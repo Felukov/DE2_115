@@ -155,7 +155,7 @@ begin
                                      x"61" | x"63" | x"64" | x"65" | x"66" | x"67" | x"6C" | x"6D" | x"6E" | x"6F" | x"90" | x"91" |
                                      x"92" | x"93" | x"94" | x"95" | x"96" | x"97" | x"98" | x"99" | x"9B" | x"9C" | x"9D" | x"9E" |
                                      x"9F" | x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AC" | x"AD" | x"AE" | x"AF" | x"CB" |
-                                     x"C9" | x"CC" | x"CE" | x"CF" | x"FC" | x"FD" =>
+                                     x"C9" | x"CC" | x"CE" | x"CF" | x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" =>
                                     byte_pos_chain(0) <= first_byte;
                                     instr_tvalid <= '1';
 
@@ -565,6 +565,24 @@ begin
                         instr_tdata.code <= MOVS_OP;
                         instr_tdata.w <= '1';
 
+                    when x"F8" =>
+                        instr_tdata.op <= SET_FLAG;
+                        instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_CF, 4));
+                        instr_tdata.w <= '0'; --clear flag
+                    when x"F9" =>
+                        instr_tdata.op <= SET_FLAG;
+                        instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_CF, 4));
+                        instr_tdata.w <= '1'; --set flag
+
+                    when x"FA" =>
+                        instr_tdata.op <= SET_FLAG;
+                        instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_IF, 4));
+                        instr_tdata.w <= '0'; --clear flag
+                    when x"FB" =>
+                        instr_tdata.op <= SET_FLAG;
+                        instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_IF, 4));
+                        instr_tdata.w <= '1'; --set flag
+
                     when x"FC" =>
                         instr_tdata.op <= SET_FLAG;
                         instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_DF, 4));
@@ -666,7 +684,7 @@ begin
                     when x"26" | x"2E" | x"36" | x"3E" =>
                         instr_tdata.dir <= SSEG;
 
-                    when x"FC" | x"FD" =>
+                    when x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" =>
                         instr_tdata.dir <= SFLG;
 
                     when others => null;

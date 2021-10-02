@@ -651,7 +651,7 @@ begin
                     when others => null;
                 end case;
             elsif (micro_tvalid = '1' and micro_tready = '1') then
-                micro_tdata.alu_w <= rr_tdata_buf.w;
+                --micro_tdata.alu_w <= rr_tdata_buf.w;
 
                 case rr_tdata_buf.op is
                     when STR =>

@@ -71,6 +71,8 @@ end entity mexec;
 
 architecture rtl of mexec is
 
+    type flag_src_t is (ALU, CMD);
+
     type alu_t is record
         code                    : std_logic_vector(3 downto 0);
         w                       : std_logic;
@@ -105,6 +107,7 @@ architecture rtl of mexec is
 
     signal flags_wr_be          : std_logic_vector(15 downto 0);
     signal flags_wr_new_val     : std_logic;
+    signal flags_src            : flag_src_t;
     signal flags_wr_vector      : std_logic_vector(15 downto 0);
 
     signal flags_cf             : std_logic;
@@ -353,6 +356,14 @@ begin
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1') then
+                if micro_tdata.cmd(MICRO_OP_CMD_FLG) = '1' then
+                    flags_src <= CMD;
+                elsif (micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1' and micro_tdata.alu_code /= ALU_SF_ADD) then
+                    flags_src <= ALU;
+                end if;
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1') then
                 flags_wr_new_val <= micro_tdata.flg_val;
             end if;
 
@@ -408,14 +419,13 @@ begin
 
         end case;
 
-
         flags_wr_vector(FLAG_15) <= '0';
         flags_wr_vector(FLAG_14) <= '0';
         flags_wr_vector(FLAG_13) <= '0';
         flags_wr_vector(FLAG_12) <= '0';
         flags_wr_vector(FLAG_OF) <= flags_of;
         flags_wr_vector(FLAG_DF) <= flags_wr_new_val;
-        flags_wr_vector(FLAG_IF) <= '0';
+        flags_wr_vector(FLAG_IF) <= flags_wr_new_val;
         flags_wr_vector(FLAG_TF) <= '0';
         flags_wr_vector(FLAG_SF) <= flags_sf;
         flags_wr_vector(FLAG_ZF) <= flags_zf;
@@ -424,7 +434,11 @@ begin
         flags_wr_vector(FLAG_03) <= '0';
         flags_wr_vector(FLAG_PF) <= flags_pf;
         flags_wr_vector(FLAG_01) <= '0';
-        flags_wr_vector(FLAG_CF) <= flags_cf;
+        if (flags_src = ALU) then
+            flags_wr_vector(FLAG_CF) <= flags_cf;
+        else
+            flags_wr_vector(FLAG_CF) <= flags_wr_new_val;
+        end if;
 
     end process;
 
