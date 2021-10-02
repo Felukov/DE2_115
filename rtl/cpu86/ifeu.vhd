@@ -245,6 +245,18 @@ begin
             micro_tdata.flg_no <= flag;
             micro_tdata.flg_val <= val;
         end procedure;
+
+        procedure alu_command_imm(cmd, aval, bval: std_logic_vector; dreg : reg_t; dmask : std_logic_vector) is begin
+            micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+            micro_tdata.alu_code <= cmd;
+            micro_tdata.alu_a_val <= aval;
+            micro_tdata.alu_b_val <= bval;
+            micro_tdata.alu_dreg <= dreg;
+            micro_tdata.alu_dmask <= dmask;
+            micro_tdata.alu_wb <= '1';
+            micro_tdata.alu_keep_lock <= '0';
+        end procedure;
+
     begin
         if rising_edge(clk) then
             if (resetn = '0') then
@@ -379,17 +391,15 @@ begin
 
                         case rr_tdata.code is
                             when STACKU_POPR =>
-                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
-                                micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '0';
                                 -- SP = SP + 2
-                                micro_tdata.alu_code <= ALU_SF_ADD;
-                                micro_tdata.alu_a_val <= rr_tdata.dreg_val;
-                                micro_tdata.alu_b_val <= rr_tdata.data;
-                                micro_tdata.alu_dreg <= rr_tdata.dreg;
-                                micro_tdata.alu_dmask <= rr_tdata.dmask;
+                                alu_command_imm(cmd => ALU_SF_ADD,
+                                    aval => rr_tdata.dreg_val,
+                                    bval => rr_tdata.data,
+                                    dreg => rr_tdata.dreg,
+                                    dmask => rr_tdata.dmask);
+
                                 -- READ MEM FROM SP
                                 micro_tdata.mem_cmd <= '0';
                                 micro_tdata.mem_width <= '1';
@@ -398,17 +408,16 @@ begin
                                 micro_tdata.mem_addr <= rr_tdata.dreg_val;
 
                             when STACKU_POPM =>
-                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
-                                micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '0';
+
                                 -- SP = SP + 2
-                                micro_tdata.alu_code <= ALU_SF_ADD;
-                                micro_tdata.alu_a_val <= rr_tdata.dreg_val;
-                                micro_tdata.alu_b_val <= rr_tdata.data;
-                                micro_tdata.alu_dreg <= rr_tdata.dreg;
-                                micro_tdata.alu_dmask <= rr_tdata.dmask;
+                                alu_command_imm(cmd => ALU_SF_ADD,
+                                    aval => rr_tdata.dreg_val,
+                                    bval => rr_tdata.data,
+                                    dreg => rr_tdata.dreg,
+                                    dmask => rr_tdata.dmask);
+
                                 -- READ MEM FROM SP
                                 micro_tdata.mem_cmd <= '0';
                                 micro_tdata.mem_width <= '1';
@@ -417,7 +426,6 @@ begin
                                 micro_tdata.mem_addr <= rr_tdata.dreg_val;
 
                             when STACKU_POPA =>
-                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
                                 micro_tdata.alu_wb <= '0';
@@ -435,32 +443,26 @@ begin
                                 micro_tdata.mem_addr <= rr_tdata.dreg_val;
 
                             when STACKU_PUSHR =>
-                                -- SP = SP - 2
-                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
                                 micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
 
-                                micro_tdata.alu_code <= ALU_SF_ADD;
-                                micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '0';
-                                micro_tdata.alu_a_val <= rr_tdata.dreg_val;
-                                micro_tdata.alu_b_val <= rr_tdata.data;
-                                micro_tdata.alu_dreg <= rr_tdata.dreg;
-                                micro_tdata.alu_dmask <= rr_tdata.dmask;
+                                -- SP = SP - 2
+                                alu_command_imm(cmd => ALU_SF_ADD,
+                                    aval => rr_tdata.dreg_val,
+                                    bval => rr_tdata.data,
+                                    dreg => rr_tdata.dreg,
+                                    dmask => rr_tdata.dmask);
 
                             when STACKU_PUSHM =>
-                                -- SP = SP - 2
-                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
 
-                                micro_tdata.alu_code <= ALU_SF_ADD;
-                                micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '0';
-                                micro_tdata.alu_a_val <= rr_tdata.dreg_val;
-                                micro_tdata.alu_b_val <= rr_tdata.data;
-                                micro_tdata.alu_dreg <= rr_tdata.dreg;
-                                micro_tdata.alu_dmask <= rr_tdata.dmask;
+                                -- SP = SP - 2
+                                alu_command_imm(cmd => ALU_SF_ADD,
+                                    aval => rr_tdata.dreg_val,
+                                    bval => rr_tdata.data,
+                                    dreg => rr_tdata.dreg,
+                                    dmask => rr_tdata.dmask);
 
                                 micro_tdata.mem_cmd <= '0';
                                 micro_tdata.mem_width <= '1';
@@ -469,17 +471,15 @@ begin
                                 micro_tdata.mem_addr <= ea_val_plus_disp_next;
 
                             when STACKU_PUSHI =>
-                                -- SP = SP - 2
-                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
                                 micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
-                                micro_tdata.alu_code <= ALU_SF_ADD;
-                                micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '0';
-                                micro_tdata.alu_a_val <= rr_tdata.dreg_val;
-                                micro_tdata.alu_b_val <= x"FFFE";
-                                micro_tdata.alu_dreg <= rr_tdata.dreg;
-                                micro_tdata.alu_dmask <= rr_tdata.dmask;
+
+                                -- SP = SP - 2
+                                alu_command_imm(cmd => ALU_SF_ADD,
+                                    aval => rr_tdata.dreg_val,
+                                    bval =>  x"FFFE",
+                                    dreg => rr_tdata.dreg,
+                                    dmask => rr_tdata.dmask);
 
                             when STACKU_PUSHA =>
                                 -- SP = SP - 2
