@@ -104,6 +104,7 @@ architecture rtl of mexec is
     signal xor_next             : std_logic_vector(15 downto 0);
 
     signal flags_wr_be          : std_logic_vector(15 downto 0);
+    signal flags_wr_new_val     : std_logic;
     signal flags_wr_vector      : std_logic_vector(15 downto 0);
 
     signal flags_cf             : std_logic;
@@ -148,8 +149,7 @@ begin
 
     micro_tready <= '1' when (micro_tvalid = '1' and
         (micro_tdata.read_fifo = '0' or (micro_tdata.read_fifo = '1' and lsu_rd_s_tvalid = '1'))) and
-        (lsu_req_tvalid = '0' or (lsu_req_tvalid = '1' and lsu_req_tready = '1')) and
-        (micro_tdata.sync_flags = '0' or (micro_tdata.sync_flags = '1' and d_flags_m_wr_tvalid = '1')) else '0';
+        (lsu_req_tvalid = '0' or (lsu_req_tvalid = '1' and lsu_req_tready = '1')) else '0';
 
     lsu_rd_s_tready <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1' else '0';
 
@@ -268,7 +268,7 @@ begin
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1') then
-                    if (micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1' and micro_tdata.alu_code /= ALU_SF_ADD) then
+                    if micro_tdata.cmd(MICRO_OP_CMD_FLG) = '1' or (micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1' and micro_tdata.alu_code /= ALU_SF_ADD) then
                         flags_m_wr_tvalid <= '1';
                     else
                         flags_m_wr_tvalid <= '0';
@@ -280,7 +280,17 @@ begin
                 d_flags_m_wr_tvalid <= flags_m_wr_tvalid;
 
                 if (micro_tvalid = '1' and micro_tready = '1') then
-                    if (micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1') then
+                    if (micro_tdata.cmd(MICRO_OP_CMD_FLG)) = '1' then
+
+                        for i in 0 to 15 loop
+                            if (micro_tdata.flg_no = std_logic_vector(to_unsigned(i, 4))) then
+                                flags_wr_be(i) <= '1';
+                            else
+                                flags_wr_be(i) <= '0';
+                            end if;
+                        end loop;
+
+                    elsif (micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1') then
 
                         case (micro_tdata.alu_code) is
                             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR =>
@@ -341,6 +351,11 @@ begin
                 end if;
 
             end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1') then
+                flags_wr_new_val <= micro_tdata.flg_val;
+            end if;
+
         end if;
     end process;
 
@@ -399,7 +414,7 @@ begin
         flags_wr_vector(FLAG_13) <= '0';
         flags_wr_vector(FLAG_12) <= '0';
         flags_wr_vector(FLAG_OF) <= flags_of;
-        flags_wr_vector(FLAG_DF) <= '0';
+        flags_wr_vector(FLAG_DF) <= flags_wr_new_val;
         flags_wr_vector(FLAG_IF) <= '0';
         flags_wr_vector(FLAG_TF) <= '0';
         flags_wr_vector(FLAG_SF) <= flags_sf;

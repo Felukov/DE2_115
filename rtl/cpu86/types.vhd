@@ -124,10 +124,11 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 3;
+    constant MICRO_OP_CMD_WIDTH : natural := 4;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
+    constant MICRO_OP_CMD_FLG : natural := 3;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -136,7 +137,6 @@ package cpu86_types is
     type micro_op_t is record
         cmd             : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0);
         unlk_fl         : std_logic;
-        sync_flags      : std_logic;
         read_fifo       : std_logic;
         --wr              : std_logic;
         alu_code        : std_logic_vector(3 downto 0);
@@ -160,6 +160,8 @@ package cpu86_types is
         mem_addr        : std_logic_vector(15 downto 0);
         mem_data_src    : std_logic_vector(1 downto 0);
         mem_data        : std_logic_vector(15 downto 0);
+        flg_no          : std_logic_vector(3 downto 0);
+        flg_val         : std_logic;
     end record;
 
     function decoded_instr_t_to_slv (decoded_instr : decoded_instr_t) return std_logic_vector;

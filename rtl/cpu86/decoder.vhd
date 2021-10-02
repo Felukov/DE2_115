@@ -155,7 +155,7 @@ begin
                                      x"61" | x"63" | x"64" | x"65" | x"66" | x"67" | x"6C" | x"6D" | x"6E" | x"6F" | x"90" | x"91" |
                                      x"92" | x"93" | x"94" | x"95" | x"96" | x"97" | x"98" | x"99" | x"9B" | x"9C" | x"9D" | x"9E" |
                                      x"9F" | x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AC" | x"AD" | x"AE" | x"AF" | x"CB" |
-                                     x"C9" | x"CC" | x"CE" | x"CF" =>
+                                     x"C9" | x"CC" | x"CE" | x"CF" | x"FC" | x"FD" =>
                                     byte_pos_chain(0) <= first_byte;
                                     instr_tvalid <= '1';
 
@@ -567,11 +567,11 @@ begin
 
                     when x"FC" =>
                         instr_tdata.op <= SET_FLAG;
-                        instr_tdata.code <= FLAG_DF;
+                        instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_DF, 4));
                         instr_tdata.w <= '0'; --clear flag
                     when x"FD" =>
                         instr_tdata.op <= SET_FLAG;
-                        instr_tdata.code <= FLAG_DF;
+                        instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_DF, 4));
                         instr_tdata.w <= '1'; --set flag
 
                     when others =>

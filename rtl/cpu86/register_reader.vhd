@@ -419,7 +419,7 @@ begin
         flags_m_lock_tvalid <= '0';
 
         if (instr_tvalid = '1' and instr_tready = '1') then
-            if (instr_tdata.op = ALU and instr_tdata.code /= ALU_SF_ADD) then
+            if instr_tdata.op = SET_FLAG or (instr_tdata.op = ALU and instr_tdata.code /= ALU_SF_ADD) then
                 flags_m_lock_tvalid <= '1';
             end if;
         end if;
