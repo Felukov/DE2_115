@@ -399,8 +399,10 @@ begin
                     end if;
 
                 when STR =>
-                    di_m_lock_tvalid <= '1';
-                    si_m_lock_tvalid <= '1';
+                    if (cx_s_tdata /= x"0000") then
+                        di_m_lock_tvalid <= '1';
+                        si_m_lock_tvalid <= '1';
+                    end if;
                 when others =>
                     null;
             end case;

@@ -65,6 +65,7 @@ entity ifeu is
 end entity ifeu;
 
 architecture rtl of ifeu is
+
     constant FLAG_DF            : natural := 10;
     constant FLAG_ZF            : natural := 6;
 
@@ -117,7 +118,11 @@ begin
         ax_m_wr_tvalid <= '0';
         bx_m_wr_tvalid <= '0';
         cx_m_wr_tvalid <= rep_upd_cx_tvalid;
-        cx_m_wr_tkeep_lock <= '1' when rep_upd_cx_tvalid = '1' and rep_mode = '1' else '0';
+        if rep_upd_cx_tvalid = '1' and rep_mode = '1' then
+            cx_m_wr_tkeep_lock <= '1';
+        else
+            cx_m_wr_tkeep_lock <= '0';
+        end if;
         dx_m_wr_tvalid <= '0';
         bp_m_wr_tvalid <= '0';
         sp_m_wr_tvalid <= '0';
@@ -197,8 +202,10 @@ begin
             else
                 if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = REP) then
                     rep_mode <= '1';
-                elsif (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0 and rep_cx_cnt = x"0001") then
-                    rep_mode <= '0';
+                elsif rep_mode = '1' and ((rr_tvalid = '1' and rr_tready = '1') or (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0)) then
+                    if (rep_cx_cnt = x"0001" or rep_cx_cnt = x"0000") then
+                        rep_mode <= '0';
+                    end if;
                 end if;
 
                 if rep_mode = '1' and ((rr_tvalid = '1' and rr_tready = '1') or (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0)) then
@@ -209,14 +216,18 @@ begin
 
                 if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = REP) then
                     rep_cx_cnt <= rr_tdata.sreg_val;
-                elsif rep_mode = '1' and ((rr_tvalid = '1' and rr_tready = '1') or (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0)) then
+                elsif rep_mode = '1' and rep_cx_cnt /= x"0000" and ((rr_tvalid = '1' and rr_tready = '1') or (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0)) then
                     rep_cx_cnt <= std_logic_vector(unsigned(rep_cx_cnt) - to_unsigned(1, 16));
                 end if;
 
                 if (rr_tvalid = '1' and rr_tready = '1' and rep_mode = '1' and rep_lock = '0') then
-                    rep_lock <= '1';
-                elsif (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0 and rep_cx_cnt = x"0001") then
-                    rep_lock <= '0';
+                    if (rep_cx_cnt /= x"0001" and rep_cx_cnt /= x"0000") then
+                        rep_lock <= '1';
+                    end if;
+                elsif rep_mode = '1' and ((rr_tvalid = '1' and rr_tready = '1') or (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0)) then
+                    if (rep_cx_cnt = x"0001" or rep_cx_cnt = x"0000") then
+                        rep_lock <= '0';
+                    end if;
                 end if;
 
             end if;
@@ -272,7 +283,6 @@ begin
 
                         when others =>
                             micro_cnt <= 0;
-
                     end case;
 
                 elsif (micro_tvalid = '1' and micro_tready = '1') then
@@ -312,7 +322,11 @@ begin
                                 micro_tdata.sync_flags <= '0';
 
                                 micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '1';
+                                if rep_mode = '1' and rep_cx_cnt /= x"0001" then
+                                    micro_tdata.alu_keep_lock <= '1';
+                                else
+                                    micro_tdata.alu_keep_lock <= '0';
+                                end if;
                                 micro_tdata.alu_code <= ALU_SF_ADD;
                                 micro_tdata.alu_a_val <= si_s_tdata;
 
@@ -626,7 +640,11 @@ begin
                                 micro_tdata.read_fifo <= '1';
 
                                 micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '1' when rep_mode = '1' else '0';
+                                if rep_mode = '1' then
+                                    micro_tdata.alu_keep_lock <= '1';
+                                else
+                                    micro_tdata.alu_keep_lock <= '0';
+                                end if;
                                 micro_tdata.alu_a_val <= di_s_tdata;
                                 micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
 
@@ -641,7 +659,11 @@ begin
                                 micro_tdata.read_fifo <= '0';
 
                                 micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '1' when rep_mode = '1' and rep_cx_cnt /= x"0001" else '0';
+                                if rep_mode = '1' and rep_cx_cnt /= x"0001" then
+                                    micro_tdata.alu_keep_lock <= '1';
+                                else
+                                    micro_tdata.alu_keep_lock <= '0';
+                                end if;
                                 micro_tdata.alu_a_val <= si_s_tdata;
                                 micro_tdata.alu_dreg <= rr_tdata_buf.sreg;
 
