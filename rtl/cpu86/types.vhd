@@ -14,11 +14,11 @@ package cpu86_types is
     );
 
     type direction_t is (
-        R2R, M2R, R2M, I2R, I2M, STK, STKM, M2M, STR, SSEG
+        R2R, M2R, R2M, I2R, I2M, STK, STKM, M2M, STR, SSEG, SFLG
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG
     );
 
     constant ALU_OP_ADD     : std_logic_vector (3 downto 0) := "0000";
@@ -57,6 +57,23 @@ package cpu86_types is
     constant MEM_DATA_SRC_ALU  : std_logic_vector(1 downto 0) := "01";
     constant MEM_DATA_SRC_IMM  : std_logic_vector(1 downto 0) := "00";
     constant MEM_DATA_SRC_FIFO : std_logic_vector(1 downto 0) := "10";
+
+    constant FLAG_15            : natural := 15;
+    constant FLAG_14            : natural := 14;
+    constant FLAG_13            : natural := 13;
+    constant FLAG_12            : natural := 12;
+    constant FLAG_OF            : natural := 11;
+    constant FLAG_DF            : natural := 10;
+    constant FLAG_IF            : natural := 9;
+    constant FLAG_TF            : natural := 8;
+    constant FLAG_SF            : natural := 7;
+    constant FLAG_ZF            : natural := 6;
+    constant FLAG_05            : natural := 5;
+    constant FLAG_AF            : natural := 4;
+    constant FLAG_03            : natural := 3;
+    constant FLAG_PF            : natural := 2;
+    constant FLAG_01            : natural := 1;
+    constant FLAG_CF            : natural := 0;
 
     constant DECODED_INSTR_T_WIDTH : integer := 62;
 

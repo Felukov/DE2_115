@@ -71,23 +71,6 @@ end entity mexec;
 
 architecture rtl of mexec is
 
-    constant FLAG_15            : natural := 15;
-    constant FLAG_14            : natural := 14;
-    constant FLAG_13            : natural := 13;
-    constant FLAG_12            : natural := 12;
-    constant FLAG_OF            : natural := 11;
-    constant FLAG_DF            : natural := 10;
-    constant FLAG_IF            : natural := 9;
-    constant FLAG_TF            : natural := 8;
-    constant FLAG_SF            : natural := 7;
-    constant FLAG_ZF            : natural := 6;
-    constant FLAG_05            : natural := 5;
-    constant FLAG_AF            : natural := 4;
-    constant FLAG_03            : natural := 3;
-    constant FLAG_PF            : natural := 2;
-    constant FLAG_01            : natural := 1;
-    constant FLAG_CF            : natural := 0;
-
     type alu_t is record
         code                    : std_logic_vector(3 downto 0);
         w                       : std_logic;

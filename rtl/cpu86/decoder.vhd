@@ -565,6 +565,15 @@ begin
                         instr_tdata.code <= MOVS_OP;
                         instr_tdata.w <= '1';
 
+                    when x"FC" =>
+                        instr_tdata.op <= SET_FLAG;
+                        instr_tdata.code <= FLAG_DF;
+                        instr_tdata.w <= '0'; --clear flag
+                    when x"FD" =>
+                        instr_tdata.op <= SET_FLAG;
+                        instr_tdata.code <= FLAG_DF;
+                        instr_tdata.w <= '1'; --set flag
+
                     when others =>
                         instr_tdata.code <= "0000";
                 end case;
@@ -656,6 +665,9 @@ begin
 
                     when x"26" | x"2E" | x"36" | x"3E" =>
                         instr_tdata.dir <= SSEG;
+
+                    when x"FC" | x"FD" =>
+                        instr_tdata.dir <= SFLG;
 
                     when others => null;
                 end case;

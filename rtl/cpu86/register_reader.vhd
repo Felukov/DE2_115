@@ -306,6 +306,10 @@ begin
                 if dreg_tvalid = '1' and seg_tvalid = '1' and ea_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
                     instr_tready <= '1';
                 end if;
+            when SFLG =>
+                if (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
+                    instr_tready <= '1';
+                end if;
             when I2R | SSEG =>
                 if dreg_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
                     instr_tready <= '1';

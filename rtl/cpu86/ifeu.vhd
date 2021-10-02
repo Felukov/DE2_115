@@ -235,7 +235,17 @@ begin
 
     end process;
 
-    micro_cmd_gen_proc : process (clk) begin
+    micro_cmd_gen_proc : process (clk)
+        procedure flag_dont_update is begin
+            micro_tdata.cmd(MICRO_OP_CMD_FLG) <= '0';
+        end procedure;
+
+        procedure flag_update (flag : std_logic_vector; val : std_logic) is begin
+            micro_tdata.cmd(MICRO_OP_CMD_FLG) <= '1';
+            micro_tdata.flg_no <= flag;
+            micro_tdata.flg_val <= val;
+        end procedure;
+    begin
         if rising_edge(clk) then
             if (resetn = '0') then
                 micro_tvalid <= '0';
@@ -312,14 +322,22 @@ begin
                 micro_tdata.unlk_fl <= '0';
 
                 case (rr_tdata.op) is
+                    when SET_FLAG =>
+                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+
+                        micro_tdata.alu_wb <= '0';
+
+                        flag_update(rr_tdata.code, rr_tdata.w);
+
                     when STR =>
+                        flag_dont_update;
                         case rr_tdata.code is
                             when MOVS_OP =>
                                 micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
-
-                                micro_tdata.sync_flags <= '0';
 
                                 micro_tdata.alu_wb <= '1';
                                 if rep_mode = '1' and rep_cx_cnt /= x"0001" then
@@ -357,7 +375,8 @@ begin
                                 null;
                         end case;
                     when STACKU =>
-                        micro_tdata.sync_flags <= '0';
+                        flag_dont_update;
+
                         case rr_tdata.code is
                             when STACKU_POPR =>
                                 micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
@@ -478,7 +497,8 @@ begin
                         end case;
 
                     when MOVU =>
-                        micro_tdata.sync_flags <= '0';
+                        flag_dont_update;
+
                         case rr_tdata.dir is
                             when I2M =>
                                 micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
@@ -525,7 +545,8 @@ begin
                         end case;
 
                     when ALU =>
-                        micro_tdata.sync_flags <= '0';
+                        flag_dont_update;
+
                         case rr_tdata.dir is
                             when M2M =>
                                 -- read from memory
@@ -614,7 +635,7 @@ begin
                         end case;
 
                     when LOOPU =>
-                        micro_tdata.sync_flags <= '0';
+
                         micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
