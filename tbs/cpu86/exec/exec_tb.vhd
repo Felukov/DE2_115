@@ -12,7 +12,7 @@ architecture rtl of exec_tb is
 
     -- Clock period definitions
     constant CLK_PERIOD         : time := 10 ns;
-    constant MAX_BUF_SIZE       : integer := 1000;
+    constant MAX_BUF_SIZE       : integer := 2000;
 
     type test_cases_t is array (natural range<>) of string;
     type input_tdata_t is array (natural range<>) of std_logic_vector(7 downto 0);
@@ -34,6 +34,18 @@ architecture rtl of exec_tb is
     end record;
 
     constant test_cases : test_cases_t := (
+        "F8                              ;      CLC                                            ",
+        "F9                              ;      STC                                            ",
+        "F8                              ;      CLC                                            ",
+
+        "FA                              ;      CLI                                            ",
+        "FB                              ;      STI                                            ",
+        "FA                              ;      CLI                                            ",
+
+        "FC                              ;      CLD                                            ",
+        "FD                              ;      STD                                            ",
+        "FC                              ;      CLD                                            ",
+
         "B8 00 10                        ;      MOV AX, 0x1000                                 ",
         "8E D8                           ;      MOV DS, AX                                     ",
         "B8 00 20                        ;      MOV AX, 0x2000                                 ",
@@ -41,15 +53,18 @@ architecture rtl of exec_tb is
         "BF 00 00                        ;      MOV DI, 0                                      ",
         "BE 00 00                        ;      MOV SI, 0                                      ",
         "B9 04 00                        ;      MOV CX, 4                                      ",
+        "FC                              ;      CLD                                            ",
         "F3 A5                           ;      REP MOVSW                                      ",
         "B9 00 00                        ;      MOV CX, 0                                      ",
         "F3 A5                           ;      REP MOVSW                                      ",
         "B9 01 00                        ;      MOV CX, 1                                      ",
         "F3 A5                           ;      REP MOVSW                                      ",
+        "B9 01 00                        ;      MOV CX, 1                                      ",
+        "A5                              ;      REP MOVSW                                      ",
         "BF 00 00                        ;      MOV DI, 0                                      ",
         "BE 00 00                        ;      MOV SI, 0                                      ",
-        "B9 FF FF                        ;      MOV CX, 0xFFFF                                 ",
-        "F3 A5                           ;      REP MOVSW                                      ",
+        -- "B9 FF FF                        ;      MOV CX, 0xFFFF                                 ",
+        -- "F3 A5                           ;      REP MOVSW                                      ",
         "B8 00 00                        ;      MOV AX, 0                                      ",
         "BB 00 00                        ;      MOV BX, 0                                      ",
         "B9 00 00                        ;      MOV CX, 0                                      ",
@@ -190,6 +205,11 @@ architecture rtl of exec_tb is
         "FF 76 02                       ;       PUSH [BP+2]                                    ",
         "8F 46 04                       ;       POP [BP+4]                                     ",
         "8B 46 04                       ;       MOV AX, [BP+4]                                 ",
+
+        "F9                              ;      STC                                            ",
+        "FB                              ;      STI                                            ",
+        "9C                             ;       PUSHF                                          ",
+        "9D                             ;       POPF                                           ",
 
         "B8 AA AA                        ;      MOV AX, 0xAAAA                                 ",
         "BB BB BB                        ;      MOV BX, 0xBBBB                                 ",
@@ -343,6 +363,38 @@ architecture rtl of exec_tb is
         "35 AD 00                        ;      XOR AX, 0x00AD                                 ",
         "B8 AD 0D                        ;      MOV AX, 0x0DAD                                 ",
         "34 00                           ;      XOR AL, 0x00                                   ",
+
+        "B8 0A 33                        ;      MOV AX, 0x330A                                 ",
+        "8E D0                           ;      MOV SS, AX                                     ",
+        "BD 00 00                        ;      MOV BP, 0                                      ",
+        "B8 FE FF                        ;      MOV AX, 0xFFFE                                 ",
+        "C7 46 00 01 00                  ;      MOV word [BP], 0x0001                          ",
+        "10 46 00                        ;      ADC [BP], AL                                   ",
+        "F9                              ;      STC                                            ",
+        "BD 00 00                        ;      MOV BP, 0                                      ",
+        "B8 FE FF                        ;      MOV AX, 0xFFFE                                 ",
+        "C7 46 00 01 00                  ;      MOV word [BP], 0x0001                          ",
+        "10 46 00                        ;      ADC [BP], AL                                   ",
+        "15 01 00                        ;      ADC AX, 0x0001                                 ",
+        "8A 66 00                        ;      MOV AH, [BP]                                   ",
+        "B8 55 55                        ;      MOV AX, 0x5555                                 ",
+        "C7 46 00 01 00                  ;      MOV word [BP], 0x0001                          ",
+        "11 46 00                        ;      ADC [BP], AX                                   ",
+        "8B 5E 00                        ;      MOV BX, [BP]                                   ",
+        "B8 59 55                        ;      MOV AX, 0x5559                                 ",
+        "13 C0                           ;      ADC AX, AX                                     ",
+        "B8 66 66                        ;      MOV AX, 0x6666                                 ",
+        "C7 46 00 01 00                  ;      MOV word [BP], 0x0001                          ",
+        "13 46 00                        ;      ADC AX, [BP]                                   ",
+        "B8 77 77                        ;      MOV AX, 0x7777                                 ",
+        "C7 46 00 01 00                  ;      MOV word [BP], 0x0001                          ",
+        "12 46 00                        ;      ADC AL, [BP]                                   ",
+        "B8 88 88                        ;      MOV AX, 0x8888                                 ",
+        "15 02 00                        ;      ADC AX, 0x0002                                 ",
+        "B8 99 99                        ;      MOV AX, 0x9999                                 ",
+        "14 01                           ;      ADC AL, 0x01                                   ",
+        "B8 FF 00                        ;      MOV AX, 0x00FF                                 ",
+        "14 01                           ;      ADC AL, 1                                      ",
 
         "B9 04 00                       ;       mov CX, 4                                      ",
         "B8 07 00                       ;       mov AX, 7                                      ",
