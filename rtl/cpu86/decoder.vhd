@@ -412,6 +412,31 @@ begin
                         instr_tdata.code <= ALU_OP_OR;
                         instr_tdata.w <= '1';
 
+                    when x"10" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_ADC;
+                        instr_tdata.w <= '0';
+                    when x"11" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_ADC;
+                        instr_tdata.w <= '1';
+                    when x"12" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_ADC;
+                        instr_tdata.w <= '0';
+                    when x"13" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_ADC;
+                        instr_tdata.w <= '1';
+                    when x"14" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_ADC;
+                        instr_tdata.w <= '0';
+                    when x"15" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_ADC;
+                        instr_tdata.w <= '1';
+
                     when x"20" =>
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_AND;

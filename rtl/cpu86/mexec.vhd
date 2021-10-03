@@ -100,7 +100,9 @@ architecture rtl of mexec is
     signal a_next               : std_logic_vector(15 downto 0);
     signal b_next               : std_logic_vector(15 downto 0);
 
+    signal carry                : std_logic_vector(16 downto 0);
     signal add_next             : std_logic_vector(16 downto 0);
+    signal adc_next             : std_logic_vector(16 downto 0);
     signal and_next             : std_logic_vector(15 downto 0);
     signal or_next              : std_logic_vector(15 downto 0);
     signal xor_next             : std_logic_vector(15 downto 0);
@@ -184,7 +186,9 @@ begin
     end process;
 
     add_next <= std_logic_vector(unsigned('0' & a_next) + unsigned('0' & b_next));
-
+    carry(16 downto 1) <= (others => '0');
+    carry(0) <= flags_s_tdata(FLAG_CF);
+    adc_next <= std_logic_vector(unsigned(add_next) + unsigned(carry));
     and_next <= a_next and b_next;
     or_next  <= a_next or  b_next;
     xor_next <= a_next xor b_next;
@@ -207,6 +211,8 @@ begin
                 alu_tdata.dmask <= micro_tdata.alu_dmask;
 
                 case (micro_tdata.alu_code) is
+                    when ALU_OP_ADC =>
+                        alu_tdata.dval <= adc_next;
                     when ALU_OP_AND =>
                         alu_tdata.dval(15 downto 0) <= and_next;
                         alu_tdata.dval(16) <= '0';

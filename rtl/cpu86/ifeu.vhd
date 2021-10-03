@@ -584,46 +584,37 @@ begin
                                 micro_tdata.alu_code <= rr_tdata.code;
 
                                 case rr_tdata.code is
-                                    when ALU_OP_ADD =>
-                                        micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
-                                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
-
-                                        micro_tdata.alu_a_val <= rr_tdata.sreg_val;
-                                        micro_tdata.alu_b_val <= rr_tdata.dreg_val;
-                                        micro_tdata.alu_wb <= '1';
-                                        micro_tdata.alu_keep_lock <= '0';
-                                        micro_tdata.alu_dreg <= rr_tdata.dreg;
-                                        micro_tdata.alu_dmask <= rr_tdata.dmask;
-
                                     when ALU_OP_INC =>
-                                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
 
-                                        micro_tdata.alu_a_val <= rr_tdata.sreg_val;
-                                        micro_tdata.alu_b_val <= rr_tdata.data;
-                                        micro_tdata.alu_wb <= '1';
-                                        micro_tdata.alu_keep_lock <= '0';
-                                        micro_tdata.alu_dreg <= rr_tdata.dreg;
-                                        micro_tdata.alu_dmask <= rr_tdata.dmask;
+                                        alu_command_imm(cmd => ALU_SF_ADD,
+                                            aval => rr_tdata.sreg_val,
+                                            bval => rr_tdata.data,
+                                            dreg => rr_tdata.dreg,
+                                            dmask => rr_tdata.dmask);
 
-                                    when others => null;
+                                    when others =>
+                                        micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
+
+                                        alu_command_imm(cmd => ALU_SF_ADD,
+                                            aval => rr_tdata.sreg_val,
+                                            bval => rr_tdata.dreg_val,
+                                            dreg => rr_tdata.dreg,
+                                            dmask => rr_tdata.dmask);
 
                                 end case;
                         end case;
 
                     when LOOPU =>
 
-                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
-
-                        micro_tdata.alu_code <= ALU_SF_ADD;
-                        micro_tdata.alu_a_val <= rr_tdata.sreg_val;
-                        micro_tdata.alu_b_val <= rr_tdata.data;
-                        micro_tdata.alu_wb <= '1';
-                        micro_tdata.alu_keep_lock <= '0';
-                        micro_tdata.alu_dreg <= rr_tdata.dreg;
-                        micro_tdata.alu_dmask <= rr_tdata.dmask;
+                        -- CX = CX - 1
+                        alu_command_imm(cmd => ALU_SF_ADD,
+                            aval => rr_tdata.sreg_val,
+                            bval => rr_tdata.data,
+                            dreg => rr_tdata.dreg,
+                            dmask => rr_tdata.dmask);
 
                     when others => null;
                 end case;
