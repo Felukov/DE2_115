@@ -6,7 +6,7 @@ use ieee.numeric_std.all;
 package cpu86_types is
 
     type reg_t is (
-        AX, DX, CX, BX, BP, SI, DI, SP, ES, CS, SS, DS
+        AX, DX, CX, BX, BP, SI, DI, SP, ES, CS, SS, DS, FL
     );
 
     type ea_t is (

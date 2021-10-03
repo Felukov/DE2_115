@@ -59,6 +59,7 @@ entity register_reader is
         di_m_lock_tvalid        : out std_logic;
 
         flags_s_tvalid          : in std_logic;
+        flags_s_tdata           : in std_logic_vector(15 downto 0);
         flags_m_lock_tvalid     : out std_logic;
 
         rr_m_tvalid             : out std_logic;
@@ -124,6 +125,7 @@ begin
             when DS => sreg_tvalid <= ds_s_tvalid;
             when SS => sreg_tvalid <= ss_s_tvalid;
             when ES => sreg_tvalid <= es_s_tvalid;
+            when FL => sreg_tvalid <= flags_s_tvalid;
             when others => sreg_tvalid <= '0';
         end case;
 

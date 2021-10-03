@@ -144,6 +144,7 @@ architecture rtl of exec is
             di_m_lock_tvalid        : out std_logic;
 
             flags_s_tvalid          : in std_logic;
+            flags_s_tdata           : in std_logic_vector(15 downto 0);
             flags_m_lock_tvalid     : out std_logic;
 
             rr_m_tvalid             : out std_logic;
@@ -840,6 +841,7 @@ begin
         di_m_lock_tvalid        => di_lock_tvalid,
 
         flags_s_tvalid          => flags_tvalid,
+        flags_s_tdata           => flags_tdata,
         flags_m_lock_tvalid     => flags_lock_tvalid,
 
         rr_m_tvalid             => rr_tvalid,

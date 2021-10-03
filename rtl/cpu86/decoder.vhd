@@ -505,6 +505,16 @@ begin
                         instr_tdata.code <= STACKU_PUSHI;
                         instr_tdata.w <= '1';
 
+                    when x"9C" =>
+                        instr_tdata.op <= STACKU;
+                        instr_tdata.code <= STACKU_PUSHR;
+                        instr_tdata.w <= '1';
+
+                    when x"9D" =>
+                        instr_tdata.op <= STACKU;
+                        instr_tdata.code <= STACKU_POPR;
+                        instr_tdata.w <= '1';
+
                     when x"A0" | x"A2" =>
                         instr_tdata.op <= MOVU;
                         instr_tdata.code <= "0000";
@@ -664,6 +674,12 @@ begin
                         instr_tdata.dir <= STK;
                     -- push imm
                     when x"68" | x"6A" =>
+                        instr_tdata.dir <= STK;
+                    -- pushf
+                    when x"9C" =>
+                        instr_tdata.dir <= STK;
+                    -- popf
+                    when x"9D" =>
                         instr_tdata.dir <= STK;
 
                     when x"A0" | x"A1" =>
@@ -870,6 +886,10 @@ begin
                         instr_tdata.dmask <= "11";
 
                     when x"60" | x"61" | x"68" | x"6A" =>
+                        instr_tdata.dreg <= SP;
+                        instr_tdata.dmask <= "11";
+
+                    when x"9D" | x"9C" =>
                         instr_tdata.dreg <= SP;
                         instr_tdata.dmask <= "11";
 
@@ -1091,6 +1111,8 @@ begin
                     when x"68" | x"6A" => instr_tdata.sreg <= SP; instr_tdata.smask <= "11";
 
                     when x"E2" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
+
+                    when x"9C" => instr_tdata.sreg <= FL; instr_tdata.smask <= "11";
 
                     when x"A2" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
                     when x"A3" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
