@@ -28,7 +28,7 @@ package cpu86_types is
     constant ALU_OP_ADC     : std_logic_vector (3 downto 0) := "0100";
     constant ALU_OP_SBB     : std_logic_vector (3 downto 0) := "0101";
     constant ALU_OP_XOR     : std_logic_vector (3 downto 0) := "0110";
-
+    constant ALU_OP_CMP     : std_logic_vector (3 downto 0) := "0111";
     constant ALU_OP_INC     : std_logic_vector (3 downto 0) := "1110";
     constant ALU_SF_ADD     : std_logic_vector (3 downto 0) := "1111";
 
@@ -200,7 +200,7 @@ package body cpu86_types is
         variable d : decoded_instr_t;
     begin
         t := v;
-        --(p.op, p.code, p.w, p.dir, p.ea, p.dreg, p.dmask, p.sreg, p.smask, p.data, p.disp) := v;
+        --(p.op,  p.code, p.w, p.dir, p.ea, p.dreg, p.dmask, p.sreg, p.smask, p.data, p.disp) := v;
 
         p.op := t(p.op'range);
         p.code := t(p.code'range);
