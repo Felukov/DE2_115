@@ -34,15 +34,16 @@ architecture rtl of decoder is
         mod_sreg_rm,    --0010
         mod_aux_rm,     --0011
         data8,          --0100
-        data_low,       --0101
-        data_high,      --0110
-        disp8,          --1000
-        disp_low,       --1001
-        disp_high       --1010
+        data_s8,        --0101
+        data_low,       --0110
+        data_high,      --0111
+        disp8,          --1001
+        disp_low,       --1010
+        disp_high       --1011
     );
 
     attribute enum_encoding : string;
-    attribute enum_encoding of byte_pos_t : type is "0000 0001 0010 0011 0100 0101 0110 1000 1001 1010";
+    attribute enum_encoding of byte_pos_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1001 1010 1011";
 
     type bytes_chain_t is array (natural range 0 to 5) of byte_pos_t;
 
@@ -59,6 +60,8 @@ architecture rtl of decoder is
 
     signal byte0                : std_logic_vector(7 downto 0);
     signal byte1                : std_logic_vector(7 downto 0);
+
+    signal dbg_instr_hs_cnt     : integer := 0;
 
 begin
 
@@ -178,6 +181,31 @@ begin
                                     byte_pos_chain(1) <= first_byte;
                                     instr_tvalid <= '0';
 
+                                when x"80" =>
+                                    byte_pos_chain(0) <= mod_aux_rm;
+                                    byte_pos_chain(1) <= disp_low;
+                                    byte_pos_chain(2) <= disp_high;
+                                    byte_pos_chain(3) <= data8;
+                                    byte_pos_chain(4) <= first_byte;
+                                    instr_tvalid <= '0';
+
+                                when x"81" =>
+                                    byte_pos_chain(0) <= mod_aux_rm;
+                                    byte_pos_chain(1) <= disp_low;
+                                    byte_pos_chain(2) <= disp_high;
+                                    byte_pos_chain(3) <= data_low;
+                                    byte_pos_chain(4) <= data_high;
+                                    byte_pos_chain(5) <= first_byte;
+                                    instr_tvalid <= '0';
+
+                                when x"83" =>
+                                    byte_pos_chain(0) <= mod_aux_rm;
+                                    byte_pos_chain(1) <= disp_low;
+                                    byte_pos_chain(2) <= disp_high;
+                                    byte_pos_chain(3) <= data_s8;
+                                    byte_pos_chain(4) <= first_byte;
+                                    instr_tvalid <= '0';
+
                                 when x"C8" =>
                                     byte_pos_chain(0) <= data_low;
                                     byte_pos_chain(1) <= data_high;
@@ -207,10 +235,16 @@ begin
 
                             case u8_tdata(7 downto 6) is
                                 when "11" =>
-                                    byte_pos_chain(0) <= first_byte;
-                                    instr_tvalid <= '1';
+                                    -- disp_lo and disp_hi are absent
+                                    byte_pos_chain(0) <= byte_pos_chain(3);
+                                    byte_pos_chain(1) <= byte_pos_chain(4);
+                                    byte_pos_chain(2) <= byte_pos_chain(5);
+                                    if (byte_pos_chain(3) = first_byte) then
+                                        instr_tvalid <= '1';
+                                    end if;
                                 when "00" =>
                                     if (u8_tdata(2 downto 0) = "110") then
+                                        -- load direct
                                         byte_pos_chain(0) <= byte_pos_chain(1);
                                         byte_pos_chain(1) <= byte_pos_chain(2);
                                         byte_pos_chain(2) <= byte_pos_chain(3);
@@ -218,11 +252,14 @@ begin
                                         byte_pos_chain(4) <= byte_pos_chain(5);
                                         instr_tvalid <= '0';
                                     else
-                                        byte_pos_chain(0) <= first_byte;
-                                        instr_tvalid <= '1';
+                                        -- skip disp
+                                        byte_pos_chain(0) <= byte_pos_chain(3);
+                                        if (byte_pos_chain(3) = first_byte) then
+                                            instr_tvalid <= '1';
+                                        end if;
                                     end if;
                                 when "01" =>
-                                    -- load disp_low
+                                    -- load disp_lo
                                     byte_pos_chain(0) <= byte_pos_chain(1);
                                     -- and skip disp_high
                                     byte_pos_chain(1) <= byte_pos_chain(3);
@@ -231,6 +268,7 @@ begin
                                     instr_tvalid <= '0';
 
                                 when "10" =>
+                                    -- load disp_lo, disp_hi
                                     byte_pos_chain(0) <= byte_pos_chain(1);
                                     byte_pos_chain(1) <= byte_pos_chain(2);
                                     byte_pos_chain(2) <= byte_pos_chain(3);
@@ -242,7 +280,7 @@ begin
 
                             end case;
 
-                        when data8 =>
+                        when data8 | data_s8 =>
                             byte_pos_chain(0) <= byte_pos_chain(1);
                             byte_pos_chain(1) <= byte_pos_chain(2);
                             byte_pos_chain(2) <= byte_pos_chain(3);
@@ -634,6 +672,40 @@ begin
             elsif (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = mod_aux_rm) then
 
                 case byte0 is
+                    when x"80" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.w <= '0';
+
+                        case u8_tdata(5 downto 3) is
+                            when "000" => instr_tdata.code <= ALU_OP_ADD;
+                            when "001" => instr_tdata.code <= ALU_OP_OR;
+                            when "010" => instr_tdata.code <= ALU_OP_ADC;
+                            when "011" => instr_tdata.code <= ALU_OP_SBB;
+
+                            when "100" => instr_tdata.code <= ALU_OP_AND;
+                            when "101" => instr_tdata.code <= ALU_OP_SUB;
+                            when "110" => instr_tdata.code <= ALU_OP_XOR;
+                            when "111" => instr_tdata.code <= ALU_OP_CMP;
+                            when others => null;
+                        end case;
+
+                    when x"81" | x"83" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.w <= '1';
+
+                        case u8_tdata(5 downto 3) is
+                            when "000" => instr_tdata.code <= ALU_OP_ADD;
+                            when "001" => instr_tdata.code <= ALU_OP_OR;
+                            when "010" => instr_tdata.code <= ALU_OP_ADC;
+                            when "011" => instr_tdata.code <= ALU_OP_SBB;
+
+                            when "100" => instr_tdata.code <= ALU_OP_AND;
+                            when "101" => instr_tdata.code <= ALU_OP_SUB;
+                            when "110" => instr_tdata.code <= ALU_OP_XOR;
+                            when "111" => instr_tdata.code <= ALU_OP_CMP;
+                            when others => null;
+                        end case;
+
                     when x"8F" =>
                         if (u8_tdata(5 downto 3) = "000") then
                             instr_tdata.op <= STACKU;
@@ -746,6 +818,14 @@ begin
             elsif (u8_tvalid = '1' and u8_tready = '1' and (byte_pos_chain(0) = mod_aux_rm)) then
 
                 case byte0 is
+                    -- alu r/m, imm
+                    when x"80" | x"81" | x"83" =>
+                        if (u8_tdata(7 downto 6) = "11") then
+                            instr_tdata.dir <= I2R;
+                        else
+                            instr_tdata.dir <= I2M;
+                        end if;
+
                     when x"8F" =>
                         if (u8_tdata(5 downto 3) = "000") then
                             instr_tdata.dir <= STKM;
@@ -1052,6 +1132,39 @@ begin
             elsif (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = mod_aux_rm) then
 
                 case byte0 is
+                    when x"80" =>
+                        case u8_tdata_rm is
+                            when "000" => instr_tdata.dreg <= AX;
+                            when "001" => instr_tdata.dreg <= CX;
+                            when "010" => instr_tdata.dreg <= DX;
+                            when "011" => instr_tdata.dreg <= BX;
+                            when "100" => instr_tdata.dreg <= AX;
+                            when "101" => instr_tdata.dreg <= CX;
+                            when "110" => instr_tdata.dreg <= DX;
+                            when "111" => instr_tdata.dreg <= BX;
+                            when others => null;
+                        end case;
+
+                        if (u8_tdata_rm(2) = '0') then
+                            instr_tdata.dmask <= "01";
+                        else
+                            instr_tdata.dmask <= "10";
+                        end if;
+
+                    when x"81" | x"83" =>
+                        case u8_tdata_rm is
+                            when "000" => instr_tdata.dreg <= AX;
+                            when "001" => instr_tdata.dreg <= CX;
+                            when "010" => instr_tdata.dreg <= DX;
+                            when "011" => instr_tdata.dreg <= BX;
+                            when "100" => instr_tdata.dreg <= SP;
+                            when "101" => instr_tdata.dreg <= BP;
+                            when "110" => instr_tdata.dreg <= SI;
+                            when "111" => instr_tdata.dreg <= DI;
+                            when others => null;
+                        end case;
+                        instr_tdata.dmask <= "11";
+
                     when x"8F" =>
                         if (u8_tdata(5 downto 3) = "000") then
                             instr_tdata.dreg <= SP;
@@ -1174,7 +1287,6 @@ begin
                         when "11" => instr_tdata.sreg <= DS;
                         when others => null;
                     end case;
-
 
                 end if;
                 instr_tdata.smask <= "11";
@@ -1323,69 +1435,80 @@ begin
 
             end if;
 
-            if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
-                case (u8_tdata) is
-                    when x"40" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" =>
-                        instr_tdata.data <= x"0001";
-                    when x"48" | x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" =>
-                        instr_tdata.data <= x"FFFF";
-                    when x"E2" =>
-                        instr_tdata.data <= x"FFFF";
-                    when x"0E" | x"1E" | x"16" | x"06" =>
-                        instr_tdata.data <= x"FFFE";
-                    when x"50" | x"51" | x"52" | x"53" | x"54" | x"55" | x"56" | x"57" =>
-                        instr_tdata.data <= x"FFFE";
-                    when x"1F" | x"17" | x"07" =>
-                        instr_tdata.data <= x"0002";
-                    when x"58" | x"59" | x"5A" | x"5B" | x"5C" | x"5D" | x"5E" | x"5F" =>
-                        instr_tdata.data <= x"0002";
-                    when x"60" =>
-                        instr_tdata.data <= x"FFFE";
-                    when x"61" =>
-                        instr_tdata.data <= x"0002";
+            if (u8_tvalid = '1' and u8_tready = '1') then
+
+                case byte_pos_chain(0) is
+                    when first_byte =>
+                        case (u8_tdata) is
+                            when x"40" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" =>
+                                instr_tdata.data <= x"0001";
+                            when x"48" | x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" =>
+                                instr_tdata.data <= x"FFFF";
+                            when x"E2" =>
+                                instr_tdata.data <= x"FFFF";
+                            when x"0E" | x"1E" | x"16" | x"06" =>
+                                instr_tdata.data <= x"FFFE";
+                            when x"50" | x"51" | x"52" | x"53" | x"54" | x"55" | x"56" | x"57" =>
+                                instr_tdata.data <= x"FFFE";
+                            when x"1F" | x"17" | x"07" =>
+                                instr_tdata.data <= x"0002";
+                            when x"58" | x"59" | x"5A" | x"5B" | x"5C" | x"5D" | x"5E" | x"5F" =>
+                                instr_tdata.data <= x"0002";
+                            when x"60" =>
+                                instr_tdata.data <= x"FFFE";
+                            when x"61" =>
+                                instr_tdata.data <= x"0002";
+                            when others =>
+                                null;
+                        end case;
+                    when data_s8 =>
+                        for i in 15 downto 8 loop
+                            instr_tdata.data(i) <= u8_tdata(7);
+                        end loop;
+                        instr_tdata.data(7 downto 0) <= u8_tdata;
+                    when data8 =>
+                        for i in 15 downto 8 loop
+                            instr_tdata.data(i) <= '0';
+                        end loop;
+                        instr_tdata.data(7 downto 0) <= u8_tdata;
+
+                    when data_low =>
+                        for i in 15 downto 8 loop
+                            instr_tdata.data(i) <= u8_tdata(7);
+                        end loop;
+                        instr_tdata.data(7 downto 0) <= u8_tdata;
+                    when data_high =>
+                        instr_tdata.data(15 downto 8) <= u8_tdata;
+                    when mod_aux_rm =>
+                        case byte0 is
+                            when x"8F" =>
+                                if (u8_tdata(5 downto 3) = "000") then
+                                    instr_tdata.data <= x"0002";
+                                end if;
+
+                            when x"FE" =>
+                                case u8_tdata(5 downto 3) is
+                                    when "000" => instr_tdata.data <= x"0001";
+                                    when "001" => instr_tdata.data <= x"FFFF";
+                                    when others => null;
+                                end case;
+
+                            when x"FF" =>
+                                case u8_tdata(5 downto 3) is
+                                    when "000" => instr_tdata.data <= x"0001";
+                                    when "001" => instr_tdata.data <= x"FFFF";
+                                    when "110" => instr_tdata.data <= x"FFFE";
+                                    when others => null;
+                                end case;
+
+                            when others =>
+                                null;
+
+                        end case;
                     when others =>
                         null;
-                end case;
-            elsif (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = data8) then
-                for i in 15 downto 8 loop
-                    instr_tdata.data(i) <= u8_tdata(7);
-                end loop;
-                instr_tdata.data(7 downto 0) <= u8_tdata;
-            elsif (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = data_low) then
-                for i in 15 downto 8 loop
-                    instr_tdata.data(i) <= u8_tdata(7);
-                end loop;
-                instr_tdata.data(7 downto 0) <= u8_tdata;
-            elsif (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = data_high) then
-                instr_tdata.data(15 downto 8) <= u8_tdata;
-            elsif (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = mod_aux_rm) then
-
-                case byte0 is
-                    when x"8F" =>
-                        if (u8_tdata(5 downto 3) = "000") then
-                            instr_tdata.data <= x"0002";
-                        end if;
-
-                    when x"FE" =>
-                        case u8_tdata(5 downto 3) is
-                            when "000" => instr_tdata.data <= x"0001";
-                            when "001" => instr_tdata.data <= x"FFFF";
-                            when others => null;
-                        end case;
-
-                    when x"FF" =>
-                        case u8_tdata(5 downto 3) is
-                            when "000" => instr_tdata.data <= x"0001";
-                            when "001" => instr_tdata.data <= x"FFFF";
-                            when "110" => instr_tdata.data <= x"FFFE";
-                            when others => null;
-                        end case;
-
-                    when others =>
-                        null;
 
                 end case;
-
             end if;
 
             if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
@@ -1404,6 +1527,20 @@ begin
                 instr_tdata.disp(15 downto 8) <= u8_tdata;
             end if;
 
+        end if;
+
+    end process;
+
+    dbg_instr_hs_cnt_proc : process (clk) begin
+
+        if (rising_edge(clk)) then
+            if resetn = '0' then
+                dbg_instr_hs_cnt <= 0;
+            else
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    dbg_instr_hs_cnt <= dbg_instr_hs_cnt + 1;
+                end if;
+            end if;
         end if;
 
     end process;
