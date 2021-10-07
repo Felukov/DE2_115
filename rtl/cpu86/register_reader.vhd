@@ -98,6 +98,8 @@ architecture rtl of register_reader is
     signal seg_override_tvalid  : std_logic;
     signal seg_override_tdata   : std_logic_vector(15 downto 0);
 
+    signal dbg_instr_hs_cnt     : integer := 0;
+
 begin
 
     instr_tvalid <= instr_s_tvalid;
@@ -498,6 +500,20 @@ begin
             end if;
 
         end if;
+    end process;
+
+    dbg_instr_hs_cnt_proc : process (clk) begin
+
+        if (rising_edge(clk)) then
+            if resetn = '0' then
+                dbg_instr_hs_cnt <= 0;
+            else
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    dbg_instr_hs_cnt <= dbg_instr_hs_cnt + 1;
+                end if;
+            end if;
+        end if;
+
     end process;
 
 end architecture;

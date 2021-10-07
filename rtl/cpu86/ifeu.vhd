@@ -492,7 +492,7 @@ begin
 
                                 micro_tdata.mem_cmd <= '1';
                                 micro_tdata.mem_width <= '1';
-                                micro_tdata.mem_seg <= rr_tdata_buf.seg_val;
+                                micro_tdata.mem_seg <= rr_tdata.seg_val;
                                 micro_tdata.mem_addr_src <= MEM_ADDR_SRC_EA;
                                 micro_tdata.mem_addr <= ea_val_plus_disp_next;
                                 micro_tdata.mem_data_src <= MEM_DATA_SRC_IMM;

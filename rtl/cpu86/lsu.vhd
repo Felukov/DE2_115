@@ -207,8 +207,8 @@ begin
             if (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
                 req_buf_tcmd <= lsu_req_s_tcmd;
                 req_buf_twidth <= lsu_req_s_twidth;
-                req_buf_taddr <= std_logic_vector(unsigned(lsu_req_s_taddr(19 downto 3)) + to_unsigned(1,18));
-                req_buf_tdata <= lsu_req_s_tdata(7 downto 0);
+                req_buf_taddr <= std_logic_vector(unsigned(lsu_req_s_taddr(19 downto 2)) + to_unsigned(1,18));
+                req_buf_tdata <= lsu_req_s_tdata(15 downto 8);
                 req_buf_tupd_addr <= add_s_taddr;
             end if;
 
@@ -277,10 +277,10 @@ begin
                     end case;
                 else
                     case lsu_req_s_taddr(1 downto 0) is
-                        when "00" => mem_req_tdata(31 downto 16) <= lsu_req_s_tdata;
-                        when "01" => mem_req_tdata(23 downto  8) <= lsu_req_s_tdata;
-                        when "10" => mem_req_tdata(15 downto  0) <= lsu_req_s_tdata;
-                        when "11" => mem_req_tdata( 7 downto  0) <= lsu_req_s_tdata(15 downto 8);
+                        when "00" => mem_req_tdata(31 downto 16) <= lsu_req_s_tdata(7 downto 0) & lsu_req_s_tdata(15 downto 8);
+                        when "01" => mem_req_tdata(23 downto  8) <= lsu_req_s_tdata(7 downto 0) & lsu_req_s_tdata(15 downto 8);
+                        when "10" => mem_req_tdata(15 downto  0) <= lsu_req_s_tdata(7 downto 0) & lsu_req_s_tdata(15 downto 8);
+                        when "11" => mem_req_tdata( 7 downto  0) <= lsu_req_s_tdata(7 downto 0);
                         when others => null;
                     end case;
                 end if;
@@ -373,7 +373,7 @@ begin
                     end if;
                 elsif (fifo_0_m_tdata(3) = '1') then
                     -- load tail of the word
-                    upd_s_tdata(7 downto 0) <= mem_rd_s_tdata(15 downto 8);
+                    upd_s_tdata(7 downto 0) <= mem_rd_s_tdata(31 downto 24);
                 end if;
 
                 upd_s_taddr <= fifo_0_m_tdata(7 downto 4);
