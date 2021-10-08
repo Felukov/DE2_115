@@ -109,7 +109,7 @@ begin
     fast_instruction_fl <= '1' when ((rr_tdata.op = MOVU and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or rr_tdata.op = FEU or rr_tdata.op = REP) else '0';
 
     jmp_lock_m_lock_tvalid <= '1' when (rr_tvalid = '1' and rr_tready = '1' and (rr_tdata.op = LOOPU or
-        (rr_tdata.op = STACKU and rr_tdata.code = STACKU_PUSHA))) else '0';
+        (rr_tdata.op = STACKU and rr_tdata.code = STACKU_PUSHA) or rr_tdata.op = DBG)) else '0';
 
     ea_val_plus_disp_next <= std_logic_vector(unsigned(rr_tdata.ea_val) + unsigned(rr_tdata.disp));
 
@@ -340,21 +340,35 @@ begin
                 micro_tdata.alu_b_mem <= '0';
                 micro_tdata.alu_w <= rr_tdata.w;
                 micro_tdata.read_fifo <= '0';
-                micro_tdata.unlk_fl <= '0';
+
+                micro_tdata.dbg_cs <= rr_tuser(31 downto 16);
+                micro_tdata.dbg_ip <= rr_tuser(15 downto 0);
 
                 case (rr_tdata.op) is
+                    when DBG =>
+                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '1';
+                        micro_tdata.alu_wb <= '0';
+                        micro_tdata.unlk_fl <= '1';
+
                     when SET_FLAG =>
                         micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '0';
 
                         micro_tdata.alu_wb <= '0';
+                        micro_tdata.unlk_fl <= '0';
 
                         flag_update(rr_tdata.code, rr_tdata.w);
 
                     when STR =>
                         flag_dont_update;
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '0';
+                        micro_tdata.unlk_fl <= '0';
 
                         case rr_tdata.code is
                             when MOVS_OP =>
@@ -399,6 +413,8 @@ begin
                     when STACKU =>
                         flag_dont_update;
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '0';
+                        micro_tdata.unlk_fl <= '0';
 
                         case rr_tdata.code is
                             when STACKU_POPR =>
@@ -483,12 +499,14 @@ begin
                     when MOVU =>
                         flag_dont_update;
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
+                        micro_tdata.alu_wb <= '0';
+                        micro_tdata.unlk_fl <= '0';
 
                         case rr_tdata.dir is
                             when I2M =>
-                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                                micro_tdata.alu_wb <= '0';
 
                                 micro_tdata.mem_cmd <= '1';
                                 micro_tdata.mem_width <= '1';
@@ -499,9 +517,7 @@ begin
                                 micro_tdata.mem_data <= rr_tdata.data;
 
                             when R2M =>
-                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                                micro_tdata.alu_wb <= '0';
 
                                 micro_tdata.mem_cmd <= '1';
                                 micro_tdata.mem_width <= rr_tdata.w;
@@ -512,9 +528,7 @@ begin
                                 micro_tdata.mem_data <= rr_tdata.sreg_val;
 
                             when M2R =>
-                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                                micro_tdata.alu_wb <= '0';
 
                                 micro_tdata.mem_cmd <= '0';
                                 micro_tdata.mem_width <= rr_tdata.w;
@@ -529,6 +543,8 @@ begin
                     when ALU =>
                         flag_dont_update;
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '0';
+                        micro_tdata.unlk_fl <= '0';
 
                         case rr_tdata.dir is
                             when M2M =>
@@ -606,9 +622,11 @@ begin
                         end case;
 
                     when LOOPU =>
-
                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '0';
+                        micro_tdata.unlk_fl <= '0';
+
                         -- CX = CX - 1
                         alu_command_imm(cmd => ALU_SF_ADD,
                             aval => rr_tdata.sreg_val,

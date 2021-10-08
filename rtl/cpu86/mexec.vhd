@@ -64,8 +64,10 @@ entity mexec is
         lsu_req_m_tcmd          : out std_logic;
         lsu_req_m_twidth        : out std_logic;
         lsu_req_m_taddr         : out std_logic_vector(19 downto 0);
-        lsu_req_m_tdata         : out std_logic_vector(15 downto 0)
+        lsu_req_m_tdata         : out std_logic_vector(15 downto 0);
 
+        dbg_m_tvalid            : out std_logic;
+        dbg_m_tdata             : out std_logic_vector(31 downto 0)
     );
 end entity mexec;
 
@@ -550,5 +552,22 @@ begin
         end if;
     end process;
 
+    dbg_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                dbg_m_tvalid <= '0';
+            else
+                if (micro_tvalid = '1' and micro_tready = '1') then
+                    dbg_m_tvalid <= micro_tdata.cmd(MICRO_OP_CMD_DBG);
+                else
+                    dbg_m_tvalid <= '0';
+                end if;
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1') then
+                dbg_m_tdata <= micro_tdata.dbg_cs & micro_tdata.dbg_ip;
+            end if;
+        end if;
+    end process;
 
 end architecture;

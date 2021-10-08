@@ -18,7 +18,7 @@ package cpu86_types is
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG
     );
 
     constant ALU_OP_ADD     : std_logic_vector (3 downto 0) := "0000";
@@ -124,11 +124,12 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 4;
+    constant MICRO_OP_CMD_WIDTH : natural := 5;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
     constant MICRO_OP_CMD_FLG : natural := 3;
+    constant MICRO_OP_CMD_DBG : natural := 4;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -162,6 +163,8 @@ package cpu86_types is
         mem_data        : std_logic_vector(15 downto 0);
         flg_no          : std_logic_vector(3 downto 0);
         flg_val         : std_logic;
+        dbg_cs          : std_logic_vector(15 downto 0);
+        dbg_ip          : std_logic_vector(15 downto 0);
     end record;
 
     function decoded_instr_t_to_slv (decoded_instr : decoded_instr_t) return std_logic_vector;

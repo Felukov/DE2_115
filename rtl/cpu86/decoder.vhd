@@ -449,6 +449,8 @@ begin
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_OR;
                         instr_tdata.w <= '1';
+                    when x"0F" =>
+                        instr_tdata.op <= DBG;
 
                     when x"10" =>
                         instr_tdata.op <= ALU;
@@ -798,6 +800,9 @@ begin
                         instr_tdata.dir <= SSEG;
 
                     when x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" =>
+                        instr_tdata.dir <= SFLG;
+
+                    when x"0F" =>
                         instr_tdata.dir <= SFLG;
 
                     when others => null;

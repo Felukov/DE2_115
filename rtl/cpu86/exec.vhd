@@ -22,7 +22,10 @@ entity exec is
         mem_req_m_tdata             : out std_logic_vector(63 downto 0);
 
         mem_rd_s_tvalid             : in std_logic;
-        mem_rd_s_tdata              : in std_logic_vector(31 downto 0)
+        mem_rd_s_tdata              : in std_logic_vector(31 downto 0);
+
+        dbg_m_tvalid                : out std_logic;
+        dbg_m_tdata                 : out std_logic_vector(14*16-1 downto 0)
     );
 end entity exec;
 
@@ -273,7 +276,10 @@ architecture rtl of exec is
             lsu_req_m_tcmd          : out std_logic;
             lsu_req_m_twidth        : out std_logic;
             lsu_req_m_taddr         : out std_logic_vector(19 downto 0);
-            lsu_req_m_tdata         : out std_logic_vector(15 downto 0)
+            lsu_req_m_tdata         : out std_logic_vector(15 downto 0);
+
+            dbg_m_tvalid            : out std_logic;
+            dbg_m_tdata             : out std_logic_vector(31 downto 0)
         );
     end component mexec;
 
@@ -507,6 +513,9 @@ architecture rtl of exec is
     signal instr_tready             : std_logic;
     signal instr_tdata              : decoded_instr_t;
     signal instr_tuser              : std_logic_vector(31 downto 0);
+
+    signal mexec_dbg_tvalid         : std_logic;
+    signal mexec_dbg_tdata          : std_logic_vector(31 downto 0);
 
 begin
 
@@ -969,7 +978,10 @@ begin
         lsu_req_m_tcmd          => lsu_req_tcmd,
         lsu_req_m_twidth        => lsu_req_twidth,
         lsu_req_m_taddr         => lsu_req_taddr,
-        lsu_req_m_tdata         => lsu_req_tdata
+        lsu_req_m_tdata         => lsu_req_tdata,
+
+        dbg_m_tvalid            => mexec_dbg_tvalid,
+        dbg_m_tdata             => mexec_dbg_tdata
     );
 
     lsu_inst : lsu port map (
@@ -1050,5 +1062,22 @@ begin
 
     req_m_tvalid <= jump_tvalid;
     req_m_tdata <= jump_tdata;
+
+    --cs, ip, ds, es, ss, ax, bx, dx, cx, bp, di, si, sp, Flags8
+    dbg_m_tvalid <= mexec_dbg_tvalid;
+    dbg_m_tdata(14*16-1 downto 13*16) <= mexec_dbg_tdata(31 downto 16);
+    dbg_m_tdata(13*16-1 downto 12*16) <= mexec_dbg_tdata(15 downto 0);
+    dbg_m_tdata(12*16-1 downto 11*16) <= ds_tdata;
+    dbg_m_tdata(11*16-1 downto 10*16) <= es_tdata;
+    dbg_m_tdata(10*16-1 downto  9*16) <= ss_tdata;
+    dbg_m_tdata( 9*16-1 downto  8*16) <= ax_tdata;
+    dbg_m_tdata( 8*16-1 downto  7*16) <= bx_tdata;
+    dbg_m_tdata( 7*16-1 downto  6*16) <= dx_tdata;
+    dbg_m_tdata( 6*16-1 downto  5*16) <= cx_tdata;
+    dbg_m_tdata( 5*16-1 downto  4*16) <= bp_tdata;
+    dbg_m_tdata( 4*16-1 downto  3*16) <= di_tdata;
+    dbg_m_tdata( 3*16-1 downto  2*16) <= si_tdata;
+    dbg_m_tdata( 2*16-1 downto  1*16) <= sp_tdata;
+    dbg_m_tdata( 1*16-1 downto  0*16) <= flags_tdata;
 
 end architecture;
