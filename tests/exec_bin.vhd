@@ -108,7 +108,11 @@ architecture rtl of exec_bin is
             mem_req_m_tdata     : out std_logic_vector(63 downto 0);
 
             mem_rd_s_tvalid     : in std_logic;
-            mem_rd_s_tdata      : in std_logic_vector(31 downto 0)
+            mem_rd_s_tdata      : in std_logic_vector(31 downto 0);
+
+            dbg_m_tvalid        : out std_logic;
+            dbg_m_tdata         : out std_logic_vector(14*16-1 downto 0)
+
         );
     end component exec;
 
@@ -206,6 +210,9 @@ architecture rtl of exec_bin is
     signal mem_rd_s_tvalid      : std_logic;
     signal mem_rd_s_tdata       : std_logic_vector(31 downto 0);
 
+    signal dbg_m_tvalid         : std_logic;
+    signal dbg_m_tdata          : std_logic_vector(14*16-1 downto 0);
+
     signal za_waitrequest       : std_logic;
     signal za_valid             : std_logic;
     signal za_data              : std_logic_vector(31 downto 0);
@@ -253,44 +260,47 @@ begin
         mem_req_m_tdata     => mem_req_m_tdata,
 
         mem_rd_s_tvalid     => mem_rd_s_tvalid,
-        mem_rd_s_tdata      => mem_rd_s_tdata
+        mem_rd_s_tdata      => mem_rd_s_tdata,
+
+        dbg_m_tvalid        => dbg_m_tvalid,
+        dbg_m_tdata         => dbg_m_tdata
 
     );
 
     axis_sdram_inst : axis_sdram port map (
-        clk             => clk,
-        resetn          => resetn,
+        clk                 => clk,
+        resetn              => resetn,
 
-        cmd_s_tvalid    => mem_req_m_tvalid,
-        cmd_s_tready    => mem_req_m_tready,
-        cmd_s_tdata     => mem_req_m_tdata,
+        cmd_s_tvalid        => mem_req_m_tvalid,
+        cmd_s_tready        => mem_req_m_tready,
+        cmd_s_tdata         => mem_req_m_tdata,
 
-        rd_m_tvalid     => mem_rd_s_tvalid,
-        rd_m_tdata      => mem_rd_s_tdata,
+        rd_m_tvalid         => mem_rd_s_tvalid,
+        rd_m_tdata          => mem_rd_s_tdata,
 
-        DRAM_ADDR       => zs_addr,
-        DRAM_BA         => zs_ba,
-        DRAM_CAS_N      => zs_cas_n,
-        DRAM_CKE        => zs_cke,
-        DRAM_CS_N       => zs_cs_n,
-        DRAM_DQ         => zs_dq,
-        DRAM_DQM        => zs_dqm,
-        DRAM_RAS_N      => zs_ras_n,
-        DRAM_WE_N       => zs_we_n
+        DRAM_ADDR           => zs_addr,
+        DRAM_BA             => zs_ba,
+        DRAM_CAS_N          => zs_cas_n,
+        DRAM_CKE            => zs_cke,
+        DRAM_CS_N           => zs_cs_n,
+        DRAM_DQ             => zs_dq,
+        DRAM_DQM            => zs_dqm,
+        DRAM_RAS_N          => zs_ras_n,
+        DRAM_WE_N           => zs_we_n
     );
 
     sdram_test_model_inst : sdram_test_model port map (
-        clk             => CLK,
+        clk                 => CLK,
 
-        zs_addr         => zs_addr,
-        zs_ba           => zs_ba,
-        zs_cas_n        => zs_cas_n,
-        zs_cke          => zs_cke,
-        zs_cs_n         => zs_cs_n,
-        zs_dq           => zs_dq,
-        zs_dqm          => zs_dqm,
-        zs_ras_n        => zs_ras_n,
-        zs_we_n         => zs_we_n
+        zs_addr             => zs_addr,
+        zs_ba               => zs_ba,
+        zs_cas_n            => zs_cas_n,
+        zs_cke              => zs_cke,
+        zs_cs_n             => zs_cs_n,
+        zs_dq               => zs_dq,
+        zs_dqm              => zs_dqm,
+        zs_ras_n            => zs_ras_n,
+        zs_we_n             => zs_we_n
     );
 
     -- Clock process
@@ -575,7 +585,7 @@ begin
     snoop_memw_proc : process
         type word_t is array (0 to 3) of std_logic_vector(7 downto 0);
         variable active_test_id : integer := 0;
-        variable memw_hs_cnt : integer := 0;
+        variable memw_hs_cnt    : integer := 0;
         variable hw_req_taddr   : std_logic_vector(24 downto 0);
         variable hw_req_tcmd    : std_logic;
         variable hw_req_tmask   : std_logic_vector(3 downto 0);
@@ -631,6 +641,64 @@ begin
             end if;
         end if;
 
+    end process;
+
+    dbg_handler_proc : process
+        variable active_test_id : integer := 0;
+        variable dumpw_hs_cnt : integer := 0;
+
+        variable hw_dump : dump_rec_t;
+        variable tb_dump : dump_rec_t;
+
+        procedure compare_reg (name : string; hw_val, tb_val : std_logic_vector) is
+        begin
+            if (hw_val /= tb_val) then
+
+                report "Test: " & to_string(active_test_id) &
+                "; HS: " & to_string(dumpw_hs_cnt) &
+                "; Incorrect data in the register " & name &
+                "; Expected: " & to_hstring(tb_val) &
+                ". Recieved: " & to_hstring(hw_val);
+
+            end if;
+        end procedure;
+    begin
+        wait until rising_edge(CLK) and dbg_m_tvalid = '1';
+
+        hw_dump.cs := dbg_m_tdata(14*16-1 downto 13*16);
+        hw_dump.ip := dbg_m_tdata(13*16-1 downto 12*16);
+        hw_dump.ds := dbg_m_tdata(12*16-1 downto 11*16);
+        hw_dump.es := dbg_m_tdata(11*16-1 downto 10*16);
+        hw_dump.ss := dbg_m_tdata(10*16-1 downto  9*16);
+        hw_dump.ax := dbg_m_tdata( 9*16-1 downto  8*16);
+        hw_dump.bx := dbg_m_tdata( 8*16-1 downto  7*16);
+        hw_dump.cx := dbg_m_tdata( 7*16-1 downto  6*16);
+        hw_dump.dx := dbg_m_tdata( 6*16-1 downto  5*16);
+        hw_dump.bp := dbg_m_tdata( 5*16-1 downto  4*16);
+        hw_dump.di := dbg_m_tdata( 4*16-1 downto  3*16);
+        hw_dump.si := dbg_m_tdata( 3*16-1 downto  2*16);
+        hw_dump.sp := dbg_m_tdata( 2*16-1 downto  1*16);
+        hw_dump.fl := dbg_m_tdata( 1*16-1 downto  0*16);
+        tb_dump := tb_data(active_test_id).dump_stream.data(dumpw_hs_cnt);
+
+        if (dumpw_hs_cnt < tb_data(active_test_id).dump_stream.len) then
+            compare_reg("cs", hw_dump.cs , tb_dump.cs);
+            compare_reg("ip", hw_dump.ip , tb_dump.ip);
+            compare_reg("ds", hw_dump.ds , tb_dump.ds);
+            compare_reg("es", hw_dump.es , tb_dump.es);
+            compare_reg("ss", hw_dump.ss , tb_dump.ss);
+            compare_reg("ax", hw_dump.ax , tb_dump.ax);
+            compare_reg("bx", hw_dump.bx , tb_dump.bx);
+            compare_reg("cx", hw_dump.cx , tb_dump.cx);
+            compare_reg("dx", hw_dump.dx , tb_dump.dx);
+            compare_reg("bp", hw_dump.bp , tb_dump.bp);
+            compare_reg("di", hw_dump.di , tb_dump.di);
+            compare_reg("si", hw_dump.si , tb_dump.si);
+            compare_reg("sp", hw_dump.sp , tb_dump.sp);
+            compare_reg("fl", hw_dump.fl , tb_dump.fl);
+
+            dumpw_hs_cnt := dumpw_hs_cnt + 1;
+        end if;
     end process;
 
 end architecture;

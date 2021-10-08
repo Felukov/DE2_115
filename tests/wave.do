@@ -103,7 +103,7 @@ add wave -noupdate -height 19 -group ifeu /exec_bin/uut/ifeu_inst/rr_tuser
 add wave -noupdate -height 19 -group ifeu /exec_bin/uut/ifeu_inst/micro_tvalid
 add wave -noupdate -height 19 -group ifeu /exec_bin/uut/ifeu_inst/micro_tready
 add wave -noupdate -height 19 -group ifeu /exec_bin/uut/ifeu_inst/micro_cnt
-add wave -noupdate -height 19 -group ifeu /exec_bin/uut/ifeu_inst/micro_tdata
+add wave -noupdate -height 19 -group ifeu -expand /exec_bin/uut/ifeu_inst/micro_tdata
 add wave -noupdate -height 19 -group ifeu /exec_bin/uut/ifeu_inst/rr_tdata_buf
 add wave -noupdate -height 19 -group ifeu /exec_bin/uut/ifeu_inst/rr_tuser_buf
 add wave -noupdate -height 19 -group ifeu /exec_bin/uut/ifeu_inst/rr_tuser_buf_ip_next
@@ -192,6 +192,8 @@ add wave -noupdate -height 19 -group mexec /exec_bin/uut/mexec_inst/lsu_rd_s_tva
 add wave -noupdate -height 19 -group mexec /exec_bin/uut/mexec_inst/lsu_rd_s_tready
 add wave -noupdate -height 19 -group mexec /exec_bin/uut/mexec_inst/lsu_rd_s_tdata
 add wave -noupdate -height 19 -group mexec /exec_bin/uut/mexec_inst/flags_s_tdata
+add wave -noupdate -height 19 -group mexec /exec_bin/uut/mexec_inst/dbg_m_tvalid
+add wave -noupdate -height 19 -group mexec /exec_bin/uut/mexec_inst/dbg_m_tdata
 add wave -noupdate -height 19 -group mexec /exec_bin/uut/mexec_inst/ax_m_wr_tvalid
 add wave -noupdate -height 19 -group mexec /exec_bin/uut/mexec_inst/ax_m_wr_tdata
 add wave -noupdate -height 19 -group mexec /exec_bin/uut/mexec_inst/ax_m_wr_tmask
@@ -285,31 +287,33 @@ add wave -noupdate -height 19 -group dram /exec_bin/sdram_test_model_inst/sdram_
 add wave -noupdate -height 19 -group dram /exec_bin/sdram_test_model_inst/sdram_test_model_mem_inst/read_address
 add wave -noupdate -height 19 -group dram /exec_bin/sdram_test_model_inst/sdram_test_model_mem_inst/wraddress
 add wave -noupdate -height 19 -group dram /exec_bin/sdram_test_model_inst/sdram_test_model_mem_inst/data
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/clk
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/resetn
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/u8_s_tvalid
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/u8_s_tready
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/u8_s_tdata
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/u8_s_tuser
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/instr_m_tvalid
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/instr_m_tready
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/instr_m_tdata
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/instr_m_tuser
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/u8_tvalid
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/u8_tready
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/u8_tdata
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/u8_tdata_rm
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/u8_tdata_reg
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/byte_pos_chain
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/dbg_instr_hs_cnt
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/instr_tvalid
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/instr_tready
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/instr_tdata
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/instr_tuser
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/byte0
-add wave -noupdate -height 19 -expand -group decoder /exec_bin/decoder_inst/byte1
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/clk
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/resetn
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/u8_s_tvalid
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/u8_s_tready
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/u8_s_tdata
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/u8_s_tuser
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/instr_m_tvalid
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/instr_m_tready
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/instr_m_tdata
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/instr_m_tuser
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/u8_tvalid
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/u8_tready
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/u8_tdata
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/u8_tdata_rm
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/u8_tdata_reg
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/byte_pos_chain
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/dbg_instr_hs_cnt
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/instr_tvalid
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/instr_tready
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/instr_tdata
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/instr_tuser
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/byte0
+add wave -noupdate -height 19 -group decoder /exec_bin/decoder_inst/byte1
+add wave -noupdate -height 19 -expand -group test /exec_bin/dbg_m_tvalid
+add wave -noupdate -height 19 -expand -group test /exec_bin/dbg_m_tdata
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {119096887 ps} 0}
+WaveRestoreCursors {{Cursor 1} {2806396 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 232
 configure wave -valuecolwidth 100
