@@ -367,13 +367,13 @@ begin
                             when "00" => upd_s_tdata <= mem_rd_s_tdata(31 downto 16);
                             when "01" => upd_s_tdata <= mem_rd_s_tdata(23 downto  8);
                             when "10" => upd_s_tdata <= mem_rd_s_tdata(15 downto  0);
-                            when "11" => upd_s_tdata(15 downto 8) <= mem_rd_s_tdata( 7 downto  0);
+                            when "11" => upd_s_tdata(7 downto 0) <= mem_rd_s_tdata( 7 downto  0);
                             when others => null;
                         end case;
                     end if;
                 elsif (fifo_0_m_tdata(3) = '1') then
                     -- load tail of the word
-                    upd_s_tdata(7 downto 0) <= mem_rd_s_tdata(31 downto 24);
+                    upd_s_tdata(15 downto 8) <= mem_rd_s_tdata(31 downto 24);
                 end if;
 
                 upd_s_taddr <= fifo_0_m_tdata(7 downto 4);
