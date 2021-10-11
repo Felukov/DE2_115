@@ -16,6 +16,8 @@ architecture rtl of exec_bin is
     constant CLK_PERIOD         : time := 10 ns;
     constant MAX_BUF_SIZE       : integer := 500;
 
+    constant IP_OFFSET          : integer := 256;
+
     type input_tdata_t is array (natural range<>) of std_logic_vector(7 downto 0);
     type input_tuser_t is array (natural range<>) of std_logic_vector(31 downto 0);
 
@@ -379,7 +381,7 @@ begin
             while not endfile(fd) loop
                 read(fd, b);
                 tb_data(test_id).input_stream.data(i) <= std_logic_vector(to_unsigned(character'pos(b), 8));
-                tb_data(test_id).input_stream.user(i) <= std_logic_vector(to_unsigned(i, 32));
+                tb_data(test_id).input_stream.user(i) <= std_logic_vector(to_unsigned(i + IP_OFFSET, 32));
                 i := i + 1;
             end loop;
             tb_data(test_id).input_stream.len <= i;
@@ -629,13 +631,13 @@ begin
         if (hw_req_tcmd = '1') then
 
             for i in 0 to 3 loop
-                tb_req_segm := to_integer(unsigned(tb_data(active_test_id).memw_stream.data(memw_hs_cnt).segm));
-                tb_req_addr := to_integer(unsigned(tb_data(active_test_id).memw_stream.data(memw_hs_cnt).addr));
-                tb_req_data := tb_data(active_test_id).memw_stream.data(memw_hs_cnt).data;
-
-                tb_req_taddr := std_logic_vector(to_unsigned((tb_req_segm * 16 + tb_req_addr)/4 , 25));
                 if (hw_req_tmask(3-i) = '0') then
-                    if (hw_req_taddr /= tb_req_taddr) then
+	                tb_req_segm := to_integer(unsigned(tb_data(active_test_id).memw_stream.data(memw_hs_cnt).segm));
+	                tb_req_addr := to_integer(unsigned(tb_data(active_test_id).memw_stream.data(memw_hs_cnt).addr));
+	                tb_req_data := tb_data(active_test_id).memw_stream.data(memw_hs_cnt).data;
+	
+	                tb_req_taddr := std_logic_vector(to_unsigned((tb_req_segm * 16 + tb_req_addr)/4 , 25));
+					if (hw_req_taddr /= tb_req_taddr) then
                         report "Test: " & to_string(active_test_id) & "; HS: " & to_string(memw_hs_cnt) &
                             "; Incorrect memory address. Expected: " & to_hstring(tb_req_taddr) & " / " & to_hstring(tb_req_data) &
                             ". Recieved: " & to_hstring(hw_req_taddr) & " / " & to_hstring(hw_req_tdata) & "|" & to_string(hw_req_tmask) severity error;
