@@ -95,7 +95,7 @@ begin
                                 when x"00" | x"01" | x"02" | x"03" | x"08" | x"09" | x"0A" | x"0B" | x"10" | x"11" | x"12" | x"13" |
                                      x"18" | x"19" | x"1A" | x"1B" | x"20" | x"21" | x"22" | x"23" | x"28" | x"29" | x"2A" | x"2B" |
                                      x"30" | x"31" | x"32" | x"33" | x"38" | x"39" | x"3A" | x"3B" | x"62" | x"84" | x"85" | x"86" |
-                                     x"87" | x"89" | x"8A" | x"8B" | x"8D" | x"C4" | x"C5" =>
+                                     x"87" | x"88" | x"89" | x"8A" | x"8B" | x"8D" | x"C4" | x"C5" =>
                                     byte_pos_chain(0) <= mod_reg_rm;
                                     byte_pos_chain(1) <= disp_low;
                                     byte_pos_chain(2) <= disp_high;
@@ -625,6 +625,16 @@ begin
                         instr_tdata.w <= '0';
 
                     when x"B8" | x"B9" | x"BA" | x"BB" | x"BC" | x"BD" | x"BE" | x"BF" =>
+                        instr_tdata.op <= MOVU;
+                        instr_tdata.code <= "0000";
+                        instr_tdata.w <= '1';
+
+                    when x"C6" =>
+                        instr_tdata.op <= MOVU;
+                        instr_tdata.code <= "0000";
+                        instr_tdata.w <= '0';
+
+                    when x"C7" =>
                         instr_tdata.op <= MOVU;
                         instr_tdata.code <= "0000";
                         instr_tdata.w <= '1';
