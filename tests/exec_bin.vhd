@@ -635,7 +635,7 @@ begin
 	                tb_req_segm := to_integer(unsigned(tb_data(active_test_id).memw_stream.data(memw_hs_cnt).segm));
 	                tb_req_addr := to_integer(unsigned(tb_data(active_test_id).memw_stream.data(memw_hs_cnt).addr));
 	                tb_req_data := tb_data(active_test_id).memw_stream.data(memw_hs_cnt).data;
-	
+
 	                tb_req_taddr := std_logic_vector(to_unsigned((tb_req_segm * 16 + tb_req_addr)/4 , 25));
 					if (hw_req_taddr /= tb_req_taddr) then
                         report "Test: " & to_string(active_test_id) & "; HS: " & to_string(memw_hs_cnt) &
@@ -648,6 +648,10 @@ begin
                             "; Incorrect data. Expected: " & to_hstring(tb_req_taddr) & " / " & to_hstring(tb_req_data) &
                             ". Recieved: " & to_hstring(hw_req_taddr) & " / " & to_hstring(hw_req_tdata) & "|" & to_string(hw_req_tmask) & " / " & to_hstring(hw_data_bytes(i)) severity error;
                     end if;
+
+                    -- report "Test: " & to_string(active_test_id) & "; HS: " & to_string(memw_hs_cnt) &
+                    -- "; Incorrect data. Expected: " & to_hstring(tb_req_taddr) & " / " & to_hstring(tb_req_data) &
+                    -- ". Recieved: " & to_hstring(hw_req_taddr) & " / " & to_hstring(hw_req_tdata) & "|" & to_string(hw_req_tmask) & " / " & to_hstring(hw_data_bytes(i)) severity error;
 
                     memw_hs_cnt := memw_hs_cnt + 1;
                 end if;

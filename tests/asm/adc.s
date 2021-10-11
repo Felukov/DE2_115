@@ -3,28 +3,51 @@ start:
     MOV AX, 0x1000
     MOV DS, AX
     MOV SS, AX
+    MOV SP, 0xFFFE
     MOV BP, 0
     db 0x0F
-
-    MOV CX, 0xBBAA
-    MOV [BP], CX
-    MOV CX, 0xFF03
-    MOV [BP+7], CX
-    MOV DX, [BP+7]
-    MOV AX, 0xFF01
-    MOV [BP+2], AX
-    MOV BX, [BP+2]
-    MOV BX, 0xFF02
-    MOV [BP+4], BX
-    MOV AX, [BP+4]
-    db 0x0F
+    NOP
 
     MOV AX, 0x330A
     MOV SS, AX
+    ; 0xFE + 0x1 = 0xFF
+    CLC
+    MOV AX, 0xFFFE
+    MOV BP, 0
+    MOV word [BP], 0x0001
+    ADC [BP], AL
+    MOV AX, [BP]
+    db 0x0F
+    NOP
+
+    ; 0xFE + 0x1 + 0x1 = 0x00
+    STC
+    MOV AX, 0xFFFE
+    MOV BP, 0
+    MOV word [BP], 0x0001
+    ADC [BP], AL
+    MOV AX, [BP]
+    db 0x0F
+    NOP
+
+    CLC
     MOV BP, 0
     MOV AX, 0xFFFE
     MOV word [BP], 0x0001
     ADC [BP], AL
+    ADC AX, 0x0001
+    db 0x0F
+    NOP
+
+    STC
+    MOV BP, 0
+    MOV AX, 0xFFFE
+    MOV word [BP], 0x0001
+    ADC [BP], AL
+    ADC AX, 0x0001
+    db 0x0F
+    NOP
+
     STC
     MOV BP, 0
     MOV AX, 0xFFFE
@@ -32,24 +55,43 @@ start:
     ADC [BP], AL
     ADC AX, 0x0001
     MOV AH, [BP]
+    db 0x0F
+    NOP
+
     MOV AX, 0x5555
     MOV word [BP], 0x0001
     ADC [BP], AX
     MOV BX, [BP]
+    db 0x0F
+    NOP
+
     MOV AX, 0x5559
     ADC AX, AX
     MOV AX, 0x6666
     MOV word [BP], 0x0001
     ADC AX, [BP]
+    db 0x0F
+    NOP
+
     MOV AX, 0x7777
     MOV word [BP], 0x0001
     ADC AL, [BP]
+    db 0x0F
+    NOP
+
     MOV AX, 0x8888
     ADC AX, 0x0002
+    db 0x0F
+    NOP
+
     MOV AX, 0x9999
     ADC AL, 0x01
+    db 0x0F
+    NOP
+
     MOV AX, 0x00FF
     ADC AL, 1
     db 0x0F
+    NOP
     ; db 0x0F
     HLT
