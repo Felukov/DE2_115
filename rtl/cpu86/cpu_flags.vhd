@@ -38,7 +38,7 @@ begin
         if rising_edge(clk) then
             if resetn = '0' then
                 reg_tvalid <= '1';
-                reg_tdata <= (others => '0');
+                reg_tdata <= x"0202";
             else
 
                 if (lock_s_tvalid = '1') then
