@@ -364,9 +364,9 @@ begin
                     else
                         -- load word
                         case fifo_0_m_tdata(1 downto 0) is
-                            when "00" => upd_s_tdata <= mem_rd_s_tdata(31 downto 16);
-                            when "01" => upd_s_tdata <= mem_rd_s_tdata(23 downto  8);
-                            when "10" => upd_s_tdata <= mem_rd_s_tdata(15 downto  0);
+                            when "00" => upd_s_tdata <= mem_rd_s_tdata(23 downto 16) & mem_rd_s_tdata(31 downto 24);
+                            when "01" => upd_s_tdata <= mem_rd_s_tdata(15 downto  8) & mem_rd_s_tdata(23 downto 16);
+                            when "10" => upd_s_tdata <= mem_rd_s_tdata( 7 downto  0) & mem_rd_s_tdata(15 downto  8);
                             when "11" => upd_s_tdata(7 downto 0) <= mem_rd_s_tdata( 7 downto  0);
                             when others => null;
                         end case;

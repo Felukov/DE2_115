@@ -399,7 +399,7 @@ begin
         if alu_tdata.w = '0' then
             flags_zf <= '1' when alu_tdata.dval(7 downto 0) = x"00" else '0';
         else
-            flags_zf <= '1' when alu_tdata.dval = x"0000" else '0';
+            flags_zf <= '1' when alu_tdata.dval(15 downto 0) = x"0000" else '0';
         end if;
 
         if alu_tdata.w = '0' then

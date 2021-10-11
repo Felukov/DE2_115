@@ -642,8 +642,6 @@ begin
                                 micro_tdata.alu_dmask <= rr_tdata.dmask;
 
                             when others =>
-                                micro_tdata.alu_code <= rr_tdata.code;
-
                                 case rr_tdata.code is
                                     when ALU_OP_INC =>
                                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
@@ -657,7 +655,7 @@ begin
                                     when others =>
                                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
 
-                                        alu_command_imm(cmd => ALU_SF_ADD,
+                                        alu_command_imm(cmd => rr_tdata.code,
                                             aval => rr_tdata.sreg_val,
                                             bval => rr_tdata.dreg_val,
                                             dreg => rr_tdata.dreg,
