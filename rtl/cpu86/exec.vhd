@@ -620,7 +620,7 @@ begin
     cpu_reg_bx : cpu_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
-        clk                      => clk,
+        clk                     => clk,
         resetn                  => resetn,
 
         wr_s_tvalid             => bx_wr_tvalid,
@@ -1072,8 +1072,8 @@ begin
     dbg_m_tdata(10*16-1 downto  9*16) <= ss_tdata;
     dbg_m_tdata( 9*16-1 downto  8*16) <= ax_tdata;
     dbg_m_tdata( 8*16-1 downto  7*16) <= bx_tdata;
-    dbg_m_tdata( 7*16-1 downto  6*16) <= dx_tdata;
-    dbg_m_tdata( 6*16-1 downto  5*16) <= cx_tdata;
+    dbg_m_tdata( 7*16-1 downto  6*16) <= cx_tdata;
+    dbg_m_tdata( 6*16-1 downto  5*16) <= dx_tdata;
     dbg_m_tdata( 5*16-1 downto  4*16) <= bp_tdata;
     dbg_m_tdata( 4*16-1 downto  3*16) <= di_tdata;
     dbg_m_tdata( 3*16-1 downto  2*16) <= si_tdata;
