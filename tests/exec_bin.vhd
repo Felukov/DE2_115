@@ -72,6 +72,7 @@ architecture rtl of exec_bin is
     type test_array_t is array (natural range<>) of test_rec_t;
 
     signal tb_data              : test_array_t(0 to 50);
+    signal tb_cnt               : integer := 0;
 
     component decoder is
         port (
@@ -185,8 +186,13 @@ architecture rtl of exec_bin is
 
     signal CLK                  : std_logic := '0';
     signal RESETN               : std_logic := '0';
+    signal DRAM_RESETN          : std_logic := '0';
+
     signal EVENT_DATA_READY     : std_logic := '0';
+    signal EVENT_NEW_TEST       : std_logic := '0';
     signal EVENT_TEST_DONE      : std_logic := '0';
+    signal EVENT_MEMW_DONE      : std_logic := '0';
+    signal EVENT_DUMP_DONE      : std_logic := '0';
 
     signal u8_s_tvalid          : std_logic;
     signal u8_s_tready          : std_logic := '1';
@@ -269,7 +275,7 @@ begin
 
     axis_sdram_inst : axis_sdram port map (
         clk                 => clk,
-        resetn              => resetn,
+        resetn              => DRAM_RESETN,
 
         cmd_s_tvalid        => mem_req_m_tvalid,
         cmd_s_tready        => mem_req_m_tready,
@@ -313,9 +319,9 @@ begin
 
     -- Reset process
     reset_process : process begin
-        RESETN <= '0';
+        DRAM_RESETN <= '0';
         wait for 100 ns;
-        RESETN <= '1';
+        DRAM_RESETN <= '1';
         wait;
     end process;
 
@@ -480,7 +486,7 @@ begin
         begin
             test_id := 0;
 
-            file_open(fd, "./sim_data/test_list.txt", read_mode);
+            file_open(fd, "C:/Projects/DE2_115/tests/sim_data/test_list.txt", read_mode);
             filename := (others => ' ');
             i := 0; j := 1;
             while not endfile(fd) loop
@@ -510,7 +516,7 @@ begin
                 end if;
             end loop;
             file_close(fd);
-
+            tb_cnt <= test_id;
         end procedure;
 
     begin
@@ -571,10 +577,18 @@ begin
                 end loop;
             elsif (u8_s_tready = '1') then
                 if (u8_s_hs = tb_data(active_test_id).input_stream.len-1) then
-                    wait until rising_edge(CLK) and EVENT_TEST_DONE = '1';
-                    exit;
+                    u8_s_tvalid <= '0';
+                    wait until rising_edge(CLK) and EVENT_NEW_TEST = '1';
+                    active_test_id := active_test_id + 1;
+                    u8_s_hs := 0;
+                    if (active_test_id = tb_cnt) then
+                        Report "Testbench is completed.";
+                        wait;
+                    end if;
+                    --exit;
+                else
+                    u8_s_hs := u8_s_hs + 1;
                 end if;
-                u8_s_hs := u8_s_hs + 1;
             end if;
         end loop;
         u8_s_tvalid <= '0';
@@ -613,6 +627,7 @@ begin
         hw_data_bytes(3) := hw_req_tdata(7 downto 0);
 
         if (hw_req_tcmd = '1') then
+
             for i in 0 to 3 loop
                 tb_req_segm := to_integer(unsigned(tb_data(active_test_id).memw_stream.data(memw_hs_cnt).segm));
                 tb_req_addr := to_integer(unsigned(tb_data(active_test_id).memw_stream.data(memw_hs_cnt).addr));
@@ -623,22 +638,32 @@ begin
                     if (hw_req_taddr /= tb_req_taddr) then
                         report "Test: " & to_string(active_test_id) & "; HS: " & to_string(memw_hs_cnt) &
                             "; Incorrect memory address. Expected: " & to_hstring(tb_req_taddr) & " / " & to_hstring(tb_req_data) &
-                            ". Recieved: " & to_hstring(hw_req_taddr) & " / " & to_hstring(hw_req_tdata) & "|" & to_string(hw_req_tmask);
+                            ". Recieved: " & to_hstring(hw_req_taddr) & " / " & to_hstring(hw_req_tdata) & "|" & to_string(hw_req_tmask) severity error;
                     end if;
 
                     if (hw_data_bytes(i) /= tb_req_data) then
                         report "Test: " & to_string(active_test_id) & "; HS: " & to_string(memw_hs_cnt) &
                             "; Incorrect data. Expected: " & to_hstring(tb_req_taddr) & " / " & to_hstring(tb_req_data) &
-                            ". Recieved: " & to_hstring(hw_req_taddr) & " / " & to_hstring(hw_req_tdata) & "|" & to_string(hw_req_tmask) & " / " & to_hstring(hw_data_bytes(i));
+                            ". Recieved: " & to_hstring(hw_req_taddr) & " / " & to_hstring(hw_req_tdata) & "|" & to_string(hw_req_tmask) & " / " & to_hstring(hw_data_bytes(i)) severity error;
                     end if;
 
                     memw_hs_cnt := memw_hs_cnt + 1;
                 end if;
             end loop;
 
-            if (memw_hs_cnt >= tb_data(active_test_id).memw_stream.len) then
-                report "Unexpected memory write request. Test: " & to_string(active_test_id);
+            -- if (memw_hs_cnt > tb_data(active_test_id).memw_stream.len) then
+            --     report "Unexpected memory write request. Test: " & to_string(active_test_id) severity error;
+            -- end if;
+
+            if (memw_hs_cnt = tb_data(active_test_id).memw_stream.len) then
+                EVENT_MEMW_DONE <= '1';
+
+                wait until rising_edge(CLK) and EVENT_NEW_TEST = '1';
+                EVENT_MEMW_DONE <= '0';
+                active_test_id := active_test_id + 1;
+                memw_hs_cnt := 0;
             end if;
+
         end if;
 
     end process;
@@ -658,7 +683,7 @@ begin
                 "; HS: " & to_string(dumpw_hs_cnt) &
                 "; Incorrect data in the register " & name &
                 "; Expected: " & to_hstring(tb_val) &
-                ". Recieved: " & to_hstring(hw_val);
+                ". Recieved: " & to_hstring(hw_val) severity error;
 
             end if;
         end procedure;
@@ -699,6 +724,41 @@ begin
 
             dumpw_hs_cnt := dumpw_hs_cnt + 1;
         end if;
+
+        if (dumpw_hs_cnt = tb_data(active_test_id).dump_stream.len) then
+            EVENT_DUMP_DONE <= '1';
+            wait until rising_edge(CLK) and EVENT_NEW_TEST = '1';
+            EVENT_DUMP_DONE <= '0';
+            active_test_id := active_test_id + 1;
+            dumpw_hs_cnt := 0;
+        end if;
+    end process;
+
+    test_done_mon_proc : process begin
+
+        wait until rising_edge(CLK) and RESETN = '1' and EVENT_DUMP_DONE = '1' and EVENT_MEMW_DONE = '1';
+        EVENT_TEST_DONE <= '1';
+
+        wait until rising_edge(CLK);
+        EVENT_TEST_DONE <= '0';
+
+        wait until rising_edge(CLK) and EVENT_NEW_TEST = '1';
+
+    end process;
+
+    new_test_init_proc : process begin
+        RESETN <= '0';
+        wait for 100 ns;
+        RESETN <= '1';
+
+        wait until rising_edge(CLK);
+        EVENT_NEW_TEST <= '1';
+
+        wait until rising_edge(CLK);
+        EVENT_NEW_TEST <= '0';
+
+        wait until rising_edge(CLK) and EVENT_TEST_DONE = '1';
+
     end process;
 
 end architecture;
