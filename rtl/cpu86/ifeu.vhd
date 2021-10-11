@@ -91,6 +91,8 @@ architecture rtl of ifeu is
     signal rep_code             : std_logic_vector(1 downto 0);
     signal rep_cx_cnt           : std_logic_vector(15 downto 0);
 
+    signal halt_mode            : std_logic;
+
     signal rep_upd_cx_tvalid    : std_logic;
 
 begin
@@ -103,10 +105,10 @@ begin
     micro_tready <= micro_m_tready;
     micro_m_tdata <= micro_tdata;
 
-    rr_tready <= '1' when jmp_lock_s_tvalid = '1' and rep_lock = '0' and (micro_tvalid = '0' or
+    rr_tready <= '1' when jmp_lock_s_tvalid = '1' and rep_lock = '0' and halt_mode = '0' and (micro_tvalid = '0' or
         (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0)) else '0';
 
-    fast_instruction_fl <= '1' when ((rr_tdata.op = MOVU and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or rr_tdata.op = FEU or rr_tdata.op = REP) else '0';
+    fast_instruction_fl <= '1' when (((rr_tdata.op = MOVU or rr_tdata.op = XCHG) and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or rr_tdata.op = SYS or rr_tdata.op = REP) else '0';
 
     jmp_lock_m_lock_tvalid <= '1' when (rr_tvalid = '1' and rr_tready = '1' and (rr_tdata.op = LOOPU or
         (rr_tdata.op = STACKU and rr_tdata.code = STACKU_PUSHA) or rr_tdata.op = DBG)) else '0';
@@ -132,22 +134,39 @@ begin
         ss_m_wr_tvalid <= '0';
         es_m_wr_tvalid <= '0';
 
-        if (rr_tvalid = '1' and rr_tready = '1' and
-            ((rr_tdata.op = MOVU and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or rr_tdata.op = FEU)) then
-            case rr_tdata.dreg is
-                when AX => ax_m_wr_tvalid <= '1';
-                when BX => bx_m_wr_tvalid <= '1';
-                when CX => cx_m_wr_tvalid <= '1';
-                when DX => dx_m_wr_tvalid <= '1';
-                when BP => bp_m_wr_tvalid <= '1';
-                when SP => sp_m_wr_tvalid <= '1';
-                when DI => di_m_wr_tvalid <= '1';
-                when SI => si_m_wr_tvalid <= '1';
-                when DS => ds_m_wr_tvalid <= '1';
-                when ES => es_m_wr_tvalid <= '1';
-                when SS => ss_m_wr_tvalid <= '1';
-                when others => null;
-            end case;
+        if (rr_tvalid = '1' and rr_tready = '1') then
+
+            if ((rr_tdata.op = MOVU or rr_tdata.op = XCHG) and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) then
+                case rr_tdata.dreg is
+                    when AX => ax_m_wr_tvalid <= '1';
+                    when BX => bx_m_wr_tvalid <= '1';
+                    when CX => cx_m_wr_tvalid <= '1';
+                    when DX => dx_m_wr_tvalid <= '1';
+                    when BP => bp_m_wr_tvalid <= '1';
+                    when SP => sp_m_wr_tvalid <= '1';
+                    when DI => di_m_wr_tvalid <= '1';
+                    when SI => si_m_wr_tvalid <= '1';
+                    when DS => ds_m_wr_tvalid <= '1';
+                    when ES => es_m_wr_tvalid <= '1';
+                    when SS => ss_m_wr_tvalid <= '1';
+                    when others => null;
+                end case;
+            end if;
+
+            if (rr_tdata.op = XCHG and rr_tdata.dir = R2R) then
+                case rr_tdata.sreg is
+                    when AX => ax_m_wr_tvalid <= '1';
+                    when BX => bx_m_wr_tvalid <= '1';
+                    when CX => cx_m_wr_tvalid <= '1';
+                    when DX => dx_m_wr_tvalid <= '1';
+                    when BP => bp_m_wr_tvalid <= '1';
+                    when SP => sp_m_wr_tvalid <= '1';
+                    when DI => di_m_wr_tvalid <= '1';
+                    when SI => si_m_wr_tvalid <= '1';
+                    when others => null;
+                end case;
+            end if;
+
         end if;
 
         ax_m_wr_tmask <= rr_tdata.dmask;
@@ -159,7 +178,16 @@ begin
 
     update_regs_data_proc : process (all) begin
 
-        if (rr_tdata.dir = I2R) then
+        ax_m_wr_tdata <= rr_tdata.sreg_val;
+        bx_m_wr_tdata <= rr_tdata.sreg_val;
+        dx_m_wr_tdata <= rr_tdata.sreg_val;
+        bp_m_wr_tdata <= rr_tdata.sreg_val;
+        sp_m_wr_tdata <= rr_tdata.sreg_val;
+        di_m_wr_tdata <= rr_tdata.sreg_val;
+        si_m_wr_tdata <= rr_tdata.sreg_val;
+        cx_m_wr_tdata <= rr_tdata.sreg_val;
+
+        if (rr_tdata.op = MOVU and rr_tdata.dir = I2R) then
             ax_m_wr_tdata <= rr_tdata.data;
             bx_m_wr_tdata <= rr_tdata.data;
             dx_m_wr_tdata <= rr_tdata.data;
@@ -167,28 +195,45 @@ begin
             sp_m_wr_tdata <= rr_tdata.data;
             di_m_wr_tdata <= rr_tdata.data;
             si_m_wr_tdata <= rr_tdata.data;
-        else
-            ax_m_wr_tdata <= rr_tdata.sreg_val;
-            bx_m_wr_tdata <= rr_tdata.sreg_val;
-            dx_m_wr_tdata <= rr_tdata.sreg_val;
-            bp_m_wr_tdata <= rr_tdata.sreg_val;
-            sp_m_wr_tdata <= rr_tdata.sreg_val;
-            di_m_wr_tdata <= rr_tdata.sreg_val;
-            si_m_wr_tdata <= rr_tdata.sreg_val;
+            cx_m_wr_tdata <= rr_tdata.data;
+        end if;
+
+        if (rr_tdata.op = XCHG and rr_tdata.dir = R2R) then
+
+            case rr_tdata.sreg is
+                when AX => ax_m_wr_tdata <= rr_tdata.dreg_val;
+                when BX => bx_m_wr_tdata <= rr_tdata.dreg_val;
+                when CX => cx_m_wr_tdata <= rr_tdata.dreg_val;
+                when DX => dx_m_wr_tdata <= rr_tdata.dreg_val;
+                when BP => bp_m_wr_tdata <= rr_tdata.dreg_val;
+                when SP => sp_m_wr_tdata <= rr_tdata.dreg_val;
+                when DI => di_m_wr_tdata <= rr_tdata.dreg_val;
+                when SI => si_m_wr_tdata <= rr_tdata.dreg_val;
+                when others => null;
+            end case;
+
         end if;
 
         if (rep_upd_cx_tvalid = '1') then
             cx_m_wr_tdata <= rep_cx_cnt;
-        elsif (rr_tdata.dir = I2R) then
-            cx_m_wr_tdata <= rr_tdata.data;
-        else
-            cx_m_wr_tdata <= rr_tdata.sreg_val;
         end if;
 
         ds_m_wr_tdata <= rr_tdata.sreg_val;
         es_m_wr_tdata <= rr_tdata.sreg_val;
         ss_m_wr_tdata <= rr_tdata.sreg_val;
 
+    end process;
+
+    halt_mode_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                halt_mode <= '0';
+            else
+                if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = SYS and rr_tdata.code = SYS_HLT_OP) then
+                    halt_mode <= '1';
+                end if;
+            end if;
+        end if;
     end process;
 
     rep_handler_proc : process (clk) begin

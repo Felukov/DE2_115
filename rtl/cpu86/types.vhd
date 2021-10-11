@@ -18,7 +18,7 @@ package cpu86_types is
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS
     );
 
     constant ALU_OP_ADD     : std_logic_vector (3 downto 0) := "0000";
@@ -50,6 +50,9 @@ package cpu86_types is
     constant REPNZ_OP       : std_logic_vector (3 downto 0) := "0001";
 
     constant MOVS_OP        : std_logic_vector (3 downto 0) := "0000";
+    constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0001";
+    constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0010";
+    constant SYS_DBG_OP     : std_logic_vector (3 downto 0) := "0010";
 
     constant MEM_ADDR_SRC_ALU  : std_logic := '1';
     constant MEM_ADDR_SRC_EA   : std_logic := '0';
