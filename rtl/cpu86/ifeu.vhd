@@ -554,7 +554,7 @@ begin
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
 
                                 micro_tdata.mem_cmd <= '1';
-                                micro_tdata.mem_width <= '1';
+                                micro_tdata.mem_width <= rr_tdata.w;
                                 micro_tdata.mem_seg <= rr_tdata.seg_val;
                                 micro_tdata.mem_addr_src <= MEM_ADDR_SRC_EA;
                                 micro_tdata.mem_addr <= ea_val_plus_disp_next;
