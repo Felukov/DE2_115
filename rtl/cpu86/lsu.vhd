@@ -124,7 +124,7 @@ architecture rtl of lsu is
 begin
 
     axis_fifo_inst : axis_fifo generic map (
-        FIFO_DEPTH              => 4,
+        FIFO_DEPTH              => 16,
         FIFO_WIDTH              => 8,
         REGISTER_OUTPUT         => '0'
     ) port map (

@@ -139,10 +139,6 @@ begin
                     when BX => sreg_tdata(7 downto 0) <= bx_s_tdata(7 downto 0);
                     when CX => sreg_tdata(7 downto 0) <= cx_s_tdata(7 downto 0);
                     when DX => sreg_tdata(7 downto 0) <= dx_s_tdata(7 downto 0);
-                    when BP => sreg_tdata(7 downto 0) <= bp_s_tdata(7 downto 0);
-                    when SI => sreg_tdata(7 downto 0) <= si_s_tdata(7 downto 0);
-                    when DI => sreg_tdata(7 downto 0) <= di_s_tdata(7 downto 0);
-                    when SP => sreg_tdata(7 downto 0) <= sp_s_tdata(7 downto 0);
                     when others => sreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
                 end case;
 
@@ -153,10 +149,6 @@ begin
                     when BX => sreg_tdata(7 downto 0) <= bx_s_tdata(15 downto 8);
                     when CX => sreg_tdata(7 downto 0) <= cx_s_tdata(15 downto 8);
                     when DX => sreg_tdata(7 downto 0) <= dx_s_tdata(15 downto 8);
-                    when BP => sreg_tdata(7 downto 0) <= bp_s_tdata(15 downto 8);
-                    when SI => sreg_tdata(7 downto 0) <= si_s_tdata(15 downto 8);
-                    when DI => sreg_tdata(7 downto 0) <= di_s_tdata(15 downto 8);
-                    when SP => sreg_tdata(7 downto 0) <= sp_s_tdata(15 downto 8);
                     when others => sreg_tdata(7 downto 0) <= ax_s_tdata(15 downto 8);
                 end case;
 
@@ -170,6 +162,10 @@ begin
                     when SI => sreg_tdata <= si_s_tdata;
                     when DI => sreg_tdata <= di_s_tdata;
                     when SP => sreg_tdata <= sp_s_tdata;
+                    when CS => sreg_tdata <= instr_tuser(31 downto 16);
+                    when SS => sreg_tdata <= ss_s_tdata;
+                    when DS => sreg_tdata <= ds_s_tdata;
+                    when ES => sreg_tdata <= es_s_tdata;
                     when others => sreg_tdata <= ax_s_tdata;
                 end case;
         end case;
