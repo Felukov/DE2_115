@@ -29,7 +29,8 @@ package cpu86_types is
     constant ALU_OP_SBB     : std_logic_vector (3 downto 0) := "0101";
     constant ALU_OP_XOR     : std_logic_vector (3 downto 0) := "0110";
     constant ALU_OP_CMP     : std_logic_vector (3 downto 0) := "0111";
-    constant ALU_OP_INC     : std_logic_vector (3 downto 0) := "1110";
+    constant ALU_OP_INC     : std_logic_vector (3 downto 0) := "1000";
+    constant ALU_OP_DEC     : std_logic_vector (3 downto 0) := "1001";
     constant ALU_SF_ADD     : std_logic_vector (3 downto 0) := "1111";
 
     constant STACKU_POPR    : std_logic_vector (3 downto 0) := "0000";

@@ -540,10 +540,13 @@ begin
                     when x"26" | x"2E" | x"36" | x"3E" =>
                         instr_tdata.op <= SET_SEG;
 
-                    when x"40" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" |
-                         x"48" | x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" =>
+                    when x"40" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" =>
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_INC;
+
+                    when x"48" | x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_DEC;
 
                     when x"50" | x"51" | x"52" | x"53" | x"54" | x"55" | x"56" | x"57" =>
                         instr_tdata.op <= STACKU;
@@ -735,15 +738,25 @@ begin
 
                     when x"FE" =>
                         instr_tdata.op <= ALU;
-                        instr_tdata.code <= ALU_OP_INC;
                         instr_tdata.w <= '0';
+                        case u8_tdata(5 downto 3) is
+                            when "000" =>
+                                instr_tdata.code <= ALU_OP_INC;
+                            when "001" =>
+                                instr_tdata.code <= ALU_OP_DEC;
+                            when others =>
+                                null;
+                        end case;
 
                     when x"FF" =>
+                        instr_tdata.w <= '1';
                         case u8_tdata(5 downto 3) is
-                            when "000" | "001" =>
+                            when "000" =>
                                 instr_tdata.op <= ALU;
                                 instr_tdata.code <= ALU_OP_INC;
-                                instr_tdata.w <= '1';
+                            when "001" =>
+                                instr_tdata.op <= ALU;
+                                instr_tdata.code <= ALU_OP_DEC;
                             when "110" =>
                                 instr_tdata.op <= STACKU;
                                 instr_tdata.code <= STACKU_PUSHM;
@@ -1466,10 +1479,9 @@ begin
                 case byte_pos_chain(0) is
                     when first_byte =>
                         case (u8_tdata) is
-                            when x"40" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" =>
+                            when x"40" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" |
+                                 x"48" | x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" =>
                                 instr_tdata.data <= x"0001";
-                            when x"48" | x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" =>
-                                instr_tdata.data <= x"FFFF";
                             when x"E2" =>
                                 instr_tdata.data <= x"FFFF";
                             when x"0E" | x"1E" | x"16" | x"06" =>
@@ -1515,14 +1527,14 @@ begin
                             when x"FE" =>
                                 case u8_tdata(5 downto 3) is
                                     when "000" => instr_tdata.data <= x"0001";
-                                    when "001" => instr_tdata.data <= x"FFFF";
+                                    when "001" => instr_tdata.data <= x"0001";
                                     when others => null;
                                 end case;
 
                             when x"FF" =>
                                 case u8_tdata(5 downto 3) is
                                     when "000" => instr_tdata.data <= x"0001";
-                                    when "001" => instr_tdata.data <= x"FFFF";
+                                    when "001" => instr_tdata.data <= x"0001";
                                     when "110" => instr_tdata.data <= x"FFFE";
                                     when others => null;
                                 end case;

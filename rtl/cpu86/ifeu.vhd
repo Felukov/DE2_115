@@ -455,6 +455,7 @@ begin
                             when others =>
                                 null;
                         end case;
+
                     when STACKU =>
                         flag_dont_update;
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
@@ -643,10 +644,10 @@ begin
 
                             when others =>
                                 case rr_tdata.code is
-                                    when ALU_OP_INC =>
+                                    when ALU_OP_INC | ALU_OP_DEC =>
                                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
 
-                                        alu_command_imm(cmd => ALU_SF_ADD,
+                                        alu_command_imm(cmd => rr_tdata.code,
                                             aval => rr_tdata.sreg_val,
                                             bval => rr_tdata.data,
                                             dreg => rr_tdata.dreg,

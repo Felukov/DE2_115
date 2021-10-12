@@ -104,6 +104,7 @@ architecture rtl of mexec is
 
     signal carry                : std_logic_vector(16 downto 0);
     signal add_next             : std_logic_vector(16 downto 0);
+    signal sub_next             : std_logic_vector(16 downto 0);
     signal adc_next             : std_logic_vector(16 downto 0);
     signal and_next             : std_logic_vector(15 downto 0);
     signal or_next              : std_logic_vector(15 downto 0);
@@ -160,7 +161,7 @@ begin
 
     lsu_rd_s_tready <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1' else '0';
 
-    flags_m_wr_tdata <= (not flags_wr_be and flags_s_tdata) or (flags_wr_be and flags_wr_vector);
+    flags_m_wr_tdata <= ((not flags_wr_be) and flags_s_tdata) or (flags_wr_be and flags_wr_vector);
 
     -- alu
     a_next_proc : process (all) begin
@@ -188,6 +189,7 @@ begin
     end process;
 
     add_next <= std_logic_vector(unsigned('0' & a_next) + unsigned('0' & b_next));
+    sub_next <= std_logic_vector(unsigned('0' & a_next) - unsigned('0' & b_next));
     carry(16 downto 1) <= (others => '0');
     carry(0) <= flags_s_tdata(FLAG_CF);
     adc_next <= std_logic_vector(unsigned(add_next) + unsigned(carry));
@@ -224,6 +226,8 @@ begin
                     when ALU_OP_XOR =>
                         alu_tdata.dval(15 downto 0) <= xor_next;
                         alu_tdata.dval(16) <= '0';
+                    when ALU_OP_SUB | ALU_OP_DEC =>
+                        alu_tdata.dval <= sub_next;
                     when others =>
                         alu_tdata.dval <= add_next;
                 end case;
@@ -330,7 +334,7 @@ begin
                                     flags_wr_be(FLAG_PF) <= '1';
                                     flags_wr_be(FLAG_01) <= '0';
                                     flags_wr_be(FLAG_CF) <= '1';
-                                when ALU_OP_INC =>
+                                when ALU_OP_INC | ALU_OP_DEC =>
                                     flags_wr_be(FLAG_15) <= '0';
                                     flags_wr_be(FLAG_14) <= '0';
                                     flags_wr_be(FLAG_13) <= '0';
@@ -424,18 +428,18 @@ begin
             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR =>
                 flags_of <= '0';
 
-            when ALU_OP_SUB =>
+            when ALU_OP_SUB | ALU_OP_DEC =>
                 if alu_tdata.w = '0' then
                     flags_of <= (alu_tdata.aval(7) xor alu_tdata.bval(7)) and (alu_tdata.dval(7) xor alu_tdata.aval(7));
                 else
-                    flags_of <= (alu_tdata.aval(15) xor alu_tdata.bval(15)) and (alu_tdata.dval(15) xor alu_tdata.bval(15));
+                    flags_of <= (alu_tdata.aval(15) xor alu_tdata.bval(15)) and (alu_tdata.dval(15) xor alu_tdata.aval(15));
                 end if;
 
             when others => --ALU_OP_ADD
                 if alu_tdata.w = '0' then
-                    flags_of <= not (alu_tdata.aval(7) xor alu_tdata.bval(7)) and (alu_tdata.dval(7) xor alu_tdata.bval(7));
+                    flags_of <= not (alu_tdata.aval(7) xor alu_tdata.bval(7)) and (alu_tdata.dval(7) xor alu_tdata.aval(7));
                 else
-                    flags_of <= not (alu_tdata.aval(15) xor alu_tdata.bval(15)) and (alu_tdata.dval(15) xor alu_tdata.bval(15));
+                    flags_of <= not (alu_tdata.aval(15) xor alu_tdata.bval(15)) and (alu_tdata.dval(15) xor alu_tdata.aval(15));
                 end if;
 
         end case;
