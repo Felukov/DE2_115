@@ -980,13 +980,13 @@ begin
 
                     when ALU =>
                         micro_tdata.unlk_fl <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
 
                         case rr_tdata_buf.dir is
                             when M2M =>
                                 if (micro_cnt = 2) then
                                     micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                     micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
-                                    micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
 
                                     micro_tdata.read_fifo <= '1';
 
@@ -999,7 +999,6 @@ begin
                                 else
                                     micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
                                     micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                                    micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
 
                                     micro_tdata.read_fifo <= '0';
 
@@ -1017,7 +1016,6 @@ begin
                             when M2R =>
                                 micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
-                                micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
 
                                 micro_tdata.read_fifo <= '1';
 
@@ -1033,7 +1031,6 @@ begin
                                 if (micro_cnt = 2) then
                                     micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                     micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
-                                    micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
 
                                     micro_tdata.read_fifo <= '1';
 
@@ -1045,8 +1042,12 @@ begin
                                     micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
                                 else
                                     micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
-                                    micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                                    micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                                    if (rr_tdata_buf.code = ALU_OP_CMP) then
+                                        micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
+                                    else
+                                        micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
+                                    end if;
+
                                     micro_tdata.read_fifo <= '0';
                                     micro_tdata.alu_wb <= '0';
 

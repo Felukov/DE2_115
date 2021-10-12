@@ -477,6 +477,31 @@ begin
                         instr_tdata.code <= ALU_OP_ADC;
                         instr_tdata.w <= '1';
 
+                    when x"18" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SBB;
+                        instr_tdata.w <= '0';
+                    when x"19" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SBB;
+                        instr_tdata.w <= '1';
+                    when x"1A" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SBB;
+                        instr_tdata.w <= '0';
+                    when x"1B" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SBB;
+                        instr_tdata.w <= '1';
+                    when x"1C" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SBB;
+                        instr_tdata.w <= '0';
+                    when x"1D" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SBB;
+                        instr_tdata.w <= '1';
+
                     when x"20" =>
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_AND;
@@ -502,6 +527,31 @@ begin
                         instr_tdata.code <= ALU_OP_AND;
                         instr_tdata.w <= '1';
 
+                    when x"28" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SUB;
+                        instr_tdata.w <= '0';
+                    when x"29" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SUB;
+                        instr_tdata.w <= '1';
+                    when x"2A" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SUB;
+                        instr_tdata.w <= '0';
+                    when x"2B" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SUB;
+                        instr_tdata.w <= '1';
+                    when x"2C" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SUB;
+                        instr_tdata.w <= '0';
+                    when x"2D" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_SUB;
+                        instr_tdata.w <= '1';
+
                     when x"30" =>
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_XOR;
@@ -525,6 +575,31 @@ begin
                     when x"35" =>
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_XOR;
+                        instr_tdata.w <= '1';
+
+                    when x"38" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_CMP;
+                        instr_tdata.w <= '0';
+                    when x"39" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_CMP;
+                        instr_tdata.w <= '1';
+                    when x"3A" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_CMP;
+                        instr_tdata.w <= '0';
+                    when x"3B" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_CMP;
+                        instr_tdata.w <= '1';
+                    when x"3C" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_CMP;
+                        instr_tdata.w <= '0';
+                    when x"3D" =>
+                        instr_tdata.op <= ALU;
+                        instr_tdata.code <= ALU_OP_CMP;
                         instr_tdata.w <= '1';
 
                     when x"0E" | x"1E" | x"16" | x"06" =>

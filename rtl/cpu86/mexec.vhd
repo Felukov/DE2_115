@@ -82,7 +82,8 @@ architecture rtl of mexec is
         dmask                   : std_logic_vector(1 downto 0);
         aval                    : std_logic_vector(15 downto 0);
         bval                    : std_logic_vector(15 downto 0);
-        dval                    : std_logic_vector(16 downto 0);
+        dval                    : std_logic_vector(16 downto 0); --dest
+        rval                    : std_logic_vector(16 downto 0); --result
     end record;
 
     signal micro_tvalid         : std_logic;
@@ -106,6 +107,7 @@ architecture rtl of mexec is
     signal add_next             : std_logic_vector(16 downto 0);
     signal sub_next             : std_logic_vector(16 downto 0);
     signal adc_next             : std_logic_vector(16 downto 0);
+    signal sbb_next             : std_logic_vector(16 downto 0);
     signal and_next             : std_logic_vector(15 downto 0);
     signal or_next              : std_logic_vector(15 downto 0);
     signal xor_next             : std_logic_vector(15 downto 0);
@@ -193,6 +195,7 @@ begin
     carry(16 downto 1) <= (others => '0');
     carry(0) <= flags_s_tdata(FLAG_CF);
     adc_next <= std_logic_vector(unsigned(add_next) + unsigned(carry));
+    sbb_next <= std_logic_vector(unsigned(sub_next) - unsigned(carry));
     and_next <= a_next and b_next;
     or_next  <= a_next or  b_next;
     xor_next <= a_next xor b_next;
@@ -203,7 +206,11 @@ begin
             if resetn = '0' then
                 alu_tvalid <= '0';
             else
-                alu_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1') else '0';
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1') then
+                    alu_tvalid <= '1';
+                else
+                    alu_tvalid <= '0';
+                end if;
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1') then
@@ -217,19 +224,34 @@ begin
                 case (micro_tdata.alu_code) is
                     when ALU_OP_ADC =>
                         alu_tdata.dval <= adc_next;
+                        alu_tdata.rval <= adc_next;
                     when ALU_OP_AND =>
                         alu_tdata.dval(15 downto 0) <= and_next;
                         alu_tdata.dval(16) <= '0';
+                        alu_tdata.rval(15 downto 0) <= and_next;
+                        alu_tdata.rval(16) <= '0';
                     when ALU_OP_OR =>
                         alu_tdata.dval(15 downto 0) <= or_next;
                         alu_tdata.dval(16) <= '0';
+                        alu_tdata.rval(15 downto 0) <= or_next;
+                        alu_tdata.rval(16) <= '0';
                     when ALU_OP_XOR =>
                         alu_tdata.dval(15 downto 0) <= xor_next;
                         alu_tdata.dval(16) <= '0';
+                        alu_tdata.rval(15 downto 0) <= xor_next;
+                        alu_tdata.rval(16) <= '0';
                     when ALU_OP_SUB | ALU_OP_DEC =>
                         alu_tdata.dval <= sub_next;
+                        alu_tdata.rval <= sub_next;
+                    when ALU_OP_SBB =>
+                        alu_tdata.dval <= sbb_next;
+                        alu_tdata.rval <= sbb_next;
+                    when ALU_OP_CMP =>
+                        alu_tdata.dval <= '0' & a_next;
+                        alu_tdata.rval <= sub_next;
                     when others =>
                         alu_tdata.dval <= add_next;
+                        alu_tdata.rval <= add_next;
                 end case;
             end if;
 
@@ -254,21 +276,73 @@ begin
                 si_m_wr_tkeep_lock <= '0';
                 di_m_wr_tkeep_lock <= '0';
             else
-                ax_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = AX) else '0';
-                bx_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = BX) else '0';
-                cx_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = CX) else '0';
-                dx_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = DX) else '0';
-                bp_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = BP) else '0';
-                sp_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = SP) else '0';
-                di_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = DI) else '0';
-                si_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = SI) else '0';
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = AX)) then
+                    ax_m_wr_tvalid <= '1';
+                else
+                    ax_m_wr_tvalid <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = BX)) then
+                    bx_m_wr_tvalid <= '1';
+                else
+                    bx_m_wr_tvalid <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = CX)) then
+                    cx_m_wr_tvalid <= '1';
+                else
+                    cx_m_wr_tvalid <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = DX)) then
+                    dx_m_wr_tvalid <= '1';
+                else
+                    dx_m_wr_tvalid <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = BP)) then
+                    bp_m_wr_tvalid <= '1';
+                else
+                    bp_m_wr_tvalid <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = SP)) then
+                    sp_m_wr_tvalid <= '1';
+                else
+                    sp_m_wr_tvalid <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = DI)) then
+                    di_m_wr_tvalid <= '1';
+                else
+                    di_m_wr_tvalid <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = SI)) then
+                    si_m_wr_tvalid <= '1';
+                else
+                    si_m_wr_tvalid <= '0';
+                end if;
 
-                ds_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = DS) else '0';
-                es_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = ES) else '0';
-                ss_m_wr_tvalid <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = SS) else '0';
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = DS)) then
+                    ds_m_wr_tvalid <= '1';
+                else
+                    ds_m_wr_tvalid <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = ES)) then
+                    es_m_wr_tvalid <= '1';
+                else
+                    es_m_wr_tvalid <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = SS)) then
+                    ss_m_wr_tvalid <= '1';
+                else
+                    ss_m_wr_tvalid <= '0';
+                end if;
 
-                si_m_wr_tkeep_lock <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_keep_lock = '1' and micro_tdata.alu_dreg = SI) else '0';
-                di_m_wr_tkeep_lock <= '1' when (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_keep_lock = '1' and micro_tdata.alu_dreg = DI) else '0';
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_keep_lock = '1' and micro_tdata.alu_dreg = SI)) then
+                    si_m_wr_tkeep_lock <= '1';
+                else
+                    si_m_wr_tkeep_lock <= '0';
+                end if;
+                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_keep_lock = '1' and micro_tdata.alu_dreg = DI)) then
+                    di_m_wr_tkeep_lock <= '1';
+                else
+                    di_m_wr_tkeep_lock <= '0';
+                end if;
             end if;
 
         end if;
@@ -397,19 +471,28 @@ begin
 
     flag_calc_proc : process (all) begin
 
-        flags_pf <= not (xor alu_tdata.dval(7 downto 0));
-        flags_af <= alu_tdata.aval(4) xor alu_tdata.bval(4) xor alu_tdata.dval(4);
+        flags_pf <= not (alu_tdata.rval(7) xor alu_tdata.rval(6) xor alu_tdata.rval(5) xor alu_tdata.rval(4) xor
+                         alu_tdata.rval(3) xor alu_tdata.rval(2) xor alu_tdata.rval(1) xor alu_tdata.rval(0));
+        flags_af <= alu_tdata.aval(4) xor alu_tdata.bval(4) xor alu_tdata.rval(4);
 
         if alu_tdata.w = '0' then
-            flags_zf <= '1' when alu_tdata.dval(7 downto 0) = x"00" else '0';
+            if (alu_tdata.rval(7 downto 0) = x"00") then
+                flags_zf <= '1';
+            else
+                flags_zf <= '0';
+            end if;
         else
-            flags_zf <= '1' when alu_tdata.dval(15 downto 0) = x"0000" else '0';
+            if (alu_tdata.rval(15 downto 0) = x"0000") then
+                flags_zf <= '1';
+            else
+                flags_zf <= '0';
+            end if;
         end if;
 
         if alu_tdata.w = '0' then
-            flags_sf <= alu_tdata.dval(7);
+            flags_sf <= alu_tdata.rval(7);
         else
-            flags_sf <= alu_tdata.dval(15);
+            flags_sf <= alu_tdata.rval(15);
         end if;
 
         case alu_tdata.code is
@@ -418,9 +501,9 @@ begin
             when others =>
                 --ALU_OP_ADD | ALU_OP_SUB
                 if alu_tdata.w = '0' then
-                    flags_cf <= alu_tdata.aval(8) xor alu_tdata.bval(8) xor alu_tdata.dval(8);
+                    flags_cf <= alu_tdata.aval(8) xor alu_tdata.bval(8) xor alu_tdata.rval(8);
                 else
-                    flags_cf <= alu_tdata.dval(16);
+                    flags_cf <= alu_tdata.rval(16);
                 end if;
         end case;
 
@@ -428,18 +511,18 @@ begin
             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR =>
                 flags_of <= '0';
 
-            when ALU_OP_SUB | ALU_OP_DEC =>
+            when ALU_OP_SUB | ALU_OP_DEC | ALU_OP_SBB | ALU_OP_CMP =>
                 if alu_tdata.w = '0' then
-                    flags_of <= (alu_tdata.aval(7) xor alu_tdata.bval(7)) and (alu_tdata.dval(7) xor alu_tdata.aval(7));
+                    flags_of <= (alu_tdata.aval(7) xor alu_tdata.bval(7)) and (alu_tdata.rval(7) xor alu_tdata.aval(7));
                 else
-                    flags_of <= (alu_tdata.aval(15) xor alu_tdata.bval(15)) and (alu_tdata.dval(15) xor alu_tdata.aval(15));
+                    flags_of <= (alu_tdata.aval(15) xor alu_tdata.bval(15)) and (alu_tdata.rval(15) xor alu_tdata.aval(15));
                 end if;
 
             when others => --ALU_OP_ADD
                 if alu_tdata.w = '0' then
-                    flags_of <= not (alu_tdata.aval(7) xor alu_tdata.bval(7)) and (alu_tdata.dval(7) xor alu_tdata.aval(7));
+                    flags_of <= not (alu_tdata.aval(7) xor alu_tdata.bval(7)) and (alu_tdata.rval(7) xor alu_tdata.aval(7));
                 else
-                    flags_of <= not (alu_tdata.aval(15) xor alu_tdata.bval(15)) and (alu_tdata.dval(15) xor alu_tdata.aval(15));
+                    flags_of <= not (alu_tdata.aval(15) xor alu_tdata.bval(15)) and (alu_tdata.rval(15) xor alu_tdata.aval(15));
                 end if;
 
         end case;
