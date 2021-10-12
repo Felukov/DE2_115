@@ -51,6 +51,8 @@ package cpu86_types is
     constant REPNZ_OP       : std_logic_vector (3 downto 0) := "0001";
 
     constant MOVS_OP        : std_logic_vector (3 downto 0) := "0000";
+    constant STOS_OP        : std_logic_vector (3 downto 0) := "0001";
+
     constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0001";
     constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0010";
     constant SYS_DBG_OP     : std_logic_vector (3 downto 0) := "0010";
