@@ -560,7 +560,11 @@ begin
                     wait until rising_edge(CLK);
                 end loop;
             end if;
-            u8_s_tvalid <= '1';
+            if (u8_s_hs < tb_data(active_test_id).input_stream.len) then
+                u8_s_tvalid <= '1';
+            else
+                u8_s_tvalid <= '0';
+            end if;
             u8_s_tdata <= tb_data(active_test_id).input_stream.data(u8_s_hs);
             u8_s_tuser <= tb_data(active_test_id).input_stream.user(u8_s_hs);
             wait until rising_edge(CLK);
@@ -568,9 +572,13 @@ begin
                 u8_s_hs := 0;
                 loop
                     if (req_tdata = tb_data(active_test_id).input_stream.user(u8_s_hs)) then
+                        report "Jump hit";
                         exit;
                     else
                         u8_s_hs := u8_s_hs + 1;
+                    end if;
+                    if (u8_s_hs > tb_data(active_test_id).input_stream.len) then
+                        report "Jump entry not found" severity error;
                     end if;
                 end loop;
                 u8_s_tvalid <= '0';
@@ -578,14 +586,14 @@ begin
                     wait until rising_edge(CLK);
                 end loop;
             elsif (u8_s_tready = '1') then
-                if (u8_s_hs = tb_data(active_test_id).input_stream.len-1) then
-                    u8_s_tvalid <= '0';
-                    wait until rising_edge(CLK) and EVENT_NEW_TEST = '1';
-                    active_test_id := active_test_id + 1;
-                    u8_s_hs := 0;
-                    if (active_test_id = tb_cnt) then
-                        Report "Testbench is completed.";
-                        wait;
+                if (u8_s_hs = tb_data(active_test_id).input_stream.len) then
+                    if EVENT_NEW_TEST = '1' then
+                        active_test_id := active_test_id + 1;
+                        u8_s_hs := 0;
+                        if (active_test_id = tb_cnt) then
+                            report "Testbench is completed.";
+                            wait;
+                        end if;
                     end if;
                     --exit;
                 else
@@ -594,6 +602,7 @@ begin
             end if;
         end loop;
         u8_s_tvalid <= '0';
+        report "End of input stream";
         wait;
 
     end process;
