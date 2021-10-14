@@ -356,10 +356,10 @@ begin
             micro_tdata.cmd(MICRO_OP_CMD_FLG) <= '0';
         end procedure;
 
-        procedure flag_update (flag : std_logic_vector; val : std_logic) is begin
+        procedure flag_update (flag : std_logic_vector; val : fl_action_t) is begin
             micro_tdata.cmd(MICRO_OP_CMD_FLG) <= '1';
             micro_tdata.flg_no <= flag;
-            micro_tdata.flg_val <= val;
+            micro_tdata.fl <= val;
         end procedure;
 
         procedure alu_command_imm(cmd, aval, bval: std_logic_vector; dreg : reg_t; dmask : std_logic_vector) is begin
@@ -483,7 +483,7 @@ begin
                         micro_tdata.alu_wb <= '0';
                         micro_tdata.unlk_fl <= '0';
 
-                        flag_update(rr_tdata.code, rr_tdata.w);
+                        flag_update(rr_tdata.code, rr_tdata.fl);
 
                     when STR =>
                         flag_dont_update;

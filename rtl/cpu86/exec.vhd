@@ -523,7 +523,7 @@ begin
 
 
     cpu_reg_jmp_lock : cpu_reg generic map (
-        DATA_WIDTH              => 1
+        DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
         resetn                  => resetn,

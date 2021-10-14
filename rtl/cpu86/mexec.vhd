@@ -114,6 +114,7 @@ architecture rtl of mexec is
 
     signal flags_wr_be          : std_logic_vector(15 downto 0);
     signal flags_wr_new_val     : std_logic;
+    signal flags_toggle_cf      : std_logic;
     signal flags_src            : flag_src_t;
     signal flags_wr_vector      : std_logic_vector(15 downto 0);
 
@@ -469,7 +470,17 @@ begin
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1') then
-                flags_wr_new_val <= micro_tdata.flg_val;
+                case (micro_tdata.fl) is
+                    when SET => flags_wr_new_val <= '1';
+                    when CLR => flags_wr_new_val <= '0';
+                    when others => null;
+                end case;
+
+                if (micro_tdata.fl = TOGGLE) then
+                    flags_toggle_cf <= '1';
+                else
+                    flags_toggle_cf <= '0';
+                end if;
             end if;
 
         end if;
@@ -534,7 +545,7 @@ begin
         end case;
 
         if (flags_src = ALU_DATA) then
-            flags_wr_vector <= alu_tdata.dval(15 downto 0);
+            flags_wr_vector(15 downto 1) <= alu_tdata.dval(15 downto 1);
         else
             flags_wr_vector(FLAG_15) <= '0';
             flags_wr_vector(FLAG_14) <= '0';
@@ -551,12 +562,20 @@ begin
             flags_wr_vector(FLAG_03) <= '0';
             flags_wr_vector(FLAG_PF) <= flags_pf;
             flags_wr_vector(FLAG_01) <= '0';
-            if (flags_src = ALU_FLAGS) then
-                flags_wr_vector(FLAG_CF) <= flags_cf;
-            else
-                flags_wr_vector(FLAG_CF) <= flags_wr_new_val;
-            end if;
         end if;
+
+        case flags_src is
+            when ALU_DATA =>
+                flags_wr_vector(FLAG_CF) <= alu_tdata.dval(0);
+            when ALU_FLAGS =>
+                flags_wr_vector(FLAG_CF) <= flags_cf;
+            when others =>
+                if (flags_toggle_cf = '1') then
+                    flags_wr_vector(FLAG_CF) <= not flags_s_tdata(FLAG_CF);
+                else
+                    flags_wr_vector(FLAG_CF) <= flags_wr_new_val;
+                end if;
+        end case;
 
     end process;
 

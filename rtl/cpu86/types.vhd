@@ -21,6 +21,10 @@ package cpu86_types is
         MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS
     );
 
+    type fl_action_t is (
+        SET, CLR, TOGGLE
+    );
+
     constant ALU_OP_ADD     : std_logic_vector (3 downto 0) := "0000";
     constant ALU_OP_SUB     : std_logic_vector (3 downto 0) := "0001";
     constant ALU_OP_OR      : std_logic_vector (3 downto 0) := "0010";
@@ -85,9 +89,10 @@ package cpu86_types is
     constant FLAG_01            : natural := 1;
     constant FLAG_CF            : natural := 0;
 
-    constant DECODED_INSTR_T_WIDTH : integer := 62;
+    constant DECODED_INSTR_T_WIDTH : integer := 64;
 
     type packed_decoded_instr_t is record
+        fl          : std_logic_vector(63 downto 62);
         op          : std_logic_vector(61 downto 57);
         code        : std_logic_vector(56 downto 53);
         w           : std_logic_vector(52 downto 52);
@@ -105,6 +110,7 @@ package cpu86_types is
         op          : op_t;
         code        : std_logic_vector(3 downto 0);
         w           : std_logic;
+        fl          : fl_action_t;
         dir         : direction_t;
         ea          : ea_t;
         dreg        : reg_t;
@@ -125,6 +131,7 @@ package cpu86_types is
         op          : op_t;
         code        : std_logic_vector(3 downto 0);
         w           : std_logic;
+        fl          : fl_action_t;
         dir         : direction_t;
         ea          : ea_t;
         dreg        : reg_t;
@@ -172,7 +179,7 @@ package cpu86_types is
         mem_data_src    : std_logic_vector(1 downto 0);
         mem_data        : std_logic_vector(15 downto 0);
         flg_no          : std_logic_vector(3 downto 0);
-        flg_val         : std_logic;
+        fl              : fl_action_t;
         dbg_cs          : std_logic_vector(15 downto 0);
         dbg_ip          : std_logic_vector(15 downto 0);
     end record;
@@ -201,7 +208,7 @@ package body cpu86_types is
         p.data := decoded_instr.data;
         p.disp := decoded_instr.disp;
 
-        v := p.op & p.code & p.w & p.dir & p.ea & p.dreg & p.dmask & p.sreg & p.smask & p.data & p.disp;
+        v := p.fl & p.op & p.code & p.w & p.dir & p.ea & p.dreg & p.dmask & p.sreg & p.smask & p.data & p.disp;
 
         return v;
 
@@ -214,7 +221,7 @@ package body cpu86_types is
     begin
         t := v;
         --(p.op,  p.code, p.w, p.dir, p.ea, p.dreg, p.dmask, p.sreg, p.smask, p.data, p.disp) := v;
-
+        p.fl := t(p.fl'range);
         p.op := t(p.op'range);
         p.code := t(p.code'range);
         p.w := t(p.w'range);
@@ -227,6 +234,7 @@ package body cpu86_types is
         p.data := t(p.data'range);
         p.disp := t(p.disp'range);
 
+        d.fl := fl_action_t'val(to_integer(unsigned(p.fl)));
         d.op := op_t'val(to_integer(unsigned(p.op)));
         d.code := p.code;
         d.w := p.w(52);

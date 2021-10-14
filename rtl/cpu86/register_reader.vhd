@@ -462,6 +462,7 @@ begin
 
                 rr_tdata.op <= instr_tdata.op;
                 rr_tdata.w <= instr_tdata.w;
+                rr_tdata.fl <= instr_tdata.fl;
                 rr_tdata.code <= instr_tdata.code;
                 rr_tdata.dir <= instr_tdata.dir;
                 rr_tdata.ea <= instr_tdata.ea;
