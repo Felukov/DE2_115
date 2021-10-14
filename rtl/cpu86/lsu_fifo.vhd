@@ -64,7 +64,7 @@ begin
     add_s_taddr     <= std_logic_vector(to_unsigned(wr_addr, ADDR_WIDTH));
     wr_data_tdata   <= add_s_tdata;
     wr_data_thit    <= add_s_thit;
-    wr_data_tready  <= '1' when wr_addr_next /= rd_addr else '0';
+    --wr_data_tready  <= '1' when wr_addr_next /= rd_addr else '0';
 
     fifo_m_tvalid   <= out_tvalid;
     out_tready      <= fifo_m_tready;
@@ -73,11 +73,34 @@ begin
     data_tvalid     <= '1' when wr_addr /= rd_addr else '0';
     data_tready     <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
 
-    wr_addr_next    <= (wr_addr + 1) mod FIFO_DEPTH;
-    rd_addr_next    <= (rd_addr + 1) mod FIFO_DEPTH;
+    --wr_addr_next    <= (wr_addr + 1) mod FIFO_DEPTH;
+    --rd_addr_next    <= (rd_addr + 1) mod FIFO_DEPTH;
 
     q_thit          <= fifo_ram_valid(rd_addr);
     q_tdata         <= fifo_ram_data(rd_addr);
+
+    wr_data_tready_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                wr_data_tready <= '1';
+            else
+                if (wr_addr_next + 1) mod FIFO_DEPTH /= rd_addr_next then
+                    wr_data_tready <= '1';
+                else
+                    wr_data_tready <= '0';
+                end if;
+            end if;
+
+        end if;
+    end process;
+
+    write_proc_next: process (all) begin
+        if (wr_data_tvalid = '1' and wr_data_tready = '1') then
+            wr_addr_next <= (wr_addr + 1) mod FIFO_DEPTH;
+        else
+            wr_addr_next <= wr_addr;
+        end if;
+    end process;
 
     write_proc: process (clk) begin
         if rising_edge(clk) then
@@ -96,9 +119,11 @@ begin
 
                 end loop;
 
-                if wr_data_tvalid = '1' and wr_data_tready = '1' then
-                    wr_addr <= wr_addr_next;
-                end if;
+                wr_addr <= wr_addr_next;
+
+                -- if wr_data_tvalid = '1' and wr_data_tready = '1' then
+                --     wr_addr <= wr_addr_next;
+                -- end if;
 
             end if;
 
@@ -113,14 +138,23 @@ begin
         end if;
     end process;
 
+    read_proc_next : process (all) begin
+        if data_tvalid = '1' and data_tready = '1' and q_thit = '1' then
+            rd_addr_next <= (rd_addr + 1) mod FIFO_DEPTH;
+        else
+            rd_addr_next <= rd_addr;
+        end if;
+    end process;
+
     read_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
                 rd_addr <= 0;
             else
-                if data_tvalid = '1' and data_tready = '1' and q_thit = '1' then
-                    rd_addr <= rd_addr_next;
-                end if;
+                rd_addr <= rd_addr_next;
+                -- if data_tvalid = '1' and data_tready = '1' and q_thit = '1' then
+                --     rd_addr <= rd_addr_next;
+                -- end if;
             end if;
         end if;
     end process;
@@ -151,7 +185,7 @@ begin
     async_output_gen: if (REGISTER_OUTPUT = '0') generate
 
         out_tvalid <= '1' when data_tvalid = '1' and q_thit = '1' else '0';
-        data_tready <= out_tready;
+        --data_tready <= out_tready;
         out_tdata <= q_tdata;
 
     end generate;
