@@ -298,6 +298,10 @@ begin
                 if sreg_tvalid = '1' and dreg_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
                     instr_tready <= '1';
                 end if;
+            when R2F =>
+                if sreg_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
+                    instr_tready <= '1';
+                end if;
             when R2M =>
                 if sreg_tvalid = '1' and seg_tvalid = '1' and ea_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
                     instr_tready <= '1';
@@ -331,7 +335,8 @@ begin
                     instr_tready <= '1';
                 end if;
             when STR =>
-                if seg_tvalid = '1' and ea_tvalid = '1' and es_s_tvalid = '1' and di_s_tvalid = '1' and ax_s_tvalid = '1' and flags_s_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
+                if seg_tvalid = '1' and ea_tvalid = '1' and es_s_tvalid = '1' and di_s_tvalid = '1' and ax_s_tvalid = '1' and flags_s_tvalid = '1' and
+                    (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
                     instr_tready <= '1';
                 end if;
         end case;
@@ -353,7 +358,7 @@ begin
         es_m_lock_tvalid <= '0';
         ss_m_lock_tvalid <= '0';
 
-        if (instr_tvalid = '1' and instr_tready = '1') then
+        if (instr_tvalid = '1' and instr_tready = '1' and resetn = '1') then
 
             case instr_tdata.dir is
                 when R2R | I2R | M2R =>

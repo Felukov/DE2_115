@@ -648,6 +648,16 @@ begin
                         instr_tdata.code <= STACKU_PUSHI;
                         instr_tdata.w <= '1';
 
+                    when x"98" =>
+                        instr_tdata.op <= FEU;
+                        instr_tdata.code <= FEU_CBW;
+                        instr_tdata.w <= '0';
+
+                    when x"99" =>
+                        instr_tdata.op <= FEU;
+                        instr_tdata.code <= FEU_CWD;
+                        instr_tdata.w <= '1';
+
                     when x"9C" =>
                         instr_tdata.op <= STACKU;
                         instr_tdata.code <= STACKU_PUSHR;
@@ -657,6 +667,11 @@ begin
                         instr_tdata.op <= STACKU;
                         instr_tdata.code <= STACKU_POPR;
                         instr_tdata.w <= '1';
+
+                    when x"9E" =>
+                        instr_tdata.op <= MOVU;
+                        instr_tdata.code <= "0000";
+                        instr_tdata.w <= '0';
 
                     when x"A0" | x"A2" =>
                         instr_tdata.op <= MOVU;
@@ -690,6 +705,11 @@ begin
                         instr_tdata.op <= MOVU;
                         instr_tdata.code <= "0000";
                         instr_tdata.w <= '0';
+
+                    when x"8D" =>
+                        instr_tdata.op <= FEU;
+                        instr_tdata.code <= FEU_LEA;
+                        instr_tdata.w <= '1';
 
                     when x"90" | x"91" | x"92" | x"93" | x"94" | x"95" | x"96" | x"97" =>
                         instr_tdata.op <= XCHG;
@@ -1126,6 +1146,18 @@ begin
                         instr_tdata.dreg <= SP;
                         instr_tdata.dmask <= "11";
 
+                    when x"98" =>
+                        instr_tdata.dreg <= AX;
+                        instr_tdata.dmask <= "11";
+
+                    when x"99" =>
+                        instr_tdata.dreg <= DX;
+                        instr_tdata.dmask <= "11";
+
+                    when x"9E" =>
+                        instr_tdata.dreg <= FL;
+                        instr_tdata.dmask <= "01";
+
                     when x"9D" | x"9C" =>
                         instr_tdata.dreg <= SP;
                         instr_tdata.dmask <= "11";
@@ -1382,7 +1414,11 @@ begin
 
                     when x"E2" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
 
+                    when x"98" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
+                    when x"99" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
+
                     when x"9C" => instr_tdata.sreg <= FL; instr_tdata.smask <= "11";
+                    when x"9E" => instr_tdata.sreg <= AX; instr_tdata.smask <= "10";
 
                     when x"A2" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
                     when x"A3" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";

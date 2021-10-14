@@ -14,7 +14,7 @@ package cpu86_types is
     );
 
     type direction_t is (
-        R2R, M2R, R2M, I2R, I2M, STK, STKM, M2M, STR, SSEG, SFLG
+        R2R, M2R, R2M, I2R, I2M, R2F, STK, STKM, M2M, STR, SSEG, SFLG
     );
 
     type op_t is (
@@ -53,9 +53,13 @@ package cpu86_types is
     constant MOVS_OP        : std_logic_vector (3 downto 0) := "0000";
     constant STOS_OP        : std_logic_vector (3 downto 0) := "0001";
 
-    constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0001";
-    constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0010";
+    constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0000";
+    constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0001";
     constant SYS_DBG_OP     : std_logic_vector (3 downto 0) := "0010";
+
+    constant FEU_CBW        : std_logic_vector (3 downto 0) := "0000";
+    constant FEU_CWD        : std_logic_vector (3 downto 0) := "0001";
+    constant FEU_LEA        : std_logic_vector (3 downto 0) := "0010";
 
     constant MEM_ADDR_SRC_ALU  : std_logic := '1';
     constant MEM_ADDR_SRC_EA   : std_logic := '0';

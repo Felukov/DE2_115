@@ -110,7 +110,7 @@ begin
     rr_tready <= '1' when jmp_lock_s_tvalid = '1' and rep_lock = '0' and halt_mode = '0' and (micro_tvalid = '0' or
         (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0)) else '0';
 
-    fast_instruction_fl <= '1' when (((rr_tdata.op = MOVU or rr_tdata.op = XCHG) and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or rr_tdata.op = SYS or rr_tdata.op = REP) else '0';
+    fast_instruction_fl <= '1' when (((rr_tdata.op = MOVU or rr_tdata.op = XCHG) and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or rr_tdata.op = SYS or rr_tdata.op = REP or rr_tdata.op = FEU) else '0';
 
     jmp_lock_m_lock_tvalid <= '1' when (rr_tvalid = '1' and rr_tready = '1' and (rr_tdata.op = LOOPU or
         (rr_tdata.op = STACKU and rr_tdata.code = STACKU_PUSHA) or rr_tdata.op = DBG)) else '0';
@@ -138,7 +138,7 @@ begin
 
         if (rr_tvalid = '1' and rr_tready = '1') then
 
-            if ((rr_tdata.op = MOVU or rr_tdata.op = XCHG) and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) then
+            if ((rr_tdata.op = MOVU or rr_tdata.op = XCHG) and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or (rr_tdata.op = FEU and rr_tdata.code /= FEU_LEA) then
                 case rr_tdata.dreg is
                     when AX => ax_m_wr_tvalid <= '1';
                     when BX => bx_m_wr_tvalid <= '1';
@@ -155,7 +155,7 @@ begin
                 end case;
             end if;
 
-            if (rr_tdata.op = XCHG and rr_tdata.dir = R2R) then
+            if (rr_tdata.op = XCHG and rr_tdata.dir = R2R) or (rr_tdata.op = FEU and rr_tdata.code = FEU_LEA) then
                 case rr_tdata.sreg is
                     when AX => ax_m_wr_tvalid <= '1';
                     when BX => bx_m_wr_tvalid <= '1';
@@ -214,6 +214,35 @@ begin
                 when others => null;
             end case;
 
+        end if;
+
+        if (rr_tdata.op = FEU and rr_tdata.code = FEU_LEA) then
+
+            case rr_tdata.sreg is
+                when AX => ax_m_wr_tdata <= ea_val_plus_disp_next;
+                when BX => bx_m_wr_tdata <= ea_val_plus_disp_next;
+                when CX => cx_m_wr_tdata <= ea_val_plus_disp_next;
+                when DX => dx_m_wr_tdata <= ea_val_plus_disp_next;
+                when BP => bp_m_wr_tdata <= ea_val_plus_disp_next;
+                when SP => sp_m_wr_tdata <= ea_val_plus_disp_next;
+                when DI => di_m_wr_tdata <= ea_val_plus_disp_next;
+                when SI => si_m_wr_tdata <= ea_val_plus_disp_next;
+                when others => null;
+            end case;
+
+        end if;
+
+        if (rr_tdata.op = FEU and rr_tdata.code = FEU_CBW) then
+            for i in 15 downto 8 loop
+                ax_m_wr_tdata(i) <= rr_tdata.sreg_val(7);
+            end loop;
+            ax_m_wr_tdata(7 downto 0) <= rr_tdata.sreg_val(7 downto 0);
+        end if;
+
+        if (rr_tdata.op = FEU and rr_tdata.code = FEU_CWD) then
+            for i in 15 downto 0 loop
+                dx_m_wr_tdata(i) <= rr_tdata.sreg_val(15);
+            end loop;
         end if;
 
         if (rep_upd_cx_tvalid = '1') then
@@ -628,13 +657,13 @@ begin
                         flag_dont_update;
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
                         micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '0';
-                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
                         micro_tdata.alu_wb <= '0';
                         micro_tdata.unlk_fl <= '0';
 
                         case rr_tdata.dir is
                             when I2M =>
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
+                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
 
                                 micro_tdata.mem_cmd <= '1';
                                 micro_tdata.mem_width <= rr_tdata.w;
@@ -646,6 +675,7 @@ begin
 
                             when R2M =>
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
+                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
 
                                 micro_tdata.mem_cmd <= '1';
                                 micro_tdata.mem_width <= rr_tdata.w;
@@ -657,12 +687,24 @@ begin
 
                             when M2R =>
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
+                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
 
                                 micro_tdata.mem_cmd <= '0';
                                 micro_tdata.mem_width <= rr_tdata.w;
                                 micro_tdata.mem_seg <= rr_tdata.seg_val;
                                 micro_tdata.mem_addr_src <= MEM_ADDR_SRC_EA;
                                 micro_tdata.mem_addr <= ea_val_plus_disp_next;
+
+                            when R2F =>
+                                micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
+                                micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+
+                                micro_tdata.alu_wb <= '1';
+                                micro_tdata.alu_code <= ALU_SF_ADD;
+                                micro_tdata.alu_a_val <= rr_tdata.sreg_val;
+                                micro_tdata.alu_b_val <= x"0000";
+                                micro_tdata.alu_dreg <= rr_tdata.dreg;
+                                micro_tdata.alu_dmask <= rr_tdata.dmask;
 
                             when others =>
                                 null;

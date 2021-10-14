@@ -386,7 +386,13 @@ begin
 
                         if ((micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1' and micro_tdata.alu_code = ALU_SF_ADD and micro_tdata.alu_dreg = FL)) then
 
-                            flags_wr_be <= (others => '1');
+                            for i in 15 downto 8 loop
+                                flags_wr_be(i) <= micro_tdata.alu_dmask(1);
+                            end loop;
+
+                            for i in 7 downto 0 loop
+                                flags_wr_be(i) <= micro_tdata.alu_dmask(0);
+                            end loop;
 
                         else
 
