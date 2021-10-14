@@ -284,6 +284,9 @@ begin
 
     micro_cnt_next_proc : process (all) begin
         case (rr_tdata.op) is
+            when XCHG =>
+                micro_cnt_next <= 1;
+
             when STR =>
                 case rr_tdata.code is
                     when MOVS_OP => micro_cnt_next <= 1;
@@ -350,6 +353,25 @@ begin
             micro_tdata.mem_addr <= addr;
         end procedure;
 
+        procedure mem_read(seg, addr : std_logic_vector; w : std_logic) is begin
+            micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
+            micro_tdata.mem_cmd <= '0';
+            micro_tdata.mem_width <= w;
+            micro_tdata.mem_seg <= seg;
+            micro_tdata.mem_addr_src <= MEM_ADDR_SRC_EA;
+            micro_tdata.mem_addr <= addr;
+        end procedure;
+
+        procedure mem_write_alu(seg, addr : std_logic_vector; w : std_logic) is begin
+            micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
+            micro_tdata.mem_cmd <= '1';
+            micro_tdata.mem_width <= w;
+            micro_tdata.mem_seg <= seg;
+            micro_tdata.mem_addr_src <= MEM_ADDR_SRC_EA;
+            micro_tdata.mem_addr <= addr;
+            micro_tdata.mem_data_src <= MEM_DATA_SRC_ALU;
+        end procedure;
+
     begin
         if rising_edge(clk) then
             if (resetn = '0') then
@@ -400,7 +422,22 @@ begin
                 micro_tdata.dbg_ip <= rr_tuser(15 downto 0);
 
                 case (rr_tdata.op) is
+                    when XCHG =>
+                        flag_dont_update;
+                        micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+
+                        -- read value from memory
+                        mem_read(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
+                        -- put value from register into alu
+                        micro_tdata.alu_wb <= '0';
+                        micro_tdata.alu_code <= ALU_SF_ADD;
+                        micro_tdata.alu_a_val <= x"0000";
+                        micro_tdata.alu_b_val <= rr_tdata.dreg_val;
+
                     when DBG =>
+                        flag_dont_update;
                         micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
                         micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
@@ -730,6 +767,19 @@ begin
                 --micro_tdata.alu_w <= rr_tdata_buf.w;
 
                 case rr_tdata_buf.op is
+                    when XCHG =>
+                        micro_tdata.read_fifo <= '1';
+
+                        -- put value from memory into alu and write it to register
+                        micro_tdata.alu_wb <= '1';
+                        micro_tdata.alu_code <= ALU_SF_ADD;
+                        micro_tdata.alu_a_val <= x"0000";
+                        micro_tdata.alu_b_mem <= '1';
+                        micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
+                        micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
+                        -- write alu to memory
+                        mem_write_alu(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp, w => rr_tdata.w);
+
                     when STR =>
                         case rr_tdata_buf.code is
                             when STOS_OP =>
@@ -1070,7 +1120,7 @@ begin
                         micro_tdata.read_fifo <= '0';
 
                         micro_tdata.jump_cs <= rr_tuser_buf(31 downto 16);
-                        micro_tdata.jump_ip <= std_logic_vector(unsigned(rr_tuser_buf_ip_next) + unsigned(rr_tdata_buf.disp));
+                        micro_tdata.jump_ip <= std_logic_vector(unsigned(rr_tuser_buf(15 downto 0)) + unsigned(rr_tdata_buf.disp));
                         micro_tdata.unlk_fl <= '1';
 
                         case (rr_tdata_buf.code(1 downto 0)) is

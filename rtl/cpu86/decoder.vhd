@@ -158,7 +158,7 @@ begin
                                      x"61" | x"63" | x"64" | x"65" | x"66" | x"67" | x"6C" | x"6D" | x"6E" | x"6F" | x"90" | x"91" |
                                      x"92" | x"93" | x"94" | x"95" | x"96" | x"97" | x"98" | x"99" | x"9B" | x"9C" | x"9D" | x"9E" |
                                      x"9F" | x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AC" | x"AD" | x"AE" | x"AF" | x"CB" |
-                                     x"C9" | x"CC" | x"CE" | x"CF" | x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" | x"F4" =>
+                                     x"C9" | x"CC" | x"CE" | x"CF" | x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" | x"F4" | x"40" =>
                                     byte_pos_chain(0) <= first_byte;
                                     instr_tvalid <= '1';
 
@@ -666,6 +666,14 @@ begin
                     when x"A1" | x"A3" =>
                         instr_tdata.op <= MOVU;
                         instr_tdata.code <= "0000";
+                        instr_tdata.w <= '1';
+
+                    when x"86" =>
+                        instr_tdata.op <= XCHG;
+                        instr_tdata.w <= '0';
+
+                    when x"87" =>
+                        instr_tdata.op <= XCHG;
                         instr_tdata.w <= '1';
 
                     when x"89" | x"8B" =>
