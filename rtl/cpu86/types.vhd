@@ -40,15 +40,16 @@ package cpu86_types is
     constant ALU_OP_DEC     : std_logic_vector (3 downto 0) := "1001";
     constant ALU_SF_ADD     : std_logic_vector (3 downto 0) := "1111";
 
-    constant STACKU_POPR    : std_logic_vector (3 downto 0) := "0000";
-    constant STACKU_PUSHR   : std_logic_vector (3 downto 0) := "0001";
-    constant STACKU_POPA    : std_logic_vector (3 downto 0) := "0010";
-    constant STACKU_PUSHA   : std_logic_vector (3 downto 0) := "0011";
-    constant STACKU_POPF    : std_logic_vector (3 downto 0) := "0100";
-    constant STACKU_PUSHF   : std_logic_vector (3 downto 0) := "0101";
-    constant STACKU_PUSHI   : std_logic_vector (3 downto 0) := "0110";
-    constant STACKU_PUSHM   : std_logic_vector (3 downto 0) := "0111";
-    constant STACKU_POPM    : std_logic_vector (3 downto 0) := "1000";
+    constant STACKU_POPM    : std_logic_vector (3 downto 0) := "0000";
+    constant STACKU_POPR    : std_logic_vector (3 downto 0) := "0001";
+    constant STACKU_POPF    : std_logic_vector (3 downto 0) := "0010";
+    constant STACKU_POPA    : std_logic_vector (3 downto 0) := "0100";
+
+    constant STACKU_PUSHR   : std_logic_vector (3 downto 0) := "1000";
+    constant STACKU_PUSHF   : std_logic_vector (3 downto 0) := "1001";
+    constant STACKU_PUSHI   : std_logic_vector (3 downto 0) := "1010";
+    constant STACKU_PUSHM   : std_logic_vector (3 downto 0) := "1011";
+    constant STACKU_PUSHA   : std_logic_vector (3 downto 0) := "1100";
 
     constant LOOP_OP        : std_logic_vector (3 downto 0) := "0000";
     constant LOOP_OP_E      : std_logic_vector (3 downto 0) := "0001";
@@ -164,7 +165,7 @@ package cpu86_types is
         alu_w           : std_logic;
         alu_dreg        : reg_t;
         alu_dmask       : std_logic_vector(1 downto 0);
-        alu_a_acc       : std_logic;
+        --alu_a_acc       : std_logic;
         alu_a_mem       : std_logic;
         alu_a_val       : std_logic_vector(15 downto 0);
         alu_b_mem       : std_logic;
@@ -183,6 +184,9 @@ package cpu86_types is
         mem_data        : std_logic_vector(15 downto 0);
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
+        sp_inc          : std_logic;
+        sp_inc_data     : std_logic_vector(15 downto 0);
+        sp_keep_lock    : std_logic;
         si_inc          : std_logic;
         si_inc_data     : std_logic_vector(15 downto 0);
         si_keep_lock    : std_logic;

@@ -48,6 +48,10 @@ entity mexec is
         ss_m_wr_tvalid          : out std_logic;
         ss_m_wr_tdata           : out std_logic_vector(15 downto 0);
 
+        sp_m_inc_tvalid         : out std_logic;
+        sp_m_inc_tdata          : out std_logic_vector(15 downto 0);
+        sp_m_inc_tkeep_lock     : out std_logic;
+
         di_m_inc_tvalid         : out std_logic;
         di_m_inc_tdata          : out std_logic_vector(15 downto 0);
         di_m_inc_tkeep_lock     : out std_logic;
@@ -178,6 +182,11 @@ begin
 
     flags_m_wr_tdata <= ((not flags_wr_be) and flags_s_tdata) or (flags_wr_be and flags_wr_vector);
 
+    -- sp increment
+    sp_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.sp_inc = '1' else '0';
+    sp_m_inc_tdata <= micro_tdata.sp_inc_data;
+    sp_m_inc_tkeep_lock <= micro_tdata.sp_keep_lock;
+
     -- di increment
     di_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.di_inc = '1' else '0';
     di_m_inc_tdata <= micro_tdata.di_inc_data;
@@ -197,9 +206,9 @@ begin
             a_next <= lsu_rd_s_tdata;
         end if;
 
-        if (micro_tdata.alu_a_acc = '1') then
-            a_next <= alu_tdata.dval(15 downto 0);
-        end if;
+        -- if (micro_tdata.alu_a_acc = '1') then
+        --     a_next <= alu_tdata.dval(15 downto 0);
+        -- end if;
 
     end process;
 
