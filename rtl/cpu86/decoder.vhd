@@ -955,7 +955,7 @@ begin
                     when x"F4" =>
                         instr_tdata.dir <= SFLG;
 
-                    when x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" =>
+                    when x"F5" | x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" =>
                         instr_tdata.dir <= SFLG;
 
                     when x"0F" =>

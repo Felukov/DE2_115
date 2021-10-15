@@ -9,6 +9,9 @@ package cpu86_types is
         AX, DX, CX, BX, BP, SI, DI, SP, ES, CS, SS, DS, FL
     );
 
+    attribute enum_encoding : string;
+    attribute enum_encoding of reg_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1001 1010 1011 1100 1101";
+
     type ea_t is (
         BX_SI_DISP, BX_DI_DISP, BP_SI_DISP, BP_DI_DISP, SI_DISP, DI_DISP, BP_DISP, BX_DISP, DIRECT
     );
@@ -107,10 +110,10 @@ package cpu86_types is
     end record;
 
     type decoded_instr_t is record
+        fl          : fl_action_t;
         op          : op_t;
         code        : std_logic_vector(3 downto 0);
         w           : std_logic;
-        fl          : fl_action_t;
         dir         : direction_t;
         ea          : ea_t;
         dreg        : reg_t;
@@ -180,6 +183,12 @@ package cpu86_types is
         mem_data        : std_logic_vector(15 downto 0);
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
+        si_inc          : std_logic;
+        si_inc_data     : std_logic_vector(15 downto 0);
+        si_keep_lock    : std_logic;
+        di_inc          : std_logic;
+        di_inc_data     : std_logic_vector(15 downto 0);
+        di_keep_lock    : std_logic;
         dbg_cs          : std_logic_vector(15 downto 0);
         dbg_ip          : std_logic_vector(15 downto 0);
     end record;
@@ -196,6 +205,7 @@ package body cpu86_types is
         variable v : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
     begin
 
+        p.fl := std_logic_vector(to_unsigned(fl_action_t'pos(decoded_instr.fl), p.fl'length));
         p.op := std_logic_vector(to_unsigned(op_t'pos(decoded_instr.op), p.op'length));
         p.code := decoded_instr.code;
         p.w := (52 => decoded_instr.w);

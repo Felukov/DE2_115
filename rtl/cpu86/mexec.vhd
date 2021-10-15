@@ -48,8 +48,13 @@ entity mexec is
         ss_m_wr_tvalid          : out std_logic;
         ss_m_wr_tdata           : out std_logic_vector(15 downto 0);
 
-        si_m_wr_tkeep_lock      : out std_logic;
-        di_m_wr_tkeep_lock      : out std_logic;
+        di_m_inc_tvalid         : out std_logic;
+        di_m_inc_tdata          : out std_logic_vector(15 downto 0);
+        di_m_inc_tkeep_lock     : out std_logic;
+
+        si_m_inc_tvalid         : out std_logic;
+        si_m_inc_tdata          : out std_logic_vector(15 downto 0);
+        si_m_inc_tkeep_lock     : out std_logic;
 
         flags_m_wr_tvalid       : out std_logic;
         flags_m_wr_tdata        : out std_logic_vector(15 downto 0);
@@ -91,7 +96,14 @@ architecture rtl of mexec is
     signal micro_tdata          : micro_op_t;
 
     signal alu_tvalid           : std_logic;
-    signal alu_tdata            : alu_t;
+    signal alu_tdata            : alu_t := (
+        code => (others=>'0'), w => '0',
+        dreg => AX, dmask => "00",
+        aval => (others=>'0'),
+        bval => (others=>'0'),
+        dval => (others=>'0'),
+        rval => (others=>'0')
+    );
 
     signal lsu_req_tvalid       : std_logic;
     signal lsu_req_tready       : std_logic;
@@ -165,6 +177,16 @@ begin
     lsu_rd_s_tready <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1' else '0';
 
     flags_m_wr_tdata <= ((not flags_wr_be) and flags_s_tdata) or (flags_wr_be and flags_wr_vector);
+
+    -- di increment
+    di_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.di_inc = '1' else '0';
+    di_m_inc_tdata <= micro_tdata.di_inc_data;
+    di_m_inc_tkeep_lock <= micro_tdata.di_keep_lock;
+
+    -- si increment
+    si_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.si_inc = '1' else '0';
+    si_m_inc_tdata <= micro_tdata.si_inc_data;
+    si_m_inc_tkeep_lock <= micro_tdata.si_keep_lock;
 
     -- alu
     a_next_proc : process (all) begin
@@ -274,8 +296,6 @@ begin
                 ds_m_wr_tvalid <= '0';
                 es_m_wr_tvalid <= '0';
                 ss_m_wr_tvalid <= '0';
-                si_m_wr_tkeep_lock <= '0';
-                di_m_wr_tkeep_lock <= '0';
             else
                 if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_dreg = AX)) then
                     ax_m_wr_tvalid <= '1';
@@ -334,16 +354,6 @@ begin
                     ss_m_wr_tvalid <= '0';
                 end if;
 
-                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_keep_lock = '1' and micro_tdata.alu_dreg = SI)) then
-                    si_m_wr_tkeep_lock <= '1';
-                else
-                    si_m_wr_tkeep_lock <= '0';
-                end if;
-                if ((micro_tvalid = '1' and micro_tready = '1' and micro_tdata.alu_wb = '1' and micro_tdata.alu_keep_lock = '1' and micro_tdata.alu_dreg = DI)) then
-                    di_m_wr_tkeep_lock <= '1';
-                else
-                    di_m_wr_tkeep_lock <= '0';
-                end if;
             end if;
 
         end if;

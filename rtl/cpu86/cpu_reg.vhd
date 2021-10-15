@@ -31,22 +31,25 @@ architecture rtl of cpu_reg is
 
 begin
 
-    reg_m_tvalid <= '1' when (wr_s_tvalid = '1' and wr_s_tkeep_lock = '0') or reg_tvalid = '1' else '0';
+    -- reg_m_tvalid <= '1' when (wr_s_tvalid = '1' and wr_s_tkeep_lock = '0') or reg_tvalid = '1' else '0';
+    reg_m_tvalid <= reg_tvalid;
 
-    forming_reg_data_proc: process (all) begin
+    reg_m_tdata <= reg_tdata;
 
-        if (wr_s_tvalid = '1') then
-            case wr_s_tmask is
-                when "11" => reg_m_tdata <= wr_s_tdata;
-                when "01" => reg_m_tdata <= reg_tdata(DATA_WIDTH-1 downto DATA_WIDTH/2) & wr_s_tdata(DATA_WIDTH/2-1 downto 0);
-                when "10" => reg_m_tdata <= wr_s_tdata(DATA_WIDTH/2-1 downto 0) & reg_tdata(DATA_WIDTH/2-1 downto 0);
-                when others => reg_m_tdata <= reg_tdata;
-            end case;
-        else
-            reg_m_tdata <= reg_tdata;
-        end if;
+    -- forming_reg_data_proc: process (all) begin
 
-    end process;
+    --     if (wr_s_tvalid = '1') then
+    --         case wr_s_tmask is
+    --             when "11" => reg_m_tdata <= wr_s_tdata;
+    --             when "01" => reg_m_tdata <= reg_tdata(DATA_WIDTH-1 downto DATA_WIDTH/2) & wr_s_tdata(DATA_WIDTH/2-1 downto 0);
+    --             when "10" => reg_m_tdata <= wr_s_tdata(DATA_WIDTH/2-1 downto 0) & reg_tdata(DATA_WIDTH/2-1 downto 0);
+    --             when others => reg_m_tdata <= reg_tdata;
+    --         end case;
+    --     else
+    --         reg_m_tdata <= reg_tdata;
+    --     end if;
+
+    -- end process;
 
     update_reg_proc: process (clk) begin
         if rising_edge(clk) then

@@ -57,7 +57,7 @@ begin
     out_tready      <= fifo_m_tready;
     fifo_m_tdata    <= out_tdata;
 
-    data_tvalid     <= '1' when wr_addr /= rd_addr else '0';
+    --data_tvalid     <= '1' when wr_addr /= rd_addr else '0';
     data_tready     <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
 
     --wr_addr_next    <= (wr_addr + 1) mod FIFO_DEPTH;
@@ -77,6 +77,20 @@ begin
                 end if;
             end if;
 
+        end if;
+    end process;
+
+    data_tvalid_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                data_tvalid <= '0';
+            else
+                if wr_addr_next /= rd_addr_next then
+                    data_tvalid <= '1';
+                else
+                    data_tvalid <= '0';
+                end if;
+            end if;
         end if;
     end process;
 
