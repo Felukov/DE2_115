@@ -105,6 +105,15 @@ architecture rtl of ifeu is
 
     signal rep_upd_cx_tvalid    : std_logic;
 
+    signal ax_tdata_selector    : std_logic_vector(2 downto 0);
+    signal bx_tdata_selector    : std_logic_vector(2 downto 0);
+    signal cx_tdata_selector    : std_logic_vector(3 downto 0);
+    signal dx_tdata_selector    : std_logic_vector(3 downto 0);
+    signal bp_tdata_selector    : std_logic_vector(2 downto 0);
+    signal di_tdata_selector    : std_logic_vector(2 downto 0);
+    signal si_tdata_selector    : std_logic_vector(2 downto 0);
+    signal sp_tdata_selector    : std_logic_vector(2 downto 0);
+
 begin
     rr_tvalid <= rr_s_tvalid;
     rr_s_tready <= rr_tready;
@@ -188,76 +197,106 @@ begin
 
     end process;
 
+    ax_tdata_selector(0) <= '1' when rr_tdata.op = MOVU and rr_tdata.dir = I2R else '0';
+    ax_tdata_selector(1) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_LEA else '0';
+    ax_tdata_selector(2) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_CBW else '0';
+
+    bx_tdata_selector(0) <= '1' when rr_tdata.op = MOVU and rr_tdata.dir = I2R else '0';
+    bx_tdata_selector(1) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_LEA else '0';
+    bx_tdata_selector(2) <= '1' when rr_tdata.op = XCHG and rr_tdata.dir = R2R else '0';
+
+    cx_tdata_selector(0) <= '1' when rr_tdata.op = MOVU and rr_tdata.dir = I2R else '0';
+    cx_tdata_selector(1) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_LEA else '0';
+    cx_tdata_selector(2) <= '1' when rr_tdata.op = XCHG and rr_tdata.dir = R2R else '0';
+    cx_tdata_selector(3) <= '1' when rep_upd_cx_tvalid = '1' else '0';
+
+    dx_tdata_selector(0) <= '1' when rr_tdata.op = MOVU and rr_tdata.dir = I2R else '0';
+    dx_tdata_selector(1) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_LEA else '0';
+    dx_tdata_selector(2) <= '1' when rr_tdata.op = XCHG and rr_tdata.dir = R2R else '0';
+    dx_tdata_selector(3) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_CBW else '0';
+
+    bp_tdata_selector(0) <= '1' when rr_tdata.op = MOVU and rr_tdata.dir = I2R else '0';
+    bp_tdata_selector(1) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_LEA else '0';
+    bp_tdata_selector(2) <= '1' when rr_tdata.op = XCHG and rr_tdata.dir = R2R else '0';
+
+    di_tdata_selector(0) <= '1' when rr_tdata.op = MOVU and rr_tdata.dir = I2R else '0';
+    di_tdata_selector(1) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_LEA else '0';
+    di_tdata_selector(2) <= '1' when rr_tdata.op = XCHG and rr_tdata.dir = R2R else '0';
+
+    si_tdata_selector(0) <= '1' when rr_tdata.op = MOVU and rr_tdata.dir = I2R else '0';
+    si_tdata_selector(1) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_LEA else '0';
+    si_tdata_selector(2) <= '1' when rr_tdata.op = XCHG and rr_tdata.dir = R2R else '0';
+
+    sp_tdata_selector(0) <= '1' when rr_tdata.op = MOVU and rr_tdata.dir = I2R else '0';
+    sp_tdata_selector(1) <= '1' when rr_tdata.op = FEU and rr_tdata.code = FEU_LEA else '0';
+    sp_tdata_selector(2) <= '1' when rr_tdata.op = XCHG and rr_tdata.dir = R2R else '0';
+
     update_regs_data_proc : process (all) begin
 
-        ax_m_wr_tdata <= rr_tdata.sreg_val;
-        bx_m_wr_tdata <= rr_tdata.sreg_val;
-        dx_m_wr_tdata <= rr_tdata.sreg_val;
-        bp_m_wr_tdata <= rr_tdata.sreg_val;
-        sp_m_wr_tdata <= rr_tdata.sreg_val;
-        di_m_wr_tdata <= rr_tdata.sreg_val;
-        si_m_wr_tdata <= rr_tdata.sreg_val;
-        cx_m_wr_tdata <= rr_tdata.sreg_val;
+        case ax_tdata_selector is
+            when "001" => ax_m_wr_tdata <= rr_tdata.data;
+            when "010" => ax_m_wr_tdata <= ea_val_plus_disp_next;
+            when "100" =>
+                for i in 15 downto 8 loop
+                    ax_m_wr_tdata(i) <= rr_tdata.sreg_val(7);
+                end loop;
+                ax_m_wr_tdata(7 downto 0) <= rr_tdata.sreg_val(7 downto 0);
+            when others => ax_m_wr_tdata <= rr_tdata.sreg_val;
+        end case;
 
-        if (rr_tdata.op = MOVU and rr_tdata.dir = I2R) then
-            ax_m_wr_tdata <= rr_tdata.data;
-            bx_m_wr_tdata <= rr_tdata.data;
-            dx_m_wr_tdata <= rr_tdata.data;
-            bp_m_wr_tdata <= rr_tdata.data;
-            sp_m_wr_tdata <= rr_tdata.data;
-            di_m_wr_tdata <= rr_tdata.data;
-            si_m_wr_tdata <= rr_tdata.data;
-            cx_m_wr_tdata <= rr_tdata.data;
-        end if;
+        case bx_tdata_selector is
+            when "001" => bx_m_wr_tdata <= rr_tdata.data;
+            when "010" => bx_m_wr_tdata <= ea_val_plus_disp_next;
+            when "100" => bx_m_wr_tdata <= rr_tdata.dreg_val;
+            when others => bx_m_wr_tdata <= rr_tdata.sreg_val;
+        end case;
 
-        if (rr_tdata.op = XCHG and rr_tdata.dir = R2R) then
+        case cx_tdata_selector is
+            when "0001" => cx_m_wr_tdata <= rr_tdata.data;
+            when "0010" => cx_m_wr_tdata <= ea_val_plus_disp_next;
+            when "0100" => cx_m_wr_tdata <= rr_tdata.dreg_val;
+            when "1000" => cx_m_wr_tdata <= rep_cx_cnt;
+            when others => cx_m_wr_tdata <= rr_tdata.sreg_val;
+        end case;
 
-            case rr_tdata.sreg is
-                when AX => ax_m_wr_tdata <= rr_tdata.dreg_val;
-                when BX => bx_m_wr_tdata <= rr_tdata.dreg_val;
-                when CX => cx_m_wr_tdata <= rr_tdata.dreg_val;
-                when DX => dx_m_wr_tdata <= rr_tdata.dreg_val;
-                when BP => bp_m_wr_tdata <= rr_tdata.dreg_val;
-                when SP => sp_m_wr_tdata <= rr_tdata.dreg_val;
-                when DI => di_m_wr_tdata <= rr_tdata.dreg_val;
-                when SI => si_m_wr_tdata <= rr_tdata.dreg_val;
-                when others => null;
-            end case;
+        case dx_tdata_selector is
+            when "0001" => dx_m_wr_tdata <= rr_tdata.data;
+            when "0010" => dx_m_wr_tdata <= ea_val_plus_disp_next;
+            when "0100" => dx_m_wr_tdata <= rr_tdata.dreg_val;
+            when "1000" =>
+                for i in 15 downto 0 loop
+                    dx_m_wr_tdata(i) <= rr_tdata.sreg_val(15);
+                end loop;
+            when others => dx_m_wr_tdata <= rr_tdata.sreg_val;
+        end case;
 
-        end if;
+        case bp_tdata_selector is
+            when "001" => bp_m_wr_tdata <= rr_tdata.data;
+            when "010" => bp_m_wr_tdata <= ea_val_plus_disp_next;
+            when "100" => bp_m_wr_tdata <= rr_tdata.dreg_val;
+            when others => bp_m_wr_tdata <= rr_tdata.sreg_val;
+        end case;
 
-        if (rr_tdata.op = FEU and rr_tdata.code = FEU_LEA) then
+        case sp_tdata_selector is
+            when "001" => sp_m_wr_tdata <= rr_tdata.data;
+            when "010" => sp_m_wr_tdata <= ea_val_plus_disp_next;
+            when "100" => sp_m_wr_tdata <= rr_tdata.dreg_val;
+            when others => sp_m_wr_tdata <= rr_tdata.sreg_val;
+        end case;
 
-            case rr_tdata.sreg is
-                when AX => ax_m_wr_tdata <= ea_val_plus_disp_next;
-                when BX => bx_m_wr_tdata <= ea_val_plus_disp_next;
-                when CX => cx_m_wr_tdata <= ea_val_plus_disp_next;
-                when DX => dx_m_wr_tdata <= ea_val_plus_disp_next;
-                when BP => bp_m_wr_tdata <= ea_val_plus_disp_next;
-                when SP => sp_m_wr_tdata <= ea_val_plus_disp_next;
-                when DI => di_m_wr_tdata <= ea_val_plus_disp_next;
-                when SI => si_m_wr_tdata <= ea_val_plus_disp_next;
-                when others => null;
-            end case;
+        case di_tdata_selector is
+            when "001" => di_m_wr_tdata <= rr_tdata.data;
+            when "010" => di_m_wr_tdata <= ea_val_plus_disp_next;
+            when "100" => di_m_wr_tdata <= rr_tdata.dreg_val;
+            when others => di_m_wr_tdata <= rr_tdata.sreg_val;
+        end case;
 
-        end if;
-
-        if (rr_tdata.op = FEU and rr_tdata.code = FEU_CBW) then
-            for i in 15 downto 8 loop
-                ax_m_wr_tdata(i) <= rr_tdata.sreg_val(7);
-            end loop;
-            ax_m_wr_tdata(7 downto 0) <= rr_tdata.sreg_val(7 downto 0);
-        end if;
-
-        if (rr_tdata.op = FEU and rr_tdata.code = FEU_CWD) then
-            for i in 15 downto 0 loop
-                dx_m_wr_tdata(i) <= rr_tdata.sreg_val(15);
-            end loop;
-        end if;
-
-        if (rep_upd_cx_tvalid = '1') then
-            cx_m_wr_tdata <= rep_cx_cnt;
-        end if;
+        case si_tdata_selector is
+            when "001" => si_m_wr_tdata <= rr_tdata.data;
+            when "010" => si_m_wr_tdata <= ea_val_plus_disp_next;
+            when "100" => si_m_wr_tdata <= rr_tdata.dreg_val;
+            when others => si_m_wr_tdata <= rr_tdata.sreg_val;
+        end case;
 
         ds_m_wr_tdata <= rr_tdata.sreg_val;
         es_m_wr_tdata <= rr_tdata.sreg_val;
@@ -648,7 +687,6 @@ begin
                                 micro_tdata.sp_keep_lock <= '0';
                             when STACKU_PUSHA =>
                                 micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '0';
-                                --mem_write_imm(seg =>rr_tdata.ss_seg_val, addr => sp_value_next, val => rr_tdata.sreg_val, w => rr_tdata.w);
                                 micro_tdata.sp_keep_lock <= '1';
                             when others => null;
                         end case;

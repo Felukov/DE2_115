@@ -1629,16 +1629,16 @@ begin
                                 instr_tdata.data <= x"FFFF";
                             when x"0E" | x"1E" | x"16" | x"06" =>
                                 instr_tdata.data <= x"FFFE";
-                            when x"50" | x"51" | x"52" | x"53" | x"54" | x"55" | x"56" | x"57" =>
-                                instr_tdata.data <= x"FFFE";
+                            -- when x"50" | x"51" | x"52" | x"53" | x"54" | x"55" | x"56" | x"57" =>
+                            --     instr_tdata.data <= x"FFFE";
                             when x"1F" | x"17" | x"07" =>
                                 instr_tdata.data <= x"0002";
-                            when x"58" | x"59" | x"5A" | x"5B" | x"5C" | x"5D" | x"5E" | x"5F" =>
-                                instr_tdata.data <= x"0002";
-                            when x"60" =>
-                                instr_tdata.data <= x"FFFE";
-                            when x"61" =>
-                                instr_tdata.data <= x"0002";
+                            -- when x"58" | x"59" | x"5A" | x"5B" | x"5C" | x"5D" | x"5E" | x"5F" =>
+                            --     instr_tdata.data <= x"0002";
+                            -- when x"60" =>
+                            --     instr_tdata.data <= x"FFFE";
+                            -- when x"61" =>
+                            --     instr_tdata.data <= x"0002";
                             when others =>
                                 null;
                         end case;
@@ -1662,10 +1662,10 @@ begin
                         instr_tdata.data(15 downto 8) <= u8_tdata;
                     when mod_aux_rm =>
                         case byte0 is
-                            when x"8F" =>
-                                if (u8_tdata(5 downto 3) = "000") then
-                                    instr_tdata.data <= x"0002";
-                                end if;
+                            -- when x"8F" =>
+                            --     if (u8_tdata(5 downto 3) = "000") then
+                            --         instr_tdata.data <= x"0002";
+                            --     end if;
 
                             when x"FE" =>
                                 case u8_tdata(5 downto 3) is
@@ -1678,7 +1678,7 @@ begin
                                 case u8_tdata(5 downto 3) is
                                     when "000" => instr_tdata.data <= x"0001";
                                     when "001" => instr_tdata.data <= x"0001";
-                                    when "110" => instr_tdata.data <= x"FFFE";
+                                    -- when "110" => instr_tdata.data <= x"FFFE";
                                     when others => null;
                                 end case;
 
