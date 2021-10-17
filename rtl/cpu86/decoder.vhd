@@ -95,7 +95,7 @@ begin
                                 when x"00" | x"01" | x"02" | x"03" | x"08" | x"09" | x"0A" | x"0B" | x"10" | x"11" | x"12" | x"13" |
                                      x"18" | x"19" | x"1A" | x"1B" | x"20" | x"21" | x"22" | x"23" | x"28" | x"29" | x"2A" | x"2B" |
                                      x"30" | x"31" | x"32" | x"33" | x"38" | x"39" | x"3A" | x"3B" | x"62" | x"84" | x"85" | x"86" |
-                                     x"87" | x"88" | x"89" | x"8A" | x"8B" | x"8D" | x"C4" | x"C5" =>
+                                     x"87" | x"88" | x"89" | x"8A" | x"8B" | x"8D" =>
                                     byte_pos_chain(0) <= mod_reg_rm;
                                     byte_pos_chain(1) <= disp_low;
                                     byte_pos_chain(2) <= disp_high;
@@ -103,7 +103,7 @@ begin
                                     instr_tvalid <= '0';
 
                                 when x"C0" | x"C1" | x"D0" | x"D1" | x"D2" | x"D3" | x"D8" | x"D9" | x"DA" | x"DB" |
-                                     x"DC" | x"DD" | x"DE" | x"DF" | x"FE" | x"FF" | x"8F" =>
+                                     x"DC" | x"DD" | x"DE" | x"DF" | x"FE" | x"FF" | x"8F" | x"C4" | x"C5" =>
                                     byte_pos_chain(0) <= mod_aux_rm;
                                     byte_pos_chain(1) <= disp_low;
                                     byte_pos_chain(2) <= disp_high;
@@ -255,6 +255,8 @@ begin
                                     else
                                         -- skip disp
                                         byte_pos_chain(0) <= byte_pos_chain(3);
+                                        byte_pos_chain(1) <= byte_pos_chain(4);
+                                        byte_pos_chain(2) <= byte_pos_chain(5);
                                         if (byte_pos_chain(3) = first_byte) then
                                             instr_tvalid <= '1';
                                         end if;
@@ -726,6 +728,16 @@ begin
                         instr_tdata.code <= MOVS_OP;
                         instr_tdata.w <= '1';
 
+                    when x"A6" =>
+                        instr_tdata.op <= STR;
+                        instr_tdata.code <= CMPS_OP;
+                        instr_tdata.w <= '0';
+
+                    when x"A7" =>
+                        instr_tdata.op <= STR;
+                        instr_tdata.code <= CMPS_OP;
+                        instr_tdata.w <= '1';
+
                     when x"AA" =>
                         instr_tdata.op <= STR;
                         instr_tdata.code <= STOS_OP;
@@ -744,6 +756,16 @@ begin
                     when x"B8" | x"B9" | x"BA" | x"BB" | x"BC" | x"BD" | x"BE" | x"BF" =>
                         instr_tdata.op <= MOVU;
                         instr_tdata.code <= "0000";
+                        instr_tdata.w <= '1';
+
+                    when x"C4" =>
+                        instr_tdata.op <= LFP;
+                        instr_tdata.code <= LFP_LES;
+                        instr_tdata.w <= '1';
+
+                    when x"C5" =>
+                        instr_tdata.op <= LFP;
+                        instr_tdata.code <= LFP_LDS;
                         instr_tdata.w <= '1';
 
                     when x"C6" =>
@@ -782,32 +804,26 @@ begin
                     when x"F8" =>
                         instr_tdata.op <= SET_FLAG;
                         instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_CF, 4));
-                        --instr_tdata.w <= '0'; --clear flag
                         instr_tdata.fl <= CLR;
                     when x"F9" =>
                         instr_tdata.op <= SET_FLAG;
                         instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_CF, 4));
-                        --instr_tdata.w <= '1'; --set flag
                         instr_tdata.fl <= SET;
                     when x"FA" =>
                         instr_tdata.op <= SET_FLAG;
                         instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_IF, 4));
-                        --instr_tdata.w <= '0'; --clear flag
                         instr_tdata.fl <= CLR;
                     when x"FB" =>
                         instr_tdata.op <= SET_FLAG;
                         instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_IF, 4));
-                        --instr_tdata.w <= '1'; --set flag
                         instr_tdata.fl <= SET;
                     when x"FC" =>
                         instr_tdata.op <= SET_FLAG;
                         instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_DF, 4));
-                        --instr_tdata.w <= '0'; --clear flag
                         instr_tdata.fl <= CLR;
                     when x"FD" =>
                         instr_tdata.op <= SET_FLAG;
                         instr_tdata.code <= std_logic_vector(to_unsigned(FLAG_DF, 4));
-                        --instr_tdata.w <= '1'; --set flag
                         instr_tdata.fl <= SET;
 
                     when others =>
@@ -943,7 +959,7 @@ begin
                     when x"A2" | x"A3" =>
                         instr_tdata.dir <= R2M;
 
-                    when x"A4" | x"A5" | x"AA" | x"AB" =>
+                    when x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" =>
                         instr_tdata.dir <= STR;
 
                     when x"F2" | x"F3" =>
@@ -980,6 +996,9 @@ begin
 
                 case byte0 is
                     -- alu r/m, imm
+                    when x"C4" | x"C5" =>
+                        instr_tdata.dir <= LFP;
+
                     when x"80" | x"81" | x"83" =>
                         if (u8_tdata(7 downto 6) = "11") then
                             instr_tdata.dir <= I2R;
@@ -1026,7 +1045,7 @@ begin
 
                 case u8_s_tdata is
                     when x"A0" | x"A1" | x"A2" | x"A3" => instr_tdata.ea <= DIRECT;
-                    when x"A4" | x"A5" => instr_tdata.ea <= SI_DISP;
+                    when x"A4" | x"A5" | x"A6" | x"A7" => instr_tdata.ea <= SI_DISP;
                     when others => null;
                 end case;
 
@@ -1179,7 +1198,7 @@ begin
                         instr_tdata.dreg <= AX;
                         instr_tdata.dmask <= "11";
 
-                    when x"A4" | x"A5" | x"AA" | x"AB" =>
+                    when x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" =>
                         instr_tdata.dreg <= DI;
                         instr_tdata.dmask <= "11";
 
@@ -1305,6 +1324,20 @@ begin
             elsif (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = mod_aux_rm) then
 
                 case byte0 is
+                    when x"C4" | x"C5" =>
+                        case u8_tdata_reg is
+                            when "000" => instr_tdata.dreg <= AX;
+                            when "001" => instr_tdata.dreg <= CX;
+                            when "010" => instr_tdata.dreg <= DX;
+                            when "011" => instr_tdata.dreg <= BX;
+                            when "100" => instr_tdata.dreg <= SP;
+                            when "101" => instr_tdata.dreg <= BP;
+                            when "110" => instr_tdata.dreg <= SI;
+                            when "111" => instr_tdata.dreg <= DI;
+                            when others => null;
+                        end case;
+                        instr_tdata.dmask <= "11";
+
                     when x"80" =>
                         case u8_tdata_rm is
                             when "000" => instr_tdata.dreg <= AX;
@@ -1432,7 +1465,7 @@ begin
                     when x"A2" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
                     when x"A3" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
 
-                    when x"A4" | x"A5" => instr_tdata.sreg <= SI; instr_tdata.smask <= "11";
+                    when x"A4" | x"A5" | x"A6" | x"A7" => instr_tdata.sreg <= SI; instr_tdata.smask <= "11";
 
                     when x"AA" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
                     when x"AB" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";

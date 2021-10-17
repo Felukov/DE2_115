@@ -116,6 +116,7 @@ architecture rtl of mexec is
     signal lsu_req_twidth       : std_logic;
     signal lsu_req_tdata        : std_logic_vector(15 downto 0);
 
+    signal a_selector           : std_logic_vector(1 downto 0);
     signal a_next               : std_logic_vector(15 downto 0);
     signal b_next               : std_logic_vector(15 downto 0);
 
@@ -141,7 +142,7 @@ architecture rtl of mexec is
     signal flags_sf             : std_logic;
     signal flags_af             : std_logic;
 
-    signal d_flags_m_wr_tvalid  : std_logic;
+    signal mem_buf_tdata        : std_logic_vector(15 downto 0);
 
 begin
 
@@ -197,18 +198,16 @@ begin
     si_m_inc_tdata <= micro_tdata.si_inc_data;
     si_m_inc_tkeep_lock <= micro_tdata.si_keep_lock;
 
+    a_selector <= micro_tdata.alu_a_mem & micro_tdata.alu_a_buf;
+
     -- alu
     a_next_proc : process (all) begin
 
-        a_next <= micro_tdata.alu_a_val;
-
-        if (micro_tdata.alu_a_mem = '1') then
-            a_next <= lsu_rd_s_tdata;
-        end if;
-
-        -- if (micro_tdata.alu_a_acc = '1') then
-        --     a_next <= alu_tdata.dval(15 downto 0);
-        -- end if;
+        case(a_selector) is
+            when "10" => a_next <= lsu_rd_s_tdata;
+            when "01" => a_next <= mem_buf_tdata;
+            when others => a_next <= micro_tdata.alu_a_val;
+        end case;
 
     end process;
 
@@ -372,7 +371,6 @@ begin
         if rising_edge(clk) then
             if resetn = '0' then
                 flags_m_wr_tvalid <= '0';
-                d_flags_m_wr_tvalid <= '0';
                 flags_wr_be <= (others => '0');
             else
 
@@ -389,7 +387,6 @@ begin
                     flags_m_wr_tvalid <= '0';
                 end if;
 
-                d_flags_m_wr_tvalid <= flags_m_wr_tvalid;
 
                 if (micro_tvalid = '1' and micro_tready = '1') then
                     if (micro_tdata.cmd(MICRO_OP_CMD_FLG)) = '1' then
@@ -596,6 +593,14 @@ begin
                 end if;
         end case;
 
+    end process;
+
+    mem_buf_proc : process (clk) begin
+        if rising_edge(clk) then
+            if (lsu_rd_s_tvalid = '1') then
+                mem_buf_tdata <= lsu_rd_s_tdata;
+            end if;
+        end if;
     end process;
 
     unlock_proc : process (clk) begin

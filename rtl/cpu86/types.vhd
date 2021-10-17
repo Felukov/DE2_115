@@ -17,11 +17,11 @@ package cpu86_types is
     );
 
     type direction_t is (
-        R2R, M2R, R2M, I2R, I2M, R2F, STK, STKM, M2M, STR, SSEG, SFLG
+        R2R, M2R, R2M, I2R, I2M, R2F, STK, STKM, M2M, STR, SSEG, SFLG, LFP
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP
     );
 
     type fl_action_t is (
@@ -58,8 +58,12 @@ package cpu86_types is
     constant REPZ_OP        : std_logic_vector (3 downto 0) := "0000";
     constant REPNZ_OP       : std_logic_vector (3 downto 0) := "0001";
 
+    constant LFP_LDS       : std_logic_vector (3 downto 0) := "0000";
+    constant LFP_LES       : std_logic_vector (3 downto 0) := "0001";
+
     constant MOVS_OP        : std_logic_vector (3 downto 0) := "0000";
     constant STOS_OP        : std_logic_vector (3 downto 0) := "0001";
+    constant CMPS_OP        : std_logic_vector (3 downto 0) := "1000";
 
     constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0000";
     constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0001";
@@ -165,7 +169,7 @@ package cpu86_types is
         alu_w           : std_logic;
         alu_dreg        : reg_t;
         alu_dmask       : std_logic_vector(1 downto 0);
-        --alu_a_acc       : std_logic;
+        alu_a_buf       : std_logic;
         alu_a_mem       : std_logic;
         alu_a_val       : std_logic_vector(15 downto 0);
         alu_b_mem       : std_logic;

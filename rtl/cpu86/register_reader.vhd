@@ -339,6 +339,11 @@ begin
                     (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
                     instr_tready <= '1';
                 end if;
+            when LFP =>
+                if seg_tvalid = '1' and ea_tvalid = '1' and dreg_tvalid = '1' and es_s_tvalid = '1' and ds_s_tvalid = '1' then
+                    instr_tready <= '1';
+                end if;
+
         end case;
 
     end process;
@@ -361,6 +366,25 @@ begin
         if (instr_tvalid = '1' and instr_tready = '1' and resetn = '1') then
 
             case instr_tdata.dir is
+                when LFP =>
+                    case instr_tdata.dreg is
+                        when AX => ax_m_lock_tvalid <= '1';
+                        when BX => bx_m_lock_tvalid <= '1';
+                        when CX => cx_m_lock_tvalid <= '1';
+                        when DX => dx_m_lock_tvalid <= '1';
+                        when BP => bp_m_lock_tvalid <= '1';
+                        when SP => sp_m_lock_tvalid <= '1';
+                        when SI => si_m_lock_tvalid <= '1';
+                        when DI => di_m_lock_tvalid <= '1';
+                        when others => null;
+                    end case;
+
+                    if (instr_tdata.code = LFP_LDS) then
+                        ds_m_lock_tvalid <= '1';
+                    else
+                        es_m_lock_tvalid <= '1';
+                    end if;
+
                 when R2R | I2R | M2R =>
                     case instr_tdata.dreg is
                         when AX => ax_m_lock_tvalid <= '1';
@@ -413,7 +437,7 @@ begin
                             when STOS_OP =>
                                 di_m_lock_tvalid <= '1';
 
-                            when MOVS_OP =>
+                            when CMPS_OP | MOVS_OP =>
                                 di_m_lock_tvalid <= '1';
                                 si_m_lock_tvalid <= '1';
 
