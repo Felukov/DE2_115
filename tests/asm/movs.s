@@ -217,7 +217,7 @@ start:
     db 0x0F
     NOP
 
-    ;
+    ; scasb
     cld
     MOV AX, 0x1000
     MOV DI, 0
@@ -235,7 +235,7 @@ start:
     MOV AX, 'Wo'
     STOSW
     MOV AX, 'rl'
-    CMPSW
+    STOSW
     MOV AL, 'd'
     STOSB
     MOV AL, 0x0
@@ -246,6 +246,45 @@ start:
     MOV AL, 0x0
     REPNZ SCASB
 
+    db 0x0F
+    NOP
+
+    ; LODS CHECKS
+    cld
+    MOV AX, 0x1000
+    MOV DI, 0
+    MOV ES, AX
+    MOV DS, AX
+
+    MOV AX, 'He'
+    STOSW
+    MOV AX, 'll'
+    STOSW
+    MOV AL, 'o'
+    STOSB
+    MOV AL, 0x0
+    STOSB
+    MOV AX, 'Wo'
+    STOSW
+    MOV AX, 'rl'
+    STOSW
+    MOV AL, 'd'
+    STOSB
+    MOV AL, 0x0
+    STOSB
+
+    MOV SI, 0
+    MOV CX, 3
+    REP LODSB
+
+    db 0x0F
+    NOP
+
+    LODSB
+    db 0x0F
+    NOP
+
+    LODSW
     db 0x0F
     NOP
 
