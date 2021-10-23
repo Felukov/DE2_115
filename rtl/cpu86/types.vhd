@@ -177,7 +177,6 @@ package cpu86_types is
         alu_b_mem       : std_logic;
         alu_b_val       : std_logic_vector(15 downto 0);
         alu_wb          : std_logic;
-        alu_keep_lock   : std_logic;
         jump_cond       : micro_op_jmp_cond_t;
         jump_cs         : std_logic_vector(15 downto 0);
         jump_ip         : std_logic_vector(15 downto 0);

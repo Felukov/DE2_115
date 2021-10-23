@@ -437,6 +437,10 @@ begin
                             when STOS_OP | SCAS_OP =>
                                 di_m_lock_tvalid <= '1';
 
+                            when LODS_OP =>
+                                ax_m_lock_tvalid <= '1';
+                                si_m_lock_tvalid <= '1';
+
                             when CMPS_OP | MOVS_OP =>
                                 di_m_lock_tvalid <= '1';
                                 si_m_lock_tvalid <= '1';

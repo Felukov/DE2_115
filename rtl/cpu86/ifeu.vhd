@@ -147,11 +147,6 @@ begin
         bx_m_wr_tvalid <= '0';
         cx_m_wr_tvalid <= rep_upd_cx_tvalid;
         cx_m_wr_tkeep_lock <= rep_upd_cx_keep_lock;
-        -- if rep_upd_cx_tvalid = '1' and rep_mode = '1' then
-        --     cx_m_wr_tkeep_lock <= '1';
-        -- else
-        --     cx_m_wr_tkeep_lock <= '0';
-        -- end if;
         dx_m_wr_tvalid <= '0';
         bp_m_wr_tvalid <= '0';
         sp_m_wr_tvalid <= '0';
@@ -416,8 +411,8 @@ begin
                 case rr_tdata.code is
                     when CMPS_OP => micro_cnt_next <= 4;
                     when SCAS_OP => micro_cnt_next <= 3;
-                    when MOVS_OP => micro_cnt_next <= 1;
                     when LODS_OP => micro_cnt_next <= 1;
+                    when MOVS_OP => micro_cnt_next <= 1;
                     when others => micro_cnt_next <= 0;
                 end case;
 
@@ -513,7 +508,6 @@ begin
             micro_tdata.alu_dreg <= dreg;
             micro_tdata.alu_dmask <= dmask;
             micro_tdata.alu_wb <= '1';
-            micro_tdata.alu_keep_lock <= '0';
         end procedure;
 
         procedure alu_put_in_b(bval : std_logic_vector) is begin
@@ -522,6 +516,16 @@ begin
             micro_tdata.alu_code <= ALU_SF_ADD;
             micro_tdata.alu_a_val <= x"0000";
             micro_tdata.alu_b_val <= bval;
+        end procedure;
+
+        procedure alu_load_reg_from_mem(dreg : reg_t; dmask : std_logic_vector) is begin
+            micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+            micro_tdata.alu_wb <= '1';
+            micro_tdata.alu_code <= ALU_SF_ADD;
+            micro_tdata.alu_a_val <= x"0000";
+            micro_tdata.alu_b_mem <= '1';
+            micro_tdata.alu_dreg <= dreg;
+            micro_tdata.alu_dmask <= dmask;
         end procedure;
 
         procedure mem_read_word(seg, addr : std_logic_vector) is begin
@@ -891,7 +895,6 @@ begin
 
                                 micro_tdata.alu_code <= rr_tdata.code;
                                 micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '0';
                                 micro_tdata.alu_a_val <= rr_tdata.dreg_val;
                                 micro_tdata.alu_b_val <= rr_tdata.data;
                                 micro_tdata.alu_dreg <= rr_tdata.dreg;
@@ -1003,7 +1006,6 @@ begin
                                         micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                         micro_tdata.alu_code <= ALU_OP_CMP;
                                         micro_tdata.alu_wb <= '0';
-                                        micro_tdata.alu_keep_lock <= '0';
                                         micro_tdata.alu_a_buf <= '1';
                                         micro_tdata.alu_b_mem <= '1';
                                     when 2 =>
@@ -1030,6 +1032,27 @@ begin
                                         null;
                                 end case;
 
+                            when LODS_OP =>
+                                case micro_cnt is
+                                    when 1 =>
+                                        mem_off; si_inc_off;
+                                        micro_tdata.read_fifo <= '1';
+                                        if rep_mode = '0' then
+                                            alu_load_reg_from_mem(rr_tdata_buf.dreg, rr_tdata_buf.dmask);
+                                        end if;
+
+                                    when 0 =>
+                                        micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
+                                        si_inc_on;
+                                        micro_tdata.read_fifo <= '0';
+                                        micro_tdata.mem_addr <= si_s_tdata;
+                                        update_si_keep_lock;
+
+                                    when others =>
+                                        null;
+                                end case;
+
+
                             when STOS_OP =>
                                 micro_tdata.mem_addr <= di_s_tdata_next;
                                 update_di_keep_lock;
@@ -1043,7 +1066,6 @@ begin
 
                                         micro_tdata.alu_code <= ALU_OP_CMP;
                                         micro_tdata.alu_wb <= '0';
-                                        micro_tdata.alu_keep_lock <= '0';
                                         micro_tdata.alu_a_val <= rr_tdata_buf.sreg_val;
                                         micro_tdata.alu_b_mem <= '1';
                                     when 2 =>
@@ -1159,7 +1181,6 @@ begin
 
                                 micro_tdata.alu_code <= ALU_SF_ADD;
                                 micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '0';
                                 micro_tdata.alu_a_val <= x"0000";
                                 micro_tdata.alu_b_mem <= '1';
                                 micro_tdata.alu_dreg <= rr_tdata_buf.sreg;
@@ -1210,7 +1231,6 @@ begin
                                         micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
                                         --micro_tdata.alu_a_acc <= '0';
                                         micro_tdata.alu_wb <= '1';
-                                        micro_tdata.alu_keep_lock <= '0';
                                     when 7 =>
                                         micro_tdata.alu_dreg <= SI;
                                     when 6 =>
@@ -1220,7 +1240,6 @@ begin
                                         --micro_tdata.alu_dreg <= SP;
                                     when 4 =>
                                         micro_tdata.alu_wb <= '1';
-                                        micro_tdata.alu_keep_lock <= '0';
                                         micro_tdata.alu_dreg <= BX;
                                     when 3 =>
                                         micro_tdata.alu_dreg <= DX;
@@ -1245,7 +1264,6 @@ begin
 
                                 micro_tdata.alu_code <= ALU_SF_ADD;
                                 micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '0';
                                 micro_tdata.read_fifo <= '1';
 
                                 micro_tdata.alu_a_val <= x"0000";
@@ -1300,7 +1318,6 @@ begin
 
                                 micro_tdata.alu_code <= rr_tdata_buf.code;
                                 micro_tdata.alu_wb <= '1';
-                                micro_tdata.alu_keep_lock <= '0';
                                 micro_tdata.alu_a_val <= rr_tdata_buf.dreg_val;
                                 micro_tdata.alu_b_mem <= '1';
                                 micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
