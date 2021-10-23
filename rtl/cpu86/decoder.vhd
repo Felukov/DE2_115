@@ -748,6 +748,26 @@ begin
                         instr_tdata.code <= STOS_OP;
                         instr_tdata.w <= '1';
 
+                    when x"AC" =>
+                        instr_tdata.op <= STR;
+                        instr_tdata.code <= LODS_OP;
+                        instr_tdata.w <= '0';
+
+                    when x"AD" =>
+                        instr_tdata.op <= STR;
+                        instr_tdata.code <= LODS_OP;
+                        instr_tdata.w <= '1';
+
+                    when x"AE" =>
+                        instr_tdata.op <= STR;
+                        instr_tdata.code <= SCAS_OP;
+                        instr_tdata.w <= '0';
+
+                    when x"AF" =>
+                        instr_tdata.op <= STR;
+                        instr_tdata.code <= SCAS_OP;
+                        instr_tdata.w <= '1';
+
                     when x"B0" | x"B1" | x"B2" | x"B3" | x"B4" | x"B5" | x"B6" | x"B7" =>
                         instr_tdata.op <= MOVU;
                         instr_tdata.code <= "0000";
@@ -959,7 +979,7 @@ begin
                     when x"A2" | x"A3" =>
                         instr_tdata.dir <= R2M;
 
-                    when x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" =>
+                    when x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AC" | x"AD" | x"AE" | x"AF" =>
                         instr_tdata.dir <= STR;
 
                     when x"F2" | x"F3" =>
@@ -1198,7 +1218,7 @@ begin
                         instr_tdata.dreg <= AX;
                         instr_tdata.dmask <= "11";
 
-                    when x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" =>
+                    when x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AE" | x"AF" =>
                         instr_tdata.dreg <= DI;
                         instr_tdata.dmask <= "11";
 
@@ -1467,8 +1487,8 @@ begin
 
                     when x"A4" | x"A5" | x"A6" | x"A7" => instr_tdata.sreg <= SI; instr_tdata.smask <= "11";
 
-                    when x"AA" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
-                    when x"AB" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
+                    when x"AA" | x"AE" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
+                    when x"AB" | x"AF" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
 
                     when x"F2" | x"F3" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
 

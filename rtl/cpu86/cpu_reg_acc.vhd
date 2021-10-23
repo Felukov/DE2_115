@@ -32,26 +32,38 @@ architecture rtl of cpu_reg_acc is
 
     signal reg_tvalid       : std_logic;
     signal reg_tdata_next   : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal reg_tdata_sel    : std_logic_vector(1 downto 0);
     signal reg_tdata        : std_logic_vector(DATA_WIDTH-1 downto 0);
 
 begin
 
     reg_m_tvalid <= reg_tvalid;
     reg_m_tdata <= reg_tdata;
-    reg_m_tdata_next <= reg_tdata_next;
+    reg_m_tdata_next <= std_logic_vector(unsigned(reg_tdata) + unsigned(inc_s_tdata));
+
+    reg_tdata_sel <= inc_s_tvalid & wr_s_tvalid;
 
     update_reg_next_proc : process (all) begin
-        reg_tdata_next <= reg_tdata;
-        if (inc_s_tvalid = '1') then
-            reg_tdata_next <= std_logic_vector(unsigned(reg_tdata) + unsigned(inc_s_tdata));
-        elsif (wr_s_tvalid = '1') then
-            case wr_s_tmask is
-                when "11" => reg_tdata_next <= wr_s_tdata;
-                when "01" => reg_tdata_next(DATA_WIDTH/2-1 downto 0) <= wr_s_tdata(DATA_WIDTH/2-1 downto 0);
-                when "10" => reg_tdata_next(DATA_WIDTH-1 downto DATA_WIDTH/2) <= wr_s_tdata(DATA_WIDTH/2-1 downto 0);
-                when others => null;
-            end case;
-        end if;
+        case reg_tdata_sel is
+            when "10" =>
+                reg_tdata_next <= std_logic_vector(unsigned(reg_tdata) + unsigned(inc_s_tdata));
+            when "01" =>
+                case wr_s_tmask is
+                    when "11" =>
+                        reg_tdata_next <= wr_s_tdata;
+                    when "01" =>
+                        reg_tdata_next(DATA_WIDTH/2-1 downto 0) <= wr_s_tdata(DATA_WIDTH/2-1 downto 0);
+                        reg_tdata_next(DATA_WIDTH-1 downto DATA_WIDTH/2) <= reg_tdata(DATA_WIDTH-1 downto DATA_WIDTH/2);
+                    when "10" =>
+                        reg_tdata_next(DATA_WIDTH/2-1 downto 0) <= reg_tdata(DATA_WIDTH/2-1 downto 0);
+                        reg_tdata_next(DATA_WIDTH-1 downto DATA_WIDTH/2) <= wr_s_tdata(DATA_WIDTH/2-1 downto 0);
+                    when others =>
+                        reg_tdata_next <= reg_tdata;
+                end case;
+            when others =>
+                reg_tdata_next <= reg_tdata;
+        end case;
+
     end process;
 
     update_reg_proc: process (clk) begin
