@@ -409,8 +409,8 @@ begin
 
             when STR =>
                 case rr_tdata.code is
-                    when CMPS_OP => micro_cnt_next <= 4;
-                    when SCAS_OP => micro_cnt_next <= 3;
+                    when CMPS_OP => micro_cnt_next <= 5;
+                    when SCAS_OP => micro_cnt_next <= 4;
                     when LODS_OP => micro_cnt_next <= 1;
                     when MOVS_OP => micro_cnt_next <= 1;
                     when others => micro_cnt_next <= 0;
@@ -472,14 +472,17 @@ begin
 
         procedure sp_inc_off is begin
             micro_tdata.sp_inc <= '0';
+            micro_tdata.sp_keep_lock <= '0';
         end procedure;
 
         procedure di_inc_off is begin
             micro_tdata.di_inc <= '0';
+            micro_tdata.di_keep_lock <= '0';
         end procedure;
 
         procedure si_inc_off is begin
             micro_tdata.si_inc <= '0';
+            micro_tdata.si_keep_lock <= '0';
         end procedure;
 
         procedure sp_inc_on is begin
@@ -985,7 +988,7 @@ begin
                         case rr_tdata_buf.code is
                             when CMPS_OP =>
                                 case micro_cnt is
-                                    when 4 =>
+                                    when 5 =>
                                         di_inc_on; si_inc_off;
                                         micro_tdata.read_fifo <= '1';
                                         if rep_mode = '1' then
@@ -999,7 +1002,7 @@ begin
                                         micro_tdata.mem_addr_src <= MEM_ADDR_SRC_EA;
                                         micro_tdata.mem_addr <= di_s_tdata;
                                         micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
-                                    when 3 =>
+                                    when 4 =>
                                         mem_off; di_inc_off; si_inc_off;
                                         micro_tdata.read_fifo <= '1';
 
@@ -1008,7 +1011,7 @@ begin
                                         micro_tdata.alu_wb <= '0';
                                         micro_tdata.alu_a_buf <= '1';
                                         micro_tdata.alu_b_mem <= '1';
-                                    when 2 =>
+                                    when 3 =>
                                         alu_off;
                                         micro_tdata.read_fifo <= '0';
 
@@ -1059,7 +1062,7 @@ begin
 
                             when SCAS_OP =>
                                 case micro_cnt is
-                                    when 3 =>
+                                    when 4 =>
                                         mem_off; di_inc_off;
                                         micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                         micro_tdata.read_fifo <= '1';
@@ -1068,7 +1071,7 @@ begin
                                         micro_tdata.alu_wb <= '0';
                                         micro_tdata.alu_a_val <= rr_tdata_buf.sreg_val;
                                         micro_tdata.alu_b_mem <= '1';
-                                    when 2 =>
+                                    when 3 =>
                                         alu_off;
                                         micro_tdata.read_fifo <= '0';
                                     when 0 =>

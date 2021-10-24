@@ -387,7 +387,7 @@ begin
                         es_m_lock_tvalid <= '1';
                     end if;
 
-                when R2R | I2R | M2R =>
+                when R2R | I2R | M2R | R2F =>
                     case instr_tdata.dreg is
                         when AX => ax_m_lock_tvalid <= '1';
                         when BX => bx_m_lock_tvalid <= '1';
