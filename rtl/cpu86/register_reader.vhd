@@ -139,6 +139,7 @@ begin
                     when BX => sreg_tdata(7 downto 0) <= bx_s_tdata(7 downto 0);
                     when CX => sreg_tdata(7 downto 0) <= cx_s_tdata(7 downto 0);
                     when DX => sreg_tdata(7 downto 0) <= dx_s_tdata(7 downto 0);
+                    when FL => sreg_tdata(7 downto 0) <= flags_s_tdata(7 downto 0);
                     when others => sreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
                 end case;
 
@@ -166,6 +167,7 @@ begin
                     when SS => sreg_tdata <= ss_s_tdata;
                     when DS => sreg_tdata <= ds_s_tdata;
                     when ES => sreg_tdata <= es_s_tdata;
+                    when FL => sreg_tdata <= flags_s_tdata;
                     when others => sreg_tdata <= ax_s_tdata;
                 end case;
         end case;
@@ -460,7 +462,10 @@ begin
         flags_m_lock_tvalid <= '0';
 
         if (instr_tvalid = '1' and instr_tready = '1') then
-            if instr_tdata.op = SET_FLAG or (instr_tdata.op = ALU and instr_tdata.code /= ALU_SF_ADD) then
+            if instr_tdata.op = SET_FLAG or
+                (instr_tdata.op = ALU and instr_tdata.code /= ALU_SF_ADD) or
+                (instr_tdata.op = STACKU and instr_tdata.code = STACKU_POPR and instr_tdata.sreg = FL) or
+                (instr_tdata.op = MOVU and instr_tdata.dir = R2F and instr_tdata.dreg = FL) then
                 flags_m_lock_tvalid <= '1';
             end if;
         end if;

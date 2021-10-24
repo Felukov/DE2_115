@@ -554,7 +554,6 @@ begin
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_SUB;
                         instr_tdata.w <= '1';
-
                     when x"30" =>
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_XOR;
@@ -579,7 +578,6 @@ begin
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_XOR;
                         instr_tdata.w <= '1';
-
                     when x"38" =>
                         instr_tdata.op <= ALU;
                         instr_tdata.code <= ALU_OP_CMP;
@@ -672,6 +670,11 @@ begin
                         instr_tdata.w <= '1';
 
                     when x"9E" =>
+                        instr_tdata.op <= MOVU;
+                        instr_tdata.code <= "0000";
+                        instr_tdata.w <= '0';
+
+                    when x"9F" =>
                         instr_tdata.op <= MOVU;
                         instr_tdata.code <= "0000";
                         instr_tdata.w <= '0';
@@ -970,6 +973,12 @@ begin
                     when x"9D" =>
                         instr_tdata.dir <= STK;
 
+                    when x"9E" =>
+                        instr_tdata.dir <= R2F;
+
+                    when x"9F" =>
+                        instr_tdata.dir <= R2F;
+
                     when x"A0" | x"A1" =>
                         instr_tdata.dir <= M2R;
 
@@ -1202,13 +1211,17 @@ begin
                         instr_tdata.dreg <= DX;
                         instr_tdata.dmask <= "11";
 
+                    when x"9D" | x"9C" =>
+                        instr_tdata.dreg <= SP;
+                        instr_tdata.dmask <= "11";
+
                     when x"9E" =>
                         instr_tdata.dreg <= FL;
                         instr_tdata.dmask <= "01";
 
-                    when x"9D" | x"9C" =>
-                        instr_tdata.dreg <= SP;
-                        instr_tdata.dmask <= "11";
+                    when x"9F" =>
+                        instr_tdata.dreg <= AX;
+                        instr_tdata.dmask <= "10";
 
                     when x"A0" =>
                         instr_tdata.dreg <= AX;
@@ -1220,6 +1233,14 @@ begin
 
                     when x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AE" | x"AF" =>
                         instr_tdata.dreg <= DI;
+                        instr_tdata.dmask <= "11";
+
+                    when x"AC" =>
+                        instr_tdata.dreg <= AX;
+                        instr_tdata.dmask <= "01";
+
+                    when x"AD" =>
+                        instr_tdata.dreg <= AX;
                         instr_tdata.dmask <= "11";
 
                     when x"F2" | x"F3" =>
@@ -1479,8 +1500,10 @@ begin
                     when x"98" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
                     when x"99" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
 
-                    when x"9C" => instr_tdata.sreg <= FL; instr_tdata.smask <= "11";
+                    when x"9C" | x"9D" => instr_tdata.sreg <= FL; instr_tdata.smask <= "11";
+
                     when x"9E" => instr_tdata.sreg <= AX; instr_tdata.smask <= "10";
+                    when x"9F" => instr_tdata.sreg <= FL; instr_tdata.smask <= "01";
 
                     when x"A2" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
                     when x"A3" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
@@ -1682,16 +1705,8 @@ begin
                                 instr_tdata.data <= x"FFFF";
                             when x"0E" | x"1E" | x"16" | x"06" =>
                                 instr_tdata.data <= x"FFFE";
-                            -- when x"50" | x"51" | x"52" | x"53" | x"54" | x"55" | x"56" | x"57" =>
-                            --     instr_tdata.data <= x"FFFE";
                             when x"1F" | x"17" | x"07" =>
                                 instr_tdata.data <= x"0002";
-                            -- when x"58" | x"59" | x"5A" | x"5B" | x"5C" | x"5D" | x"5E" | x"5F" =>
-                            --     instr_tdata.data <= x"0002";
-                            -- when x"60" =>
-                            --     instr_tdata.data <= x"FFFE";
-                            -- when x"61" =>
-                            --     instr_tdata.data <= x"0002";
                             when others =>
                                 null;
                         end case;

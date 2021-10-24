@@ -407,9 +407,13 @@ begin
                                 flags_wr_be(i) <= micro_tdata.alu_dmask(1);
                             end loop;
 
-                            for i in 7 downto 0 loop
-                                flags_wr_be(i) <= micro_tdata.alu_dmask(0);
-                            end loop;
+                            flags_wr_be(FLAG_ZF) <= micro_tdata.alu_dmask(0);
+                            flags_wr_be(FLAG_05) <= '0';
+                            flags_wr_be(FLAG_AF) <= '0';
+                            flags_wr_be(FLAG_03) <= '0';
+                            flags_wr_be(FLAG_PF) <= micro_tdata.alu_dmask(0);
+                            flags_wr_be(FLAG_01) <= '0';
+                            flags_wr_be(FLAG_CF) <= micro_tdata.alu_dmask(0);
 
                         else
 

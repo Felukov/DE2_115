@@ -42,11 +42,9 @@ package cpu86_types is
 
     constant STACKU_POPM    : std_logic_vector (3 downto 0) := "0000";
     constant STACKU_POPR    : std_logic_vector (3 downto 0) := "0001";
-    constant STACKU_POPF    : std_logic_vector (3 downto 0) := "0010";
     constant STACKU_POPA    : std_logic_vector (3 downto 0) := "0100";
 
     constant STACKU_PUSHR   : std_logic_vector (3 downto 0) := "1000";
-    constant STACKU_PUSHF   : std_logic_vector (3 downto 0) := "1001";
     constant STACKU_PUSHI   : std_logic_vector (3 downto 0) := "1010";
     constant STACKU_PUSHM   : std_logic_vector (3 downto 0) := "1011";
     constant STACKU_PUSHA   : std_logic_vector (3 downto 0) := "1100";
