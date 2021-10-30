@@ -65,6 +65,9 @@ package cpu86_types is
     constant CMPS_OP        : std_logic_vector (3 downto 0) := "1000";
     constant SCAS_OP        : std_logic_vector (3 downto 0) := "1001";
 
+    constant IMUL_AX        : std_logic_vector (3 downto 0) := "0000";
+    constant IMUL_RR        : std_logic_vector (3 downto 0) := "0001";
+
     constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0000";
     constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0001";
     constant SYS_DBG_OP     : std_logic_vector (3 downto 0) := "0010";
@@ -97,9 +100,19 @@ package cpu86_types is
     constant FLAG_01            : natural := 1;
     constant FLAG_CF            : natural := 0;
 
-    constant DECODED_INSTR_T_WIDTH : integer := 64;
+    constant DECODED_INSTR_T_WIDTH : integer := 74;
 
     type packed_decoded_instr_t is record
+        lock_fl     : std_logic_vector(73 downto 73);
+        lock_sp     : std_logic_vector(72 downto 72);
+        lock_sreg   : std_logic_vector(71 downto 71);
+        lock_dreg   : std_logic_vector(70 downto 70);
+        lock_ax     : std_logic_vector(69 downto 69);
+        lock_si     : std_logic_vector(68 downto 68);
+        lock_di     : std_logic_vector(67 downto 67);
+        lock_ds     : std_logic_vector(66 downto 66);
+        lock_es     : std_logic_vector(65 downto 65);
+        lock_all    : std_logic_vector(64 downto 64);
         fl          : std_logic_vector(63 downto 62);
         op          : std_logic_vector(61 downto 57);
         code        : std_logic_vector(56 downto 53);
@@ -115,6 +128,16 @@ package cpu86_types is
     end record;
 
     type decoded_instr_t is record
+        lock_fl     : std_logic;
+        lock_sreg   : std_logic;
+        lock_dreg   : std_logic;
+        lock_ax     : std_logic;
+        lock_sp     : std_logic;
+        lock_si     : std_logic;
+        lock_di     : std_logic;
+        lock_ds     : std_logic;
+        lock_es     : std_logic;
+        lock_all    : std_logic;
         fl          : fl_action_t;
         op          : op_t;
         code        : std_logic_vector(3 downto 0);
@@ -149,12 +172,13 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 5;
+    constant MICRO_OP_CMD_WIDTH : natural := 6;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
     constant MICRO_OP_CMD_FLG : natural := 3;
-    constant MICRO_OP_CMD_DBG : natural := 4;
+    constant MICRO_OP_CMD_MUL : natural := 4;
+    constant MICRO_OP_CMD_DBG : natural := 5;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -212,20 +236,31 @@ package body cpu86_types is
         variable v : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
     begin
 
-        p.fl := std_logic_vector(to_unsigned(fl_action_t'pos(decoded_instr.fl), p.fl'length));
-        p.op := std_logic_vector(to_unsigned(op_t'pos(decoded_instr.op), p.op'length));
-        p.code := decoded_instr.code;
-        p.w := (52 => decoded_instr.w);
-        p.dir := std_logic_vector(to_unsigned(direction_t'pos(decoded_instr.dir), p.dir'length));
-        p.ea := std_logic_vector(to_unsigned(ea_t'pos(decoded_instr.ea), p.ea'length));
-        p.dreg := std_logic_vector(to_unsigned(reg_t'pos(decoded_instr.dreg), p.dreg'length));
-        p.dmask := decoded_instr.dmask;
-        p.sreg := std_logic_vector(to_unsigned(reg_t'pos(decoded_instr.sreg), p.sreg'length));
-        p.smask := decoded_instr.smask;
-        p.data := decoded_instr.data;
-        p.disp := decoded_instr.disp;
+        p.lock_fl   := (73 => decoded_instr.lock_fl);
+        p.lock_sp   := (72 => decoded_instr.lock_sp);
+        p.lock_sreg := (71 => decoded_instr.lock_sreg);
+        p.lock_dreg := (70 => decoded_instr.lock_dreg);
+        p.lock_ax   := (69 => decoded_instr.lock_ax);
+        p.lock_si   := (68 => decoded_instr.lock_si);
+        p.lock_di   := (67 => decoded_instr.lock_di);
+        p.lock_ds   := (66 => decoded_instr.lock_ds);
+        p.lock_es   := (65 => decoded_instr.lock_es);
+        p.lock_all  := (64 => decoded_instr.lock_all);
+        p.fl        := std_logic_vector(to_unsigned(fl_action_t'pos(decoded_instr.fl), p.fl'length));
+        p.op        := std_logic_vector(to_unsigned(op_t'pos(decoded_instr.op), p.op'length));
+        p.code      := decoded_instr.code;
+        p.w         := (52 => decoded_instr.w);
+        p.dir       := std_logic_vector(to_unsigned(direction_t'pos(decoded_instr.dir), p.dir'length));
+        p.ea        := std_logic_vector(to_unsigned(ea_t'pos(decoded_instr.ea), p.ea'length));
+        p.dreg      := std_logic_vector(to_unsigned(reg_t'pos(decoded_instr.dreg), p.dreg'length));
+        p.dmask     := decoded_instr.dmask;
+        p.sreg      := std_logic_vector(to_unsigned(reg_t'pos(decoded_instr.sreg), p.sreg'length));
+        p.smask     := decoded_instr.smask;
+        p.data      := decoded_instr.data;
+        p.disp      := decoded_instr.disp;
 
-        v := p.fl & p.op & p.code & p.w & p.dir & p.ea & p.dreg & p.dmask & p.sreg & p.smask & p.data & p.disp;
+        v := p.lock_fl & p.lock_sp & p.lock_sreg & p.lock_dreg & p.lock_ax & p.lock_si & p.lock_di & p.lock_ds & p.lock_es & p.lock_all &
+            p.fl & p.op & p.code & p.w & p.dir & p.ea & p.dreg & p.dmask & p.sreg & p.smask & p.data & p.disp;
 
         return v;
 
@@ -238,31 +273,51 @@ package body cpu86_types is
     begin
         t := v;
         --(p.op,  p.code, p.w, p.dir, p.ea, p.dreg, p.dmask, p.sreg, p.smask, p.data, p.disp) := v;
-        p.fl := t(p.fl'range);
-        p.op := t(p.op'range);
-        p.code := t(p.code'range);
-        p.w := t(p.w'range);
-        p.dir := t(p.dir'range);
-        p.ea := t(p.ea'range);
-        p.dreg := t(p.dreg'range);
-        p.dmask := t(p.dmask'range);
-        p.sreg := t(p.sreg'range);
-        p.smask := t(p.smask'range);
-        p.data := t(p.data'range);
-        p.disp := t(p.disp'range);
+        p.lock_fl   := t(p.lock_fl'range);
+        p.lock_sp   := t(p.lock_sp'range);
+        p.lock_sreg := t(p.lock_sreg'range);
+        p.lock_dreg := t(p.lock_dreg'range);
+        p.lock_ax   := t(p.lock_ax'range);
+        p.lock_si   := t(p.lock_si'range);
+        p.lock_di   := t(p.lock_di'range);
+        p.lock_ds   := t(p.lock_ds'range);
+        p.lock_es   := t(p.lock_es'range);
+        p.lock_all  := t(p.lock_all'range);
+        p.fl        := t(p.fl'range);
+        p.op        := t(p.op'range);
+        p.code      := t(p.code'range);
+        p.w         := t(p.w'range);
+        p.dir       := t(p.dir'range);
+        p.ea        := t(p.ea'range);
+        p.dreg      := t(p.dreg'range);
+        p.dmask     := t(p.dmask'range);
+        p.sreg      := t(p.sreg'range);
+        p.smask     := t(p.smask'range);
+        p.data      := t(p.data'range);
+        p.disp      := t(p.disp'range);
 
-        d.fl := fl_action_t'val(to_integer(unsigned(p.fl)));
-        d.op := op_t'val(to_integer(unsigned(p.op)));
-        d.code := p.code;
-        d.w := p.w(52);
-        d.dir := direction_t'val(to_integer(unsigned(p.dir)));
-        d.ea := ea_t'val(to_integer(unsigned(p.ea)));
-        d.dreg := reg_t'val(to_integer(unsigned(p.dreg)));
-        d.dmask := p.dmask;
-        d.sreg := reg_t'val(to_integer(unsigned(p.sreg)));
-        d.smask := p.smask;
-        d.data := p.data;
-        d.disp := p.disp;
+        d.lock_fl   := p.lock_fl(73);
+        d.lock_sp   := p.lock_sp(72);
+        d.lock_sreg := p.lock_sreg(71);
+        d.lock_dreg := p.lock_dreg(70);
+        d.lock_ax   := p.lock_ax(69);
+        d.lock_si   := p.lock_si(68);
+        d.lock_di   := p.lock_di(67);
+        d.lock_ds   := p.lock_ds(66);
+        d.lock_es   := p.lock_es(65);
+        d.lock_all  := p.lock_all(64);
+        d.fl        := fl_action_t'val(to_integer(unsigned(p.fl)));
+        d.op        := op_t'val(to_integer(unsigned(p.op)));
+        d.code      := p.code;
+        d.w         := p.w(52);
+        d.dir       := direction_t'val(to_integer(unsigned(p.dir)));
+        d.ea        := ea_t'val(to_integer(unsigned(p.ea)));
+        d.dreg      := reg_t'val(to_integer(unsigned(p.dreg)));
+        d.dmask     := p.dmask;
+        d.sreg      := reg_t'val(to_integer(unsigned(p.sreg)));
+        d.smask     := p.smask;
+        d.data      := p.data;
+        d.disp      := p.disp;
 
         return d;
 
