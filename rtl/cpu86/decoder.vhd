@@ -389,7 +389,7 @@ begin
                     case u8_tdata is
                         when x"00" | x"01" | x"08" | x"09" | x"10" | x"11" | x"18" | x"19" |
                              x"20" | x"21" | x"28" | x"29" | x"30" | x"31" | x"38" | x"39" |
-                             x"88" | x"89" | x"8A" | x"8B" | x"8C" =>
+                             x"88" | x"89" | x"8C" =>
                             reg_rm_direction <= TO_RM;
                         when others =>
                             reg_rm_direction <= TO_REG;
@@ -423,6 +423,10 @@ begin
             instr_tdata.fl <= action;
         end procedure;
 
+        procedure lock_fl (val : std_logic) is begin
+            instr_tdata.lock_fl <= val;
+        end;
+
         procedure no_lock is begin
             instr_tdata.lock_sreg <= '0';
             instr_tdata.lock_dreg <= '0';
@@ -430,6 +434,9 @@ begin
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '0';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure lock_ax_only is begin
@@ -439,6 +446,9 @@ begin
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '0';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure lock_dreg_only is begin
@@ -448,6 +458,33 @@ begin
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '0';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
+        end;
+
+        procedure lock_les is begin
+            instr_tdata.lock_sreg <= '0';
+            instr_tdata.lock_dreg <= '1';
+            instr_tdata.lock_ax <= '0';
+            instr_tdata.lock_si <= '0';
+            instr_tdata.lock_di <= '0';
+            instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '1';
+            instr_tdata.lock_sp <= '0';
+        end;
+
+        procedure lock_lds is begin
+            instr_tdata.lock_sreg <= '0';
+            instr_tdata.lock_dreg <= '1';
+            instr_tdata.lock_ax <= '0';
+            instr_tdata.lock_si <= '0';
+            instr_tdata.lock_di <= '0';
+            instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '1';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure lock_sreg_dreg is begin
@@ -457,24 +494,33 @@ begin
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '0';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure lock_stack_pop is begin
-            instr_tdata.lock_sreg <= '1';
+            instr_tdata.lock_sreg <= '0';
             instr_tdata.lock_dreg <= '1';
             instr_tdata.lock_ax <= '0';
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '0';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '1';
         end;
 
         procedure lock_stack_default is begin
-            instr_tdata.lock_sreg <= '1';
+            instr_tdata.lock_sreg <= '0';
             instr_tdata.lock_dreg <= '0';
             instr_tdata.lock_ax <= '0';
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '0';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '1';
         end;
 
         procedure lock_stack_popa is begin
@@ -484,15 +530,21 @@ begin
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '0';
             instr_tdata.lock_all <= '1';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure lock_stack_pusha is begin
-            instr_tdata.lock_sreg <= '1';
-            instr_tdata.lock_dreg <= '1';
+            instr_tdata.lock_sreg <= '0';
+            instr_tdata.lock_dreg <= '0';
             instr_tdata.lock_ax <= '0';
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '0';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '1';
         end;
 
         procedure lock_movs is begin
@@ -502,6 +554,9 @@ begin
             instr_tdata.lock_si <= '1';
             instr_tdata.lock_di <= '1';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure lock_cmps is begin
@@ -511,6 +566,9 @@ begin
             instr_tdata.lock_si <= '1';
             instr_tdata.lock_di <= '1';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure lock_stos is begin
@@ -520,6 +578,9 @@ begin
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '1';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure lock_scas is begin
@@ -529,6 +590,9 @@ begin
             instr_tdata.lock_si <= '0';
             instr_tdata.lock_di <= '1';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure lock_lods is begin
@@ -538,153 +602,156 @@ begin
             instr_tdata.lock_si <= '1';
             instr_tdata.lock_di <= '0';
             instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
         end;
 
         procedure decode_op_first_byte is begin
             case u8_tdata is
-                when x"00" => set_op(ALU, ALU_OP_ADD, '0'); no_lock;
-                when x"01" => set_op(ALU, ALU_OP_ADD, '1'); no_lock;
-                when x"02" => set_op(ALU, ALU_OP_ADD, '0'); no_lock;
-                when x"03" => set_op(ALU, ALU_OP_ADD, '1'); no_lock;
-                when x"04" => set_op(ALU, ALU_OP_ADD, '0'); lock_ax_only;
-                when x"05" => set_op(ALU, ALU_OP_ADD, '1'); lock_ax_only;
+                when x"00" => set_op(ALU, ALU_OP_ADD, '0'); no_lock; lock_fl('1');
+                when x"01" => set_op(ALU, ALU_OP_ADD, '1'); no_lock; lock_fl('1');
+                when x"02" => set_op(ALU, ALU_OP_ADD, '0'); no_lock; lock_fl('1');
+                when x"03" => set_op(ALU, ALU_OP_ADD, '1'); no_lock; lock_fl('1');
+                when x"04" => set_op(ALU, ALU_OP_ADD, '0'); lock_ax_only; lock_fl('1');
+                when x"05" => set_op(ALU, ALU_OP_ADD, '1'); lock_ax_only; lock_fl('1');
 
-                when x"06" => set_stack_op(STACKU_PUSHR); lock_stack_default;
-                when x"07" => set_stack_op(STACKU_POPR); lock_stack_pop;
+                when x"06" => set_stack_op(STACKU_PUSHR); lock_stack_default; lock_fl('0');
+                when x"07" => set_stack_op(STACKU_POPR); lock_stack_pop; lock_fl('0');
 
-                when x"08" => set_op(ALU, ALU_OP_OR,  '0'); no_lock;
-                when x"09" => set_op(ALU, ALU_OP_OR,  '1'); no_lock;
-                when x"0A" => set_op(ALU, ALU_OP_OR,  '0'); no_lock;
-                when x"0B" => set_op(ALU, ALU_OP_OR,  '1'); no_lock;
-                when x"0C" => set_op(ALU, ALU_OP_OR,  '0'); lock_ax_only;
-                when x"0D" => set_op(ALU, ALU_OP_OR,  '1'); lock_ax_only;
+                when x"08" => set_op(ALU, ALU_OP_OR,  '0'); no_lock; lock_fl('1'); lock_fl('0');
+                when x"09" => set_op(ALU, ALU_OP_OR,  '1'); no_lock; lock_fl('1'); lock_fl('0');
+                when x"0A" => set_op(ALU, ALU_OP_OR,  '0'); no_lock; lock_fl('1'); lock_fl('0');
+                when x"0B" => set_op(ALU, ALU_OP_OR,  '1'); no_lock; lock_fl('1'); lock_fl('0');
+                when x"0C" => set_op(ALU, ALU_OP_OR,  '0'); lock_ax_only; lock_fl('1');
+                when x"0D" => set_op(ALU, ALU_OP_OR,  '1'); lock_ax_only; lock_fl('1');
 
-                when x"0E" => set_stack_op(STACKU_PUSHR); lock_stack_default;
-                when x"0F" => set_op(DBG); no_lock;
+                when x"0E" => set_stack_op(STACKU_PUSHR); lock_stack_default; lock_fl('0');
+                when x"0F" => set_op(DBG); no_lock; lock_fl('0');
 
-                when x"10" => set_op(ALU, ALU_OP_ADC, '0'); no_lock;
-                when x"11" => set_op(ALU, ALU_OP_ADC, '1'); no_lock;
-                when x"12" => set_op(ALU, ALU_OP_ADC, '0'); no_lock;
-                when x"13" => set_op(ALU, ALU_OP_ADC, '1'); no_lock;
-                when x"14" => set_op(ALU, ALU_OP_ADC, '0'); lock_ax_only;
-                when x"15" => set_op(ALU, ALU_OP_ADC, '1'); lock_ax_only;
+                when x"10" => set_op(ALU, ALU_OP_ADC, '0'); no_lock; lock_fl('1');
+                when x"11" => set_op(ALU, ALU_OP_ADC, '1'); no_lock; lock_fl('1');
+                when x"12" => set_op(ALU, ALU_OP_ADC, '0'); no_lock; lock_fl('1');
+                when x"13" => set_op(ALU, ALU_OP_ADC, '1'); no_lock; lock_fl('1');
+                when x"14" => set_op(ALU, ALU_OP_ADC, '0'); lock_ax_only; lock_fl('1');
+                when x"15" => set_op(ALU, ALU_OP_ADC, '1'); lock_ax_only; lock_fl('1');
 
-                when x"16" => set_stack_op(STACKU_PUSHR); lock_stack_default;
-                when x"17" => set_stack_op(STACKU_POPR); lock_stack_pop;
+                when x"16" => set_stack_op(STACKU_PUSHR); lock_stack_default; lock_fl('0');
+                when x"17" => set_stack_op(STACKU_POPR); lock_stack_pop; lock_fl('0');
 
-                when x"18" => set_op(ALU, ALU_OP_SBB, '0'); no_lock;
-                when x"19" => set_op(ALU, ALU_OP_SBB, '1'); no_lock;
-                when x"1A" => set_op(ALU, ALU_OP_SBB, '0'); no_lock;
-                when x"1B" => set_op(ALU, ALU_OP_SBB, '1'); no_lock;
-                when x"1C" => set_op(ALU, ALU_OP_SBB, '0'); lock_ax_only;
-                when x"1D" => set_op(ALU, ALU_OP_SBB, '1'); lock_ax_only;
+                when x"18" => set_op(ALU, ALU_OP_SBB, '0'); no_lock; lock_fl('1');
+                when x"19" => set_op(ALU, ALU_OP_SBB, '1'); no_lock; lock_fl('1');
+                when x"1A" => set_op(ALU, ALU_OP_SBB, '0'); no_lock; lock_fl('1');
+                when x"1B" => set_op(ALU, ALU_OP_SBB, '1'); no_lock; lock_fl('1');
+                when x"1C" => set_op(ALU, ALU_OP_SBB, '0'); lock_ax_only; lock_fl('1');
+                when x"1D" => set_op(ALU, ALU_OP_SBB, '1'); lock_ax_only; lock_fl('1');
 
-                when x"1E" => set_stack_op(STACKU_PUSHR); lock_stack_default;
-                when x"1F" => set_stack_op(STACKU_POPR); lock_stack_pop;
+                when x"1E" => set_stack_op(STACKU_PUSHR); lock_stack_default; lock_fl('0');
+                when x"1F" => set_stack_op(STACKU_POPR); lock_stack_pop; lock_fl('0');
 
-                when x"20" => set_op(ALU, ALU_OP_AND, '0'); no_lock;
-                when x"21" => set_op(ALU, ALU_OP_AND, '1'); no_lock;
-                when x"22" => set_op(ALU, ALU_OP_AND, '0'); no_lock;
-                when x"23" => set_op(ALU, ALU_OP_AND, '1'); no_lock;
-                when x"24" => set_op(ALU, ALU_OP_AND, '0'); lock_ax_only;
-                when x"25" => set_op(ALU, ALU_OP_AND, '1'); lock_ax_only;
+                when x"20" => set_op(ALU, ALU_OP_AND, '0'); no_lock; lock_fl('1');
+                when x"21" => set_op(ALU, ALU_OP_AND, '1'); no_lock; lock_fl('1');
+                when x"22" => set_op(ALU, ALU_OP_AND, '0'); no_lock; lock_fl('1');
+                when x"23" => set_op(ALU, ALU_OP_AND, '1'); no_lock; lock_fl('1');
+                when x"24" => set_op(ALU, ALU_OP_AND, '0'); lock_ax_only; lock_fl('1');
+                when x"25" => set_op(ALU, ALU_OP_AND, '1'); lock_ax_only; lock_fl('1');
 
-                when x"28" => set_op(ALU, ALU_OP_SUB, '0'); no_lock;
-                when x"29" => set_op(ALU, ALU_OP_SUB, '1'); no_lock;
-                when x"2A" => set_op(ALU, ALU_OP_SUB, '0'); no_lock;
-                when x"2B" => set_op(ALU, ALU_OP_SUB, '1'); no_lock;
-                when x"2C" => set_op(ALU, ALU_OP_SUB, '0'); lock_ax_only;
-                when x"2D" => set_op(ALU, ALU_OP_SUB, '1'); lock_ax_only;
+                when x"28" => set_op(ALU, ALU_OP_SUB, '0'); no_lock; lock_fl('1');
+                when x"29" => set_op(ALU, ALU_OP_SUB, '1'); no_lock; lock_fl('1');
+                when x"2A" => set_op(ALU, ALU_OP_SUB, '0'); no_lock; lock_fl('1');
+                when x"2B" => set_op(ALU, ALU_OP_SUB, '1'); no_lock; lock_fl('1');
+                when x"2C" => set_op(ALU, ALU_OP_SUB, '0'); lock_ax_only; lock_fl('1');
+                when x"2D" => set_op(ALU, ALU_OP_SUB, '1'); lock_ax_only; lock_fl('1');
 
-                when x"30" => set_op(ALU, ALU_OP_XOR, '0'); no_lock;
-                when x"31" => set_op(ALU, ALU_OP_XOR, '1'); no_lock;
-                when x"32" => set_op(ALU, ALU_OP_XOR, '0'); no_lock;
-                when x"33" => set_op(ALU, ALU_OP_XOR, '1'); no_lock;
-                when x"34" => set_op(ALU, ALU_OP_XOR, '0'); lock_ax_only;
-                when x"35" => set_op(ALU, ALU_OP_XOR, '1'); lock_ax_only;
+                when x"30" => set_op(ALU, ALU_OP_XOR, '0'); no_lock; lock_fl('1');
+                when x"31" => set_op(ALU, ALU_OP_XOR, '1'); no_lock; lock_fl('1');
+                when x"32" => set_op(ALU, ALU_OP_XOR, '0'); no_lock; lock_fl('1');
+                when x"33" => set_op(ALU, ALU_OP_XOR, '1'); no_lock; lock_fl('1');
+                when x"34" => set_op(ALU, ALU_OP_XOR, '0'); lock_ax_only; lock_fl('1');
+                when x"35" => set_op(ALU, ALU_OP_XOR, '1'); lock_ax_only; lock_fl('1');
 
-                when x"38" => set_op(ALU, ALU_OP_CMP, '0'); no_lock;
-                when x"39" => set_op(ALU, ALU_OP_CMP, '1'); no_lock;
-                when x"3A" => set_op(ALU, ALU_OP_CMP, '0'); no_lock;
-                when x"3B" => set_op(ALU, ALU_OP_CMP, '1'); no_lock;
-                when x"3C" => set_op(ALU, ALU_OP_CMP, '0'); lock_ax_only;
-                when x"3D" => set_op(ALU, ALU_OP_CMP, '1'); lock_ax_only;
+                when x"38" => set_op(ALU, ALU_OP_CMP, '0'); no_lock; lock_fl('1');
+                when x"39" => set_op(ALU, ALU_OP_CMP, '1'); no_lock; lock_fl('1');
+                when x"3A" => set_op(ALU, ALU_OP_CMP, '0'); no_lock; lock_fl('1');
+                when x"3B" => set_op(ALU, ALU_OP_CMP, '1'); no_lock; lock_fl('1');
+                when x"3C" => set_op(ALU, ALU_OP_CMP, '0'); lock_ax_only; lock_fl('1');
+                when x"3D" => set_op(ALU, ALU_OP_CMP, '1'); lock_ax_only; lock_fl('1');
 
                 when x"26" | x"2E" | x"36" | x"3E" => set_op(SET_SEG); no_lock;
 
-                when x"40" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" => set_op(ALU, ALU_OP_INC, '1'); lock_dreg_only;
-                when x"48" | x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" => set_op(ALU, ALU_OP_DEC, '1'); lock_dreg_only;
-                when x"50" | x"51" | x"52" | x"53" | x"54" | x"55" | x"56" | x"57" => set_stack_op(STACKU_PUSHR); lock_stack_default;
-                when x"58" | x"59" | x"5A" | x"5B" | x"5C" | x"5D" | x"5E" | x"5F" => set_stack_op(STACKU_POPR); lock_stack_pop;
+                when x"40" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" => set_op(ALU, ALU_OP_INC, '1'); lock_dreg_only; lock_fl('1');
+                when x"48" | x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" => set_op(ALU, ALU_OP_DEC, '1'); lock_dreg_only; lock_fl('1');
+                when x"50" | x"51" | x"52" | x"53" | x"54" | x"55" | x"56" | x"57" => set_stack_op(STACKU_PUSHR); lock_stack_default; lock_fl('0');
+                when x"58" | x"59" | x"5A" | x"5B" | x"5C" | x"5D" | x"5E" | x"5F" => set_stack_op(STACKU_POPR); lock_stack_pop; lock_fl('0');
 
-                when x"60" => set_stack_op(STACKU_PUSHA); lock_stack_pusha;
-                when x"61" => set_stack_op(STACKU_POPA); lock_stack_popa;
-                when x"68" => set_stack_op(STACKU_PUSHI); lock_dreg_only;
-                when x"69" => set_op(MULU, IMUL_RR, '1'); no_lock;
-                when x"6A" => set_stack_op(STACKU_PUSHI); lock_stack_default;
-                when x"6B" => set_op(MULU, IMUL_RR, '0'); no_lock;
+                when x"60" => set_stack_op(STACKU_PUSHA); lock_stack_pusha; lock_fl('0');
+                when x"61" => set_stack_op(STACKU_POPA); lock_stack_popa; lock_fl('0');
+                when x"68" => set_stack_op(STACKU_PUSHI); lock_dreg_only; lock_fl('0');
+                when x"69" => set_op(MULU, IMUL_RR, '1'); no_lock; lock_fl('0');
+                when x"6A" => set_stack_op(STACKU_PUSHI); lock_stack_default; lock_fl('0');
+                when x"6B" => set_op(MULU, IMUL_RR, '0'); no_lock; lock_fl('0');
 
-                when x"80" => no_lock;
-                when x"81" => no_lock;
-                when x"82" => no_lock;
-                when x"83" => no_lock;
-                when x"86" => set_op(XCHG, "0000", '0'); no_lock;
-                when x"87" => set_op(XCHG, "0000", '1'); no_lock;
-                when x"88" => set_op(MOVU, "0000", '0'); no_lock;
-                when x"89" => set_op(MOVU, "0000", '1'); no_lock;
-                when x"8A" => set_op(MOVU, "0000", '0'); no_lock;
-                when x"8B" => set_op(MOVU, "0000", '1'); no_lock;
-                when x"8C" => set_op(MOVU, "0000", '1'); no_lock;
-                when x"8D" => set_op(FEU,  FEU_LEA, '1'); no_lock;
-                when x"8E" => set_op(MOVU, "0000", '1'); no_lock;
-                when x"8F" => no_lock;
+                when x"80" => no_lock; lock_fl('1');
+                when x"81" => no_lock; lock_fl('0');
+                when x"82" => no_lock; lock_fl('1');
+                when x"83" => no_lock; lock_fl('1');
+                when x"86" => set_op(XCHG, "0000", '0'); no_lock; lock_fl('0');
+                when x"87" => set_op(XCHG, "0000", '1'); no_lock; lock_fl('0');
+                when x"88" => set_op(MOVU, "0000", '0'); no_lock; lock_fl('0');
+                when x"89" => set_op(MOVU, "0000", '1'); no_lock; lock_fl('0');
+                when x"8A" => set_op(MOVU, "0000", '0'); no_lock; lock_fl('0');
+                when x"8B" => set_op(MOVU, "0000", '1'); no_lock; lock_fl('0');
+                when x"8C" => set_op(MOVU, "0000", '1'); no_lock; lock_fl('0');
+                when x"8D" => set_op(FEU,  FEU_LEA, '1'); no_lock; lock_fl('0');
+                when x"8E" => set_op(MOVU, "0000", '1'); no_lock; lock_fl('0');
+                when x"8F" => no_lock; lock_fl('0');
 
-                when x"90" | x"91" | x"92" | x"93" | x"94" | x"95" | x"96" | x"97" => set_op(XCHG, "0000", '1'); lock_sreg_dreg;
-                when x"98" => set_op(FEU,  FEU_CBW, '0'); lock_dreg_only;
-                when x"99" => set_op(FEU,  FEU_CWD, '1'); lock_dreg_only;
+                when x"90" | x"91" | x"92" | x"93" | x"94" | x"95" | x"96" | x"97" => set_op(XCHG, "0000", '1'); lock_sreg_dreg; lock_fl('0');
+                when x"98" => set_op(FEU,  FEU_CBW, '0'); lock_dreg_only; lock_fl('0');
+                when x"99" => set_op(FEU,  FEU_CWD, '1'); lock_dreg_only; lock_fl('0');
 
-                when x"9C" => set_stack_op(STACKU_PUSHR); lock_stack_default;
-                when x"9D" => set_stack_op(STACKU_POPR); lock_stack_pop;
+                when x"9C" => set_stack_op(STACKU_PUSHR); lock_stack_default; lock_fl('0');
+                when x"9D" => set_stack_op(STACKU_POPR); lock_stack_pop; lock_fl('0');
 
-                when x"9E" => set_op(MOVU, "0000", '0'); lock_dreg_only;
-                when x"9F" => set_op(MOVU, "0000", '0'); lock_dreg_only;
+                when x"9E" => set_op(MOVU, "0000", '0'); lock_dreg_only; lock_fl('0');
+                when x"9F" => set_op(MOVU, "0000", '0'); lock_dreg_only; lock_fl('0');
 
-                when x"A0" => set_op(MOVU, "0000", '0'); lock_dreg_only;
-                when x"A1" => set_op(MOVU, "0000", '1'); lock_dreg_only;
-                when x"A2" => set_op(MOVU, "0000", '0'); lock_dreg_only;
-                when x"A3" => set_op(MOVU, "0000", '1'); lock_dreg_only;
+                when x"A0" => set_op(MOVU, "0000", '0'); lock_dreg_only; lock_fl('0');
+                when x"A1" => set_op(MOVU, "0000", '1'); lock_dreg_only; lock_fl('0');
+                when x"A2" => set_op(MOVU, "0000", '0'); no_lock; lock_fl('0');
+                when x"A3" => set_op(MOVU, "0000", '1'); no_lock; lock_fl('0');
 
-                when x"A4" => set_op(STR, MOVS_OP, '0'); lock_movs;
-                when x"A5" => set_op(STR, MOVS_OP, '1'); lock_movs;
-                when x"A6" => set_op(STR, CMPS_OP, '0'); lock_cmps;
-                when x"A7" => set_op(STR, CMPS_OP, '1'); lock_cmps;
-                when x"AA" => set_op(STR, STOS_OP, '0'); lock_stos;
-                when x"AB" => set_op(STR, STOS_OP, '1'); lock_stos;
-                when x"AC" => set_op(STR, LODS_OP, '0'); lock_lods;
-                when x"AD" => set_op(STR, LODS_OP, '1'); lock_lods;
-                when x"AE" => set_op(STR, SCAS_OP, '0'); lock_scas;
-                when x"AF" => set_op(STR, SCAS_OP, '1'); lock_scas;
+                when x"A4" => set_op(STR, MOVS_OP, '0'); lock_movs; lock_fl('0');
+                when x"A5" => set_op(STR, MOVS_OP, '1'); lock_movs; lock_fl('0');
+                when x"A6" => set_op(STR, CMPS_OP, '0'); lock_cmps; lock_fl('0');
+                when x"A7" => set_op(STR, CMPS_OP, '1'); lock_cmps; lock_fl('0');
+                when x"AA" => set_op(STR, STOS_OP, '0'); lock_stos; lock_fl('0');
+                when x"AB" => set_op(STR, STOS_OP, '1'); lock_stos; lock_fl('0');
+                when x"AC" => set_op(STR, LODS_OP, '0'); lock_lods; lock_fl('0');
+                when x"AD" => set_op(STR, LODS_OP, '1'); lock_lods; lock_fl('0');
+                when x"AE" => set_op(STR, SCAS_OP, '0'); lock_scas; lock_fl('0');
+                when x"AF" => set_op(STR, SCAS_OP, '1'); lock_scas; lock_fl('0');
 
-                when x"B0" | x"B1" | x"B2" | x"B3" | x"B4" | x"B5" | x"B6" | x"B7" => set_op(MOVU, "0000", '0'); lock_dreg_only;
-                when x"B8" | x"B9" | x"BA" | x"BB" | x"BC" | x"BD" | x"BE" | x"BF" => set_op(MOVU, "0000", '1'); lock_dreg_only;
+                when x"B0" | x"B1" | x"B2" | x"B3" | x"B4" | x"B5" | x"B6" | x"B7" => set_op(MOVU, "0000", '0'); lock_dreg_only; lock_fl('0');
+                when x"B8" | x"B9" | x"BA" | x"BB" | x"BC" | x"BD" | x"BE" | x"BF" => set_op(MOVU, "0000", '1'); lock_dreg_only; lock_fl('0');
 
-                when x"C4" => set_op(LFP, LFP_LES, '1'); lock_dreg_only;
-                when x"C5" => set_op(LFP, LFP_LDS, '1'); lock_dreg_only;
-                when x"C6" => set_op(MOVU, "0000", '0'); no_lock;
-                when x"C7" => set_op(MOVU, "0000", '1'); no_lock;
-                when x"E2" => set_op(LOOPU, LOOP_OP, '1'); lock_dreg_only;
+                when x"C4" => set_op(LFP, LFP_LES, '1'); lock_les; lock_fl('0');
+                when x"C5" => set_op(LFP, LFP_LDS, '1'); lock_lds; lock_fl('0');
+                when x"C6" => set_op(MOVU, "0000", '0'); no_lock; lock_fl('0');
+                when x"C7" => set_op(MOVU, "0000", '1'); no_lock; lock_fl('0');
+                when x"E2" => set_op(LOOPU, LOOP_OP, '1'); lock_dreg_only; lock_fl('0');
 
-                when x"F2" => set_op(REP, REPNZ_OP, '1'); lock_dreg_only;
-                when x"F3" => set_op(REP, REPZ_OP, '1'); lock_dreg_only;
-                when x"F4" => set_op(SYS, SYS_HLT_OP, '1'); no_lock;
+                when x"F2" => set_op(REP, REPNZ_OP, '1'); lock_dreg_only; lock_fl('0');
+                when x"F3" => set_op(REP, REPZ_OP, '1'); lock_dreg_only; lock_fl('0');
+                when x"F4" => set_op(SYS, SYS_HLT_OP, '1'); no_lock; lock_fl('0');
 
-                when x"F5" => set_flag_op(FLAG_CF, TOGGLE); lock_dreg_only;
-                when x"F8" => set_flag_op(FLAG_CF, CLR); lock_dreg_only;
-                when x"F9" => set_flag_op(FLAG_CF, SET); lock_dreg_only;
-                when x"FA" => set_flag_op(FLAG_IF, CLR); lock_dreg_only;
-                when x"FB" => set_flag_op(FLAG_IF, SET); lock_dreg_only;
-                when x"FC" => set_flag_op(FLAG_DF, CLR); lock_dreg_only;
-                when x"FD" => set_flag_op(FLAG_DF, SET); lock_dreg_only;
+                when x"F5" => set_flag_op(FLAG_CF, TOGGLE); lock_dreg_only; lock_fl('1');
+                when x"F8" => set_flag_op(FLAG_CF, CLR); lock_dreg_only; lock_fl('1');
+                when x"F9" => set_flag_op(FLAG_CF, SET); lock_dreg_only; lock_fl('1');
+                when x"FA" => set_flag_op(FLAG_IF, CLR); lock_dreg_only; lock_fl('1');
+                when x"FB" => set_flag_op(FLAG_IF, SET); lock_dreg_only; lock_fl('1');
+                when x"FC" => set_flag_op(FLAG_DF, CLR); lock_dreg_only; lock_fl('1');
+                when x"FD" => set_flag_op(FLAG_DF, SET); lock_dreg_only; lock_fl('1');
 
                 when others =>
                     instr_tdata.code <= "0000";
@@ -844,7 +911,7 @@ begin
             if (u8_tdata(7 downto 6) = "11") then
                 instr_tdata.dir <= R2R;
             else
-                if byte0(WIDTH_BIT) = TO_RM then
+                if reg_rm_direction = TO_RM then
                     instr_tdata.dir <= R2M;
                 else
                     instr_tdata.dir <= M2R;
@@ -1049,21 +1116,18 @@ begin
                         instr_tdata.dreg <= CX;
                         instr_tdata.dmask <= "11";
 
-                    when x"0E" | x"1E" | x"16" | x"06" =>
-                        instr_tdata.dreg <= SP;
-                        instr_tdata.dmask <= "11";
+                    when x"07" => instr_tdata.dreg <= ES; instr_tdata.dmask <= "11";
+                    when x"17" => instr_tdata.dreg <= SS; instr_tdata.dmask <= "11";
+                    when x"1F" => instr_tdata.dreg <= DS; instr_tdata.dmask <= "11";
 
-                    when x"1F" | x"17" | x"07" =>
-                        instr_tdata.dreg <= SP;
-                        instr_tdata.dmask <= "11";
-
-                    when x"50" | x"51" | x"52" | x"53" | x"54" | x"55" | x"56" | x"57" =>
-                        instr_tdata.dreg <= SP;
-                        instr_tdata.dmask <= "11";
-
-                    when x"58" | x"59" | x"5A" | x"5B" | x"5C" | x"5D" | x"5E" | x"5F" =>
-                        instr_tdata.dreg <= SP;
-                        instr_tdata.dmask <= "11";
+                    when x"58" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
+                    when x"59" => instr_tdata.dreg <= CX; instr_tdata.dmask <= "11";
+                    when x"5A" => instr_tdata.dreg <= DX; instr_tdata.dmask <= "11";
+                    when x"5B" => instr_tdata.dreg <= BX; instr_tdata.dmask <= "11";
+                    when x"5C" => instr_tdata.dreg <= SP; instr_tdata.dmask <= "11";
+                    when x"5D" => instr_tdata.dreg <= BP; instr_tdata.dmask <= "11";
+                    when x"5E" => instr_tdata.dreg <= SI; instr_tdata.dmask <= "11";
+                    when x"5F" => instr_tdata.dreg <= DI; instr_tdata.dmask <= "11";
 
                     when x"60" | x"61" | x"68" | x"6A" =>
                         instr_tdata.dreg <= SP;
@@ -1077,13 +1141,8 @@ begin
                         instr_tdata.dreg <= DX;
                         instr_tdata.dmask <= "11";
 
-                    when x"9D" | x"9C" =>
-                        instr_tdata.dreg <= SP;
-                        instr_tdata.dmask <= "11";
-
-                    when x"9E" =>
-                        instr_tdata.dreg <= FL;
-                        instr_tdata.dmask <= "01";
+                    when x"9D" => instr_tdata.dreg <= FL; instr_tdata.dmask <= "11";
+                    when x"9E" => instr_tdata.dreg <= FL; instr_tdata.dmask <= "01";
 
                     when x"9F" =>
                         instr_tdata.dreg <= AX;
@@ -1159,7 +1218,7 @@ begin
 
                 if (instr_tdata.w = '0') then
 
-                    if (byte0(WIDTH_BIT) = TO_RM) then
+                    if (reg_rm_direction = TO_RM) then
 
                         case u8_tdata_rm is
                             when "000" => instr_tdata.dreg <= AX;
@@ -1203,7 +1262,7 @@ begin
 
                 elsif (instr_tdata.w = '1') then
 
-                    if (byte0(WIDTH_BIT) = TO_RM) then
+                    if (reg_rm_direction = TO_RM) then
 
                         case u8_tdata_rm is
                             when "000" => instr_tdata.dreg <= AX;
@@ -1318,12 +1377,6 @@ begin
                         end case;
                         instr_tdata.dmask <= "11";
 
-                    when x"8F" =>
-                        if (u8_tdata(5 downto 3) = "000") then
-                            instr_tdata.dreg <= SP;
-                            instr_tdata.dmask <= "11";
-                        end if;
-
                     when x"FE" =>
                         case u8_tdata_rm is
                             when "000" => instr_tdata.dreg <= AX;
@@ -1380,23 +1433,19 @@ begin
                     when x"1E" => instr_tdata.sreg <= DS; instr_tdata.smask <= "11";
                     when x"06" => instr_tdata.sreg <= ES; instr_tdata.smask <= "11";
 
-                    when x"17" => instr_tdata.sreg <= SS; instr_tdata.smask <= "11";
-                    when x"1F" => instr_tdata.sreg <= DS; instr_tdata.smask <= "11";
-                    when x"07" => instr_tdata.sreg <= ES; instr_tdata.smask <= "11";
-
                     when x"26" => instr_tdata.sreg <= ES; instr_tdata.smask <= "11";
                     when x"2E" => instr_tdata.sreg <= CS; instr_tdata.smask <= "11";
                     when x"36" => instr_tdata.sreg <= SS; instr_tdata.smask <= "11";
                     when x"3E" => instr_tdata.sreg <= DS; instr_tdata.smask <= "11";
 
-                    when x"40" | x"48" | x"50" | x"58" | x"90" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
-                    when x"41" | x"49" | x"51" | x"59" | x"91" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
-                    when x"42" | x"4A" | x"52" | x"5A" | x"92" => instr_tdata.sreg <= DX; instr_tdata.smask <= "11";
-                    when x"43" | x"4B" | x"53" | x"5B" | x"93" => instr_tdata.sreg <= BX; instr_tdata.smask <= "11";
-                    when x"44" | x"4C" | x"54" | x"5C" | x"94" => instr_tdata.sreg <= SP; instr_tdata.smask <= "11";
-                    when x"45" | x"4D" | x"55" | x"5D" | x"95" => instr_tdata.sreg <= BP; instr_tdata.smask <= "11";
-                    when x"46" | x"4E" | x"56" | x"5E" | x"96" => instr_tdata.sreg <= SI; instr_tdata.smask <= "11";
-                    when x"47" | x"4F" | x"57" | x"5F" | x"97" => instr_tdata.sreg <= DI; instr_tdata.smask <= "11";
+                    when x"40" | x"48" | x"50" | x"90" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
+                    when x"41" | x"49" | x"51" | x"91" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
+                    when x"42" | x"4A" | x"52" | x"92" => instr_tdata.sreg <= DX; instr_tdata.smask <= "11";
+                    when x"43" | x"4B" | x"53" | x"93" => instr_tdata.sreg <= BX; instr_tdata.smask <= "11";
+                    when x"44" | x"4C" | x"54" | x"94" => instr_tdata.sreg <= SP; instr_tdata.smask <= "11";
+                    when x"45" | x"4D" | x"55" | x"95" => instr_tdata.sreg <= BP; instr_tdata.smask <= "11";
+                    when x"46" | x"4E" | x"56" | x"96" => instr_tdata.sreg <= SI; instr_tdata.smask <= "11";
+                    when x"47" | x"4F" | x"57" | x"97" => instr_tdata.sreg <= DI; instr_tdata.smask <= "11";
 
                     when x"60" | x"61" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
                     when x"68" | x"6A" => instr_tdata.sreg <= SP; instr_tdata.smask <= "11";
@@ -1470,7 +1519,7 @@ begin
 
                 else
                     if (instr_tdata.w = '0') then
-                        if (byte0(WIDTH_BIT) = TO_REG) then
+                        if (reg_rm_direction = TO_REG) then
 
                             case u8_tdata_rm is
                                 when "000" => instr_tdata.sreg <= AX;
@@ -1514,7 +1563,7 @@ begin
 
                     elsif (instr_tdata.w = '1') then
 
-                        if (byte0(WIDTH_BIT) = TO_REG) then
+                        if (reg_rm_direction = TO_REG) then
 
                             case u8_tdata_rm is
                                 when "000" => instr_tdata.sreg <= AX;
@@ -1635,10 +1684,6 @@ begin
                         instr_tdata.data(15 downto 8) <= u8_tdata;
                     when mod_aux_rm =>
                         case byte0 is
-                            -- when x"8F" =>
-                            --     if (u8_tdata(5 downto 3) = "000") then
-                            --         instr_tdata.data <= x"0002";
-                            --     end if;
 
                             when x"FE" =>
                                 case u8_tdata(5 downto 3) is

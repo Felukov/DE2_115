@@ -98,6 +98,8 @@ architecture rtl of register_reader is
     signal seg_override_tvalid  : std_logic;
     signal seg_override_tdata   : std_logic_vector(15 downto 0);
 
+    signal skip_next             : std_logic;
+
     signal dbg_instr_hs_cnt     : integer := 0;
 
 begin
@@ -206,6 +208,7 @@ begin
             when DS => dreg_tvalid <= ds_s_tvalid;
             when ES => dreg_tvalid <= es_s_tvalid;
             when SS => dreg_tvalid <= ss_s_tvalid;
+            when FL => dreg_tvalid <= flags_s_tvalid;
             when others => dreg_tvalid <= '0';
         end case;
 
@@ -218,6 +221,7 @@ begin
             when SI => dreg_tdata <= si_s_tdata;
             when DI => dreg_tdata <= di_s_tdata;
             when SP => dreg_tdata <= sp_s_tdata;
+            when FL => dreg_tdata <= flags_s_tdata;
             when others => dreg_tdata <= ax_s_tdata;
         end case;
 
@@ -325,11 +329,11 @@ begin
                     instr_tready <= '1';
                 end if;
             when STK =>
-                if dreg_tvalid = '1' and ss_s_tvalid = '1' and sreg_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
+                if dreg_tvalid = '1' and ss_s_tvalid = '1' and sp_s_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
                     instr_tready <= '1';
                 end if;
             when STKM =>
-                if dreg_tvalid = '1' and seg_tvalid = '1' and ea_tvalid = '1' and ss_s_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
+                if seg_tvalid = '1' and ea_tvalid = '1' and ss_s_tvalid = '1' and sp_s_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
                     instr_tready <= '1';
                 end if;
             when M2M =>
@@ -350,8 +354,7 @@ begin
 
     end process;
 
-    reg_lock_proc: process (all) begin
-
+    reg_lock_proc2: process (all) begin
         ax_m_lock_tvalid <= '0';
         bx_m_lock_tvalid <= '0';
         cx_m_lock_tvalid <= '0';
@@ -365,111 +368,119 @@ begin
         es_m_lock_tvalid <= '0';
         ss_m_lock_tvalid <= '0';
 
+        flags_m_lock_tvalid <= '0';
+
         if (instr_tvalid = '1' and instr_tready = '1' and resetn = '1') then
 
-            case instr_tdata.dir is
-                when LFP =>
-                    case instr_tdata.dreg is
-                        when AX => ax_m_lock_tvalid <= '1';
-                        when BX => bx_m_lock_tvalid <= '1';
-                        when CX => cx_m_lock_tvalid <= '1';
-                        when DX => dx_m_lock_tvalid <= '1';
-                        when BP => bp_m_lock_tvalid <= '1';
-                        when SP => sp_m_lock_tvalid <= '1';
-                        when SI => si_m_lock_tvalid <= '1';
-                        when DI => di_m_lock_tvalid <= '1';
-                        when others => null;
-                    end case;
+            if (instr_tdata.lock_ax = '1') or
+                (instr_tdata.lock_all = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = AX) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = AX)
+            then
+                ax_m_lock_tvalid <= '1';
+            end if;
 
-                    if (instr_tdata.code = LFP_LDS) then
-                        ds_m_lock_tvalid <= '1';
-                    else
-                        es_m_lock_tvalid <= '1';
-                    end if;
+            if (instr_tdata.lock_all = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = BX) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = BX)
+            then
+                bx_m_lock_tvalid <= '1';
+            end if;
 
-                when R2R | I2R | M2R | R2F =>
-                    case instr_tdata.dreg is
-                        when AX => ax_m_lock_tvalid <= '1';
-                        when BX => bx_m_lock_tvalid <= '1';
-                        when CX => cx_m_lock_tvalid <= '1';
-                        when DX => dx_m_lock_tvalid <= '1';
-                        when BP => bp_m_lock_tvalid <= '1';
-                        when SP => sp_m_lock_tvalid <= '1';
-                        when SI => si_m_lock_tvalid <= '1';
-                        when DI => di_m_lock_tvalid <= '1';
-                        when DS => ds_m_lock_tvalid <= '1';
-                        when ES => es_m_lock_tvalid <= '1';
-                        when SS => ss_m_lock_tvalid <= '1';
-                        when others => null;
-                    end case;
+            if (instr_tdata.lock_all = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = CX) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = CX)
+            then
+                if (instr_tdata.op = REP and cx_s_tdata = x"0000") then
+                    cx_m_lock_tvalid <= '0';
+                else
+                    cx_m_lock_tvalid <= '1';
+                end if;
+            end if;
 
-                when STK | STKM =>
-                    sp_m_lock_tvalid <= '1';
+            if (instr_tdata.lock_all = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = DX) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = DX)
+            then
+                dx_m_lock_tvalid <= '1';
+            end if;
 
-                    if (instr_tdata.code = STACKU_POPR) then
+            if (instr_tdata.lock_all = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = BP) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = BP)
+            then
+                bp_m_lock_tvalid <= '1';
+            end if;
 
-                        case instr_tdata.sreg is
-                            when AX => ax_m_lock_tvalid <= '1';
-                            when BX => bx_m_lock_tvalid <= '1';
-                            when CX => cx_m_lock_tvalid <= '1';
-                            when DX => dx_m_lock_tvalid <= '1';
-                            when BP => bp_m_lock_tvalid <= '1';
-                            when SI => si_m_lock_tvalid <= '1';
-                            when DI => di_m_lock_tvalid <= '1';
-                            when DS => ds_m_lock_tvalid <= '1';
-                            when ES => es_m_lock_tvalid <= '1';
-                            when SS => ss_m_lock_tvalid <= '1';
-                            when others => null;
-                        end case;
+            if (instr_tdata.lock_sp = '1') or
+                (instr_tdata.lock_all = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = SP) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = SP)
+            then
+                sp_m_lock_tvalid <= '1';
+            end if;
 
-                    elsif (instr_tdata.code = STACKU_POPA) then
-                        ax_m_lock_tvalid <= '1';
-                        bx_m_lock_tvalid <= '1';
-                        cx_m_lock_tvalid <= '1';
-                        dx_m_lock_tvalid <= '1';
-                        bp_m_lock_tvalid <= '1';
-                        sp_m_lock_tvalid <= '1';
-                        si_m_lock_tvalid <= '1';
-                        di_m_lock_tvalid <= '1';
-                    end if;
+            if (instr_tdata.lock_di = '1' and skip_next = '0') or
+                (instr_tdata.lock_all = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = DI) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = DI)
+            then
+                di_m_lock_tvalid <= '1';
+            end if;
 
-                when STR =>
-                    if (cx_s_tdata /= x"0000") then
-                        case (instr_tdata.code) is
-                            when STOS_OP | SCAS_OP =>
-                                di_m_lock_tvalid <= '1';
+            if (instr_tdata.lock_si = '1' and skip_next = '0') or
+                (instr_tdata.lock_all = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = SI) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = SI)
+            then
+                si_m_lock_tvalid <= '1';
+            end if;
 
-                            when LODS_OP =>
-                                ax_m_lock_tvalid <= '1';
-                                si_m_lock_tvalid <= '1';
+            if (instr_tdata.lock_ds = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = DS) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = DS)
+            then
+                ds_m_lock_tvalid <= '1';
+            end if;
 
-                            when CMPS_OP | MOVS_OP =>
-                                di_m_lock_tvalid <= '1';
-                                si_m_lock_tvalid <= '1';
+            if (instr_tdata.lock_es = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = ES) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = ES)
+            then
+                es_m_lock_tvalid <= '1';
+            end if;
 
-                            when others => null;
-                        end case;
-                    end if;
-                when others =>
-                    null;
-            end case;
+            if (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = SS) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = SS)
+            then
+                ss_m_lock_tvalid <= '1';
+            end if;
+
+            if (instr_tdata.lock_fl = '1') or
+                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = FL) or
+                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = FL)
+            then
+                flags_m_lock_tvalid <= '1';
+            end if;
 
         end if;
 
     end process;
 
-    flags_lock_proc : process (all) begin
-        flags_m_lock_tvalid <= '0';
-
-        if (instr_tvalid = '1' and instr_tready = '1') then
-            if instr_tdata.op = SET_FLAG or
-                (instr_tdata.op = ALU and instr_tdata.code /= ALU_SF_ADD) or
-                (instr_tdata.op = STACKU and instr_tdata.code = STACKU_POPR and instr_tdata.sreg = FL) or
-                (instr_tdata.op = MOVU and instr_tdata.dir = R2F and instr_tdata.dreg = FL) then
-                flags_m_lock_tvalid <= '1';
+    skip_next_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                skip_next <= '0';
+            else
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.op = REP and cx_s_tdata = x"0000") then
+                        skip_next <= '1';
+                    else
+                        skip_next <= '0';
+                    end if;
+                end if;
             end if;
         end if;
-
     end process;
 
     forming_output_proc: process (clk) begin
@@ -480,7 +491,9 @@ begin
             else
 
                 if (instr_tvalid = '1' and instr_tready = '1') then
-                    if (instr_tdata.op = SET_SEG) then
+                    if instr_tdata.op = SET_SEG or skip_next = '1' or
+                        (instr_tdata.op = REP and cx_s_tdata = x"0000")
+                    then
                         rr_tvalid <= '0';
                     else
                         rr_tvalid <= '1';

@@ -105,6 +105,16 @@ architecture rtl of mexec is
         rval                    : std_logic_vector(16 downto 0); --result
     end record;
 
+    type mul_res_t is record
+        code                    : std_logic_vector(3 downto 0);
+        w                       : std_logic;
+        dreg                    : reg_t;
+        dmask                   : std_logic_vector(1 downto 0);
+        aval                    : std_logic_vector(15 downto 0);
+        bval                    : std_logic_vector(15 downto 0);
+        dval                    : std_logic_vector(31 downto 0); --dest
+    end record;
+
     signal micro_tvalid         : std_logic;
     signal micro_tready         : std_logic;
     signal micro_tdata          : micro_op_t;
@@ -122,8 +132,20 @@ architecture rtl of mexec is
         bval => (others=>'0')
     );
 
+    signal mul_0_tvalid         : std_logic;
+    signal mul_1_tvalid         : std_logic;
+    signal mul_0_tdata          : alu_t;
+    signal mul_1_tdata          : alu_t;
+
     signal res_tvalid           : std_logic;
-    signal alu_res_tdata_next       : res_t;
+    signal alu_res_tdata_next   : res_t;
+
+    signal mul_res_0_tvalid     : std_logic;
+    signal mul_res_1_tvalid     : std_logic;
+    signal mul_res_2_tvalid     : std_logic;
+    signal mul_res_0_tdata      : mul_res_t;
+    signal mul_res_1_tdata      : mul_res_t;
+    signal mul_res_2_tdata      : mul_res_t;
 
     signal res_tdata            : res_t := (
         code => (others=>'0'),
@@ -166,9 +188,10 @@ architecture rtl of mexec is
     signal mem_buf_tdata        : std_logic_vector(15 downto 0);
     signal mexec_busy           : std_logic;
     signal mexec_wait_fifo      : std_logic;
+    signal mexec_wait_mul       : std_logic;
 
     signal alu_wait_fifo        : std_logic;
-
+    signal mul_wait_fifo        : std_logic;
     signal mem_wait_alu         : std_logic;
     signal mem_wait_fifo        : std_logic;
     signal mem_addr_wait_alu    : std_logic;
@@ -247,12 +270,15 @@ begin
             if resetn = '0' then
                 mexec_busy <= '0';
                 mexec_wait_fifo <= '0';
+                mexec_wait_mul <= '0';
             else
 
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1') then
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1') then --or
+                --    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1') then
                     mexec_busy <= '1';
                 elsif (mexec_busy = '1') then
-                    if not (mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1') then
+                    if not (mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1') and
+                        not (mexec_wait_mul = '1' xor mul_res_1_tvalid = '1') then
                         mexec_busy <= '0';
                     end if;
                 end if;
@@ -265,7 +291,75 @@ begin
                     end if;
                 end if;
 
+                -- if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1') then
+                    -- mexec_wait_mul <= '1';
+                -- elsif (mul_res_1_tvalid = '1') then
+                    -- mexec_wait_mul <= '0';
+                -- end if;
+
             end if;
+        end if;
+    end process;
+
+    mul_proc : process (clk) begin
+        if rising_edge(clk) then
+
+            if resetn = '0' then
+                mul_0_tvalid <= '0';
+                mul_1_tvalid <= '0';
+                mul_res_0_tvalid <= '0';
+                mul_res_1_tvalid <= '0';
+                mul_res_2_tvalid <= '0';
+                mul_wait_fifo <= '0';
+            else
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1' and micro_tdata.read_fifo = '0') then
+                    mul_0_tvalid <= '1';
+                elsif (mul_wait_fifo = '1' and mexec_busy = '1' and not(mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1')) then
+                    mul_0_tvalid <= '1';
+                else
+                    mul_0_tvalid <= '0';
+                end if;
+
+                mul_1_tvalid <= mul_0_tvalid;
+                mul_res_0_tvalid <= mul_1_tvalid;
+                mul_res_1_tvalid <= mul_res_0_tvalid;
+                mul_res_2_tvalid <= mul_res_1_tvalid;
+
+                if (micro_tvalid = '1' and micro_tready = '1') then
+                    if (micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1' AND micro_tdata.read_fifo = '1') then
+                        mul_wait_fifo <= '1';
+                    else
+                        mul_wait_fifo <= '0';
+                    end if;
+                end if;
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1') then
+                mul_0_tdata.code <= micro_tdata.alu_code;
+                mul_0_tdata.w <= micro_tdata.alu_w;
+                mul_0_tdata.wb <= micro_tdata.alu_wb;
+                mul_0_tdata.aval <= micro_tdata.alu_a_val;
+                mul_0_tdata.bval <= micro_tdata.alu_b_val;
+                mul_0_tdata.dreg <= micro_tdata.alu_dreg;
+                mul_0_tdata.dmask <= micro_tdata.alu_dmask;
+                mul_0_tdata.upd_fl <= '1';
+
+            elsif (mexec_busy = '1' and not(mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1')) then
+                mul_0_tdata.aval <= lsu_rd_s_tdata;
+            end if;
+
+            mul_1_tdata <= mul_0_tdata;
+
+            mul_res_0_tdata.code <= mul_1_tdata.code;
+            mul_res_0_tdata.w <= mul_1_tdata.w;
+            mul_res_0_tdata.dreg <= mul_1_tdata.dreg;
+            mul_res_0_tdata.dmask <= mul_1_tdata.dmask;
+            mul_res_0_tdata.aval <= mul_1_tdata.aval;
+            mul_res_0_tdata.bval <= mul_1_tdata.bval;
+            mul_res_0_tdata.dval <= mul_1_tdata.aval * mul_1_tdata.bval;
+
+            mul_res_1_tdata <= mul_res_0_tdata;
+            mul_res_2_tdata <= mul_res_1_tdata;
         end if;
     end process;
 
@@ -382,6 +476,13 @@ begin
 
             if (alu_tvalid = '1') then
                 res_tdata <= alu_res_tdata_next;
+            elsif (mul_res_2_tvalid = '1') then
+                res_tdata.code <= mul_res_2_tdata.code;
+                res_tdata.w <= mul_res_2_tdata.w;
+                res_tdata.dmask <= mul_res_2_tdata.dmask;
+                res_tdata.aval <= mul_res_2_tdata.aval;
+                res_tdata.bval <= mul_res_2_tdata.bval;
+                res_tdata.dval <= mul_res_2_tdata.dval(16 downto 0);
             end if;
 
         end if;
@@ -403,7 +504,7 @@ begin
                 es_m_wr_tvalid <= '0';
                 ss_m_wr_tvalid <= '0';
             else
-                if ((alu_tvalid = '1' and alu_tdata.wb = '1' and alu_tdata.dreg = AX)) then
+                if ((alu_tvalid = '1' and alu_tdata.wb = '1' and alu_tdata.dreg = AX) or (mul_res_1_tvalid = '1' and mul_res_1_tdata.dreg = AX)) then
                     ax_m_wr_tvalid <= '1';
                 else
                     ax_m_wr_tvalid <= '0';
@@ -418,7 +519,7 @@ begin
                 else
                     cx_m_wr_tvalid <= '0';
                 end if;
-                if ((alu_tvalid = '1' and alu_tdata.wb = '1' and alu_tdata.dreg = DX)) then
+                if ((alu_tvalid = '1' and alu_tdata.wb = '1' and alu_tdata.dreg = DX) or (mul_res_1_tvalid = '1' and mul_res_1_tdata.dreg = DX)) then
                     dx_m_wr_tvalid <= '1';
                 else
                     dx_m_wr_tvalid <= '0';
