@@ -17,7 +17,7 @@ package cpu86_types is
     );
 
     type direction_t is (
-        R2R, M2R, R2M, I2R, I2M, R2F, STK, STKM, M2M, STR, SSEG, SFLG, LFP
+        R2R, M2R, R2M, I2R, I2M, R2F, M2M
     );
 
     type op_t is (
@@ -100,9 +100,21 @@ package cpu86_types is
     constant FLAG_01            : natural := 1;
     constant FLAG_CF            : natural := 0;
 
-    constant DECODED_INSTR_T_WIDTH : integer := 74;
+    constant DECODED_INSTR_T_WIDTH : integer := 86;
 
     type packed_decoded_instr_t is record
+        wait_ax     : std_logic_vector(85 downto 85);
+        wait_bx     : std_logic_vector(84 downto 84);
+        wait_cx     : std_logic_vector(83 downto 83);
+        wait_dx     : std_logic_vector(82 downto 82);
+        wait_bp     : std_logic_vector(81 downto 81);
+        wait_si     : std_logic_vector(80 downto 80);
+        wait_di     : std_logic_vector(79 downto 79);
+        wait_sp     : std_logic_vector(78 downto 78);
+        wait_ds     : std_logic_vector(77 downto 77);
+        wait_es     : std_logic_vector(76 downto 76);
+        wait_ss     : std_logic_vector(75 downto 75);
+        wait_fl     : std_logic_vector(74 downto 74);
         lock_fl     : std_logic_vector(73 downto 73);
         lock_sp     : std_logic_vector(72 downto 72);
         lock_sreg   : std_logic_vector(71 downto 71);
@@ -128,6 +140,18 @@ package cpu86_types is
     end record;
 
     type decoded_instr_t is record
+        wait_ax     : std_logic;
+        wait_bx     : std_logic;
+        wait_cx     : std_logic;
+        wait_dx     : std_logic;
+        wait_bp     : std_logic;
+        wait_si     : std_logic;
+        wait_di     : std_logic;
+        wait_sp     : std_logic;
+        wait_ds     : std_logic;
+        wait_es     : std_logic;
+        wait_ss     : std_logic;
+        wait_fl     : std_logic;
         lock_fl     : std_logic;
         lock_sreg   : std_logic;
         lock_dreg   : std_logic;
@@ -236,6 +260,19 @@ package body cpu86_types is
         variable v : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
     begin
 
+        p.wait_ax   := (85 => decoded_instr.wait_ax);
+        p.wait_bx   := (84 => decoded_instr.wait_bx);
+        p.wait_cx   := (83 => decoded_instr.wait_cx);
+        p.wait_dx   := (82 => decoded_instr.wait_dx);
+        p.wait_bp   := (81 => decoded_instr.wait_bp);
+        p.wait_si   := (80 => decoded_instr.wait_si);
+        p.wait_di   := (79 => decoded_instr.wait_di);
+        p.wait_sp   := (78 => decoded_instr.wait_sp);
+        p.wait_ds   := (77 => decoded_instr.wait_ds);
+        p.wait_es   := (76 => decoded_instr.wait_es);
+        p.wait_ss   := (75 => decoded_instr.wait_ss);
+        p.wait_fl   := (74 => decoded_instr.wait_fl);
+
         p.lock_fl   := (73 => decoded_instr.lock_fl);
         p.lock_sp   := (72 => decoded_instr.lock_sp);
         p.lock_sreg := (71 => decoded_instr.lock_sreg);
@@ -259,7 +296,8 @@ package body cpu86_types is
         p.data      := decoded_instr.data;
         p.disp      := decoded_instr.disp;
 
-        v := p.lock_fl & p.lock_sp & p.lock_sreg & p.lock_dreg & p.lock_ax & p.lock_si & p.lock_di & p.lock_ds & p.lock_es & p.lock_all &
+        v := p.wait_ax & p.wait_bx & p.wait_cx & p.wait_dx & p.wait_bp & p.wait_si & p.wait_di & p.wait_sp & p.wait_ds & p.wait_es & p.wait_ss & p.wait_fl &
+            p.lock_fl & p.lock_sp & p.lock_sreg & p.lock_dreg & p.lock_ax & p.lock_si & p.lock_di & p.lock_ds & p.lock_es & p.lock_all &
             p.fl & p.op & p.code & p.w & p.dir & p.ea & p.dreg & p.dmask & p.sreg & p.smask & p.data & p.disp;
 
         return v;
@@ -273,6 +311,20 @@ package body cpu86_types is
     begin
         t := v;
         --(p.op,  p.code, p.w, p.dir, p.ea, p.dreg, p.dmask, p.sreg, p.smask, p.data, p.disp) := v;
+
+        p.wait_ax   := t(p.wait_ax'range);
+        p.wait_bx   := t(p.wait_bx'range);
+        p.wait_cx   := t(p.wait_cx'range);
+        p.wait_dx   := t(p.wait_dx'range);
+        p.wait_bp   := t(p.wait_bp'range);
+        p.wait_si   := t(p.wait_si'range);
+        p.wait_di   := t(p.wait_di'range);
+        p.wait_sp   := t(p.wait_sp'range);
+        p.wait_ds   := t(p.wait_ds'range);
+        p.wait_es   := t(p.wait_es'range);
+        p.wait_ss   := t(p.wait_ss'range);
+        p.wait_fl   := t(p.wait_fl'range);
+
         p.lock_fl   := t(p.lock_fl'range);
         p.lock_sp   := t(p.lock_sp'range);
         p.lock_sreg := t(p.lock_sreg'range);
@@ -295,6 +347,19 @@ package body cpu86_types is
         p.smask     := t(p.smask'range);
         p.data      := t(p.data'range);
         p.disp      := t(p.disp'range);
+
+        d.wait_ax   := p.wait_ax(85);
+        d.wait_bx   := p.wait_bx(84);
+        d.wait_cx   := p.wait_cx(83);
+        d.wait_dx   := p.wait_dx(82);
+        d.wait_bp   := p.wait_bp(81);
+        d.wait_si   := p.wait_si(80);
+        d.wait_di   := p.wait_di(79);
+        d.wait_sp   := p.wait_sp(78);
+        d.wait_ds   := p.wait_ds(77);
+        d.wait_es   := p.wait_es(76);
+        d.wait_ss   := p.wait_ss(75);
+        d.wait_fl   := p.wait_fl(74);
 
         d.lock_fl   := p.lock_fl(73);
         d.lock_sp   := p.lock_sp(72);

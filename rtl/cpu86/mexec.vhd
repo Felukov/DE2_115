@@ -273,8 +273,9 @@ begin
                 mexec_wait_mul <= '0';
             else
 
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1') then --or
-                --    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1') then
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1') or
+                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1')
+                then
                     mexec_busy <= '1';
                 elsif (mexec_busy = '1') then
                     if not (mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1') and
@@ -291,11 +292,11 @@ begin
                     end if;
                 end if;
 
-                -- if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1') then
-                    -- mexec_wait_mul <= '1';
-                -- elsif (mul_res_1_tvalid = '1') then
-                    -- mexec_wait_mul <= '0';
-                -- end if;
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1') then
+                    mexec_wait_mul <= '1';
+                elsif (mul_res_1_tvalid = '1') then
+                    mexec_wait_mul <= '0';
+                end if;
 
             end if;
         end if;

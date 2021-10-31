@@ -81,26 +81,24 @@ architecture rtl of register_reader is
     signal rr_tdata             : rr_instr_t;
     signal rr_tuser             : std_logic_vector(31 downto 0);
 
-    signal sreg_tvalid          : std_logic;
+    signal seg_tdata            : std_logic_vector(15 downto 0);
     signal sreg_tdata           : std_logic_vector(15 downto 0);
-
-    signal dreg_tvalid          : std_logic;
     signal dreg_tdata           : std_logic_vector(15 downto 0);
-
-    signal ea_tvalid            : std_logic;
     signal ea_tdata             : std_logic_vector(15 downto 0);
 
     signal intr_mask            : std_logic;
 
-    signal seg_tvalid           : std_logic;
-    signal seg_tdata            : std_logic_vector(15 downto 0);
-
     signal seg_override_tvalid  : std_logic;
     signal seg_override_tdata   : std_logic_vector(15 downto 0);
 
-    signal skip_next             : std_logic;
+    signal skip_next            : std_logic;
 
     signal dbg_instr_hs_cnt     : integer := 0;
+
+    signal wait_sreg_fl         : std_logic;
+    signal wait_dreg_fl         : std_logic;
+    signal wait_ea_fl           : std_logic;
+    signal wait_seg_fl          : std_logic;
 
 begin
 
@@ -115,23 +113,6 @@ begin
     rr_m_tuser <= rr_tuser;
 
     process (all) begin
-
-        case instr_tdata.sreg is
-            when AX => sreg_tvalid <= ax_s_tvalid;
-            when BX => sreg_tvalid <= bx_s_tvalid;
-            when CX => sreg_tvalid <= cx_s_tvalid;
-            when DX => sreg_tvalid <= dx_s_tvalid;
-            when BP => sreg_tvalid <= bp_s_tvalid;
-            when SI => sreg_tvalid <= si_s_tvalid;
-            when DI => sreg_tvalid <= di_s_tvalid;
-            when SP => sreg_tvalid <= sp_s_tvalid;
-            when CS => sreg_tvalid <= '1';
-            when DS => sreg_tvalid <= ds_s_tvalid;
-            when SS => sreg_tvalid <= ss_s_tvalid;
-            when ES => sreg_tvalid <= es_s_tvalid;
-            when FL => sreg_tvalid <= flags_s_tvalid;
-            when others => sreg_tvalid <= '0';
-        end case;
 
         case instr_tdata.smask is
             when "01" =>
@@ -175,17 +156,6 @@ begin
         end case;
 
         if (seg_override_tvalid = '1') then
-            seg_tvalid <= '1';
-        else
-            case instr_tdata.ea is
-                when BP_SI_DISP | BP_DI_DISP | BP_DISP =>
-                    seg_tvalid <= ss_s_tvalid;
-                when others =>
-                    seg_tvalid <= ds_s_tvalid;
-            end case;
-        end if;
-
-        if (seg_override_tvalid = '1') then
             seg_tdata <= seg_override_tdata;
         else
             case instr_tdata.ea is
@@ -195,22 +165,6 @@ begin
                     seg_tdata <= ds_s_tdata;
             end case;
         end if;
-
-        case instr_tdata.dreg is
-            when AX => dreg_tvalid <= ax_s_tvalid;
-            when BX => dreg_tvalid <= bx_s_tvalid;
-            when CX => dreg_tvalid <= cx_s_tvalid;
-            when DX => dreg_tvalid <= dx_s_tvalid;
-            when BP => dreg_tvalid <= bp_s_tvalid;
-            when SI => dreg_tvalid <= si_s_tvalid;
-            when DI => dreg_tvalid <= di_s_tvalid;
-            when SP => dreg_tvalid <= sp_s_tvalid;
-            when DS => dreg_tvalid <= ds_s_tvalid;
-            when ES => dreg_tvalid <= es_s_tvalid;
-            when SS => dreg_tvalid <= ss_s_tvalid;
-            when FL => dreg_tvalid <= flags_s_tvalid;
-            when others => dreg_tvalid <= '0';
-        end case;
 
         case instr_tdata.dreg is
             when AX => dreg_tdata <= ax_s_tdata;
@@ -223,62 +177,6 @@ begin
             when SP => dreg_tdata <= sp_s_tdata;
             when FL => dreg_tdata <= flags_s_tdata;
             when others => dreg_tdata <= ax_s_tdata;
-        end case;
-
-        case instr_tdata.ea is
-            when BX_SI_DISP =>
-                if bx_s_tvalid = '1' and si_s_tvalid = '1' then
-                    ea_tvalid <= '1';
-                else
-                    ea_tvalid <= '0';
-                end if;
-            when BX_DI_DISP =>
-                if bx_s_tvalid = '1' and di_s_tvalid = '1' then
-                    ea_tvalid <= '1';
-                else
-                    ea_tvalid <= '0';
-                end if;
-            when BP_SI_DISP =>
-                if bp_s_tvalid = '1' and si_s_tvalid = '1' then
-                    ea_tvalid <= '1';
-                else
-                    ea_tvalid <= '0';
-                end if;
-            when BP_DI_DISP =>
-                if bp_s_tvalid = '1' and di_s_tvalid = '1' then
-                    ea_tvalid <= '1';
-                else
-                    ea_tvalid <= '0';
-                end if;
-            when SI_DISP =>
-                if si_s_tvalid = '1' then
-                    ea_tvalid <= '1';
-                else
-                    ea_tvalid <= '0';
-                end if;
-            when DI_DISP =>
-                if di_s_tvalid = '1' then
-                    ea_tvalid <= '1';
-                else
-                    ea_tvalid <= '0';
-                end if;
-            when BP_DISP =>
-                if bp_s_tvalid = '1' then
-                    ea_tvalid <= '1';
-                else
-                    ea_tvalid <= '0';
-                end if;
-            when BX_DISP =>
-                if bx_s_tvalid = '1' then
-                    ea_tvalid <= '1';
-                else
-                    ea_tvalid <= '0';
-                end if;
-            when DIRECT =>
-                ea_tvalid <= '1';
-
-            when others =>
-                ea_tvalid <= '0';
         end case;
 
         case instr_tdata.ea is
@@ -295,64 +193,20 @@ begin
 
     end process;
 
-
-    instr_tready_forming_proc: process (all) begin
-        instr_tready <= '0';
-
-        case instr_tdata.dir is
-            when R2R =>
-                if sreg_tvalid = '1' and dreg_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when R2F =>
-                if sreg_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when R2M =>
-                if sreg_tvalid = '1' and seg_tvalid = '1' and ea_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when M2R =>
-                if dreg_tvalid = '1' and seg_tvalid = '1' and ea_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when SFLG =>
-                if (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when I2R | SSEG =>
-                if dreg_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when I2M =>
-                if seg_tvalid = '1' and ea_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when STK =>
-                if dreg_tvalid = '1' and ss_s_tvalid = '1' and sp_s_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when STKM =>
-                if seg_tvalid = '1' and ea_tvalid = '1' and ss_s_tvalid = '1' and sp_s_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when M2M =>
-                if seg_tvalid = '1' and ea_tvalid = '1' and (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when STR =>
-                if seg_tvalid = '1' and ea_tvalid = '1' and es_s_tvalid = '1' and di_s_tvalid = '1' and ax_s_tvalid = '1' and flags_s_tvalid = '1' and
-                    (rr_tvalid ='0' or (rr_tvalid = '1' and rr_tready = '1')) then
-                    instr_tready <= '1';
-                end if;
-            when LFP =>
-                if seg_tvalid = '1' and ea_tvalid = '1' and dreg_tvalid = '1' and es_s_tvalid = '1' and ds_s_tvalid = '1' then
-                    instr_tready <= '1';
-                end if;
-
-        end case;
-
-    end process;
+    instr_tready <= '1' when
+        (instr_tdata.wait_ax = '0' or (instr_tdata.wait_ax = '1' and ax_s_tvalid = '1')) and
+        (instr_tdata.wait_bx = '0' or (instr_tdata.wait_bx = '1' and bx_s_tvalid = '1')) and
+        (instr_tdata.wait_cx = '0' or (instr_tdata.wait_cx = '1' and cx_s_tvalid = '1')) and
+        (instr_tdata.wait_dx = '0' or (instr_tdata.wait_dx = '1' and dx_s_tvalid = '1')) and
+        (instr_tdata.wait_bp = '0' or (instr_tdata.wait_bp = '1' and bp_s_tvalid = '1')) and
+        (instr_tdata.wait_si = '0' or (instr_tdata.wait_si = '1' and si_s_tvalid = '1')) and
+        (instr_tdata.wait_di = '0' or (instr_tdata.wait_di = '1' and di_s_tvalid = '1')) and
+        (instr_tdata.wait_sp = '0' or (instr_tdata.wait_sp = '1' and sp_s_tvalid = '1')) and
+        (instr_tdata.wait_ds = '0' or (instr_tdata.wait_ds = '1' and ds_s_tvalid = '1')) and
+        (instr_tdata.wait_es = '0' or (instr_tdata.wait_es = '1' and es_s_tvalid = '1')) and
+        (instr_tdata.wait_ss = '0' or (instr_tdata.wait_ss = '1' and ss_s_tvalid = '1')) and
+        (instr_tdata.wait_fl = '0' or (instr_tdata.wait_fl = '1' and flags_s_tvalid = '1')) and
+        (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) else '0';
 
     reg_lock_proc2: process (all) begin
         ax_m_lock_tvalid <= '0';
