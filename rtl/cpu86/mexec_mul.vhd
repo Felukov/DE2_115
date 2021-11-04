@@ -44,7 +44,7 @@ begin
     res_m_tuser(FLAG_DF) <= '0';
     res_m_tuser(FLAG_IF) <= '0';
     res_m_tuser(FLAG_TF) <= '0';
-    res_m_tuser(FLAG_SF) <= '0';
+    res_m_tuser(FLAG_SF) <= flags_sf;
     res_m_tuser(FLAG_ZF) <= '0';
     res_m_tuser(FLAG_05) <= '0';
     res_m_tuser(FLAG_AF) <= '0';

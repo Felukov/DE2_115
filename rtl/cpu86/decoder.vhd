@@ -154,7 +154,7 @@ begin
                                     instr_tvalid <= '0';
 
                                 when x"6B" =>
-                                    decode_chain(mod_reg_rm, disp_low, disp_high, data8, first_byte);
+                                    decode_chain(mod_reg_rm, disp_low, disp_high, data_s8, first_byte);
                                     instr_tvalid <= '0';
 
                                 when x"C7" =>
@@ -1219,7 +1219,7 @@ begin
                 when x"68" => set_stack_op(STACKU_PUSHI); lock_dreg_only; wait_stack_only; lock_fl('0');
                 when x"69" => set_op(MULU, IMUL_RR, '1'); no_lock; no_wait; lock_fl('1');
                 when x"6A" => set_stack_op(STACKU_PUSHI); lock_stack_default; wait_stack_only; lock_fl('0');
-                when x"6B" => set_op(MULU, IMUL_RR, '0'); no_lock; no_wait; lock_fl('1');
+                when x"6B" => set_op(MULU, IMUL_RR, '1'); no_lock; no_wait; lock_fl('1');
 
                 when x"80" => no_lock; no_wait; lock_fl('1');
                 when x"81" => no_lock; no_wait; lock_fl('0');

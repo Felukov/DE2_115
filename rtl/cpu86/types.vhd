@@ -228,9 +228,9 @@ package cpu86_types is
         mul_w           : std_logic;
         mul_dreg        : reg_t;
         mul_dmask       : std_logic_vector(1 downto 0);
-        mul_a_mem       : std_logic;
+        --mul_a_mem       : std_logic;
         mul_a_val       : std_logic_vector(15 downto 0);
-        mul_b_mem       : std_logic;
+        --mul_b_mem       : std_logic;
         mul_b_val       : std_logic_vector(15 downto 0);
         mul_wb          : std_logic;
 

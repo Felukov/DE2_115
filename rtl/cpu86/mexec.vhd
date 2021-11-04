@@ -273,6 +273,7 @@ begin
     si_m_inc_tdata <= micro_tdata.si_inc_data;
     si_m_inc_tkeep_lock <= micro_tdata.si_keep_lock;
 
+
     mexec_busy_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
@@ -319,7 +320,7 @@ begin
             else
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1' and micro_tdata.read_fifo = '0') then
                     mul_req_tvalid <= '1';
-                elsif (mul_wait_fifo = '1' and mexec_busy = '1' and not(mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1')) then
+                elsif (mul_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                     mul_req_tvalid <= '1';
                 else
                     mul_req_tvalid <= '0';
@@ -331,6 +332,8 @@ begin
                     else
                         mul_wait_fifo <= '0';
                     end if;
+                elsif (mul_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    mul_wait_fifo <= '0';
                 end if;
             end if;
 
@@ -343,7 +346,7 @@ begin
                 mul_req_tdata.dreg <= micro_tdata.mul_dreg;
                 mul_req_tdata.dmask <= micro_tdata.mul_dmask;
 
-            elsif (mexec_busy = '1' and not(mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1')) then
+            elsif (mul_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 mul_req_tdata.aval <= lsu_rd_s_tdata;
             end if;
 
@@ -359,7 +362,8 @@ begin
             else
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_ALU) = '1' and micro_tdata.read_fifo = '0') then
                     alu_req_tvalid <= '1';
-                elsif (alu_wait_fifo = '1' and mexec_busy = '1' and not(mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1')) then
+                --elsif (alu_wait_fifo = '1' and mexec_busy = '1' and not(mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1')) then
+                elsif (alu_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                     alu_req_tvalid <= '1';
                 else
                     alu_req_tvalid <= '0';
@@ -371,6 +375,8 @@ begin
                     else
                         alu_wait_fifo <= '0';
                     end if;
+                elsif (alu_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    alu_wait_fifo <= '0';
                 end if;
             end if;
 
@@ -398,7 +404,8 @@ begin
                 alu_a_wait_fifo <= micro_tdata.alu_a_mem;
                 alu_b_wait_fifo <= micro_tdata.alu_b_mem;
 
-            elsif (mexec_busy = '1' and not(mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1')) then
+            --elsif (mexec_busy = '1' and not(mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1')) then
+            elsif (alu_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 if (alu_a_wait_fifo = '1') then
                     alu_req_tdata.aval <= lsu_rd_s_tdata;
                 end if;
@@ -627,12 +634,12 @@ begin
                     flags_wr_be(FLAG_DF) <= '0';
                     flags_wr_be(FLAG_IF) <= '0';
                     flags_wr_be(FLAG_TF) <= '0';
-                    flags_wr_be(FLAG_SF) <= '0';
+                    flags_wr_be(FLAG_SF) <= '1';
                     flags_wr_be(FLAG_ZF) <= '0';
                     flags_wr_be(FLAG_05) <= '0';
                     flags_wr_be(FLAG_AF) <= '0';
                     flags_wr_be(FLAG_03) <= '0';
-                    flags_wr_be(FLAG_PF) <= '0';
+                    flags_wr_be(FLAG_PF) <= '1';
                     flags_wr_be(FLAG_01) <= '0';
                     flags_wr_be(FLAG_CF) <= '1';
 

@@ -17,7 +17,7 @@ start:
     db 0x0F
     NOP
 
-    MOV AX, 0xAAAA
+    MOV AX, 0xABAC
     MOV DS, AX
     PUSH DS
     MOV AX, 0xA00A

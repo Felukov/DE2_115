@@ -14,10 +14,10 @@ start:
     MOV AX, 0xFFFF
     MOV word [BP], 0x00AA
     AND [BP], AL
+    MOV AH, [BP]
     db 0x0F
     NOP
 
-    MOV AH, [BP]
     MOV AX, 0x0AA0
     MOV word [BP], 0xABBA
     AND [BP], AX

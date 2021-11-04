@@ -408,6 +408,12 @@ begin
             when XCHG =>
                 micro_cnt_next <= 1;
 
+            when MULU =>
+                case rr_tdata.dir is
+                    when M2R => micro_cnt_next <= 1;
+                    when others => micro_cnt_next <= 0;
+                end case;
+
             when STR =>
                 case rr_tdata.code is
                     when CMPS_OP => micro_cnt_next <= 6;
@@ -591,6 +597,53 @@ begin
             end if;
         end;
 
+        procedure do_mul_cmd_0 is begin
+            fl_off; jmp_off; dbg_off; alu_off;
+            sp_inc_off; di_inc_off; si_inc_off;
+            micro_tdata.unlk_fl <= '0';
+
+            micro_tdata.mul_code <= rr_tdata.code;
+            micro_tdata.mul_w <= rr_tdata.w;
+            micro_tdata.mul_dreg <= rr_tdata.dreg;
+            micro_tdata.mul_dmask <= rr_tdata.dmask;
+
+            case rr_tdata.dir is
+                when M2R =>
+                    mul_off;
+                    mem_read_word(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp_next);
+
+                when R2R =>
+                    mem_off;
+                    micro_tdata.cmd(MICRO_OP_CMD_MUL) <= '1';
+                    micro_tdata.mul_wb <= '1';
+                    micro_tdata.mul_a_val <= rr_tdata.sreg_val;
+
+                when others => null;
+            end case;
+
+            case rr_tdata.code is
+                when IMUL_RR =>
+                    micro_tdata.mul_b_val <= rr_tdata.data;
+                when IMUL_AXDX =>
+                    if (rr_tdata.w = '0') then
+                        for i in 15 downto 8 loop
+                            micro_tdata.mul_b_val(i) <= ax_s_tdata(7);
+                        end loop;
+                        micro_tdata.mul_b_val(7 downto 0) <= ax_s_tdata(7 downto 0);
+                    else
+                        micro_tdata.mul_b_val <= ax_s_tdata;
+                    end if;
+                when others => null;
+            end case;
+        end procedure;
+
+        procedure do_mul_cmd_1 is begin
+            mem_off;
+            micro_tdata.read_fifo <= '1';
+            micro_tdata.cmd(MICRO_OP_CMD_MUL) <= '1';
+            micro_tdata.mul_wb <= '1';
+        end procedure;
+
     begin
         if rising_edge(clk) then
             if (resetn = '0') then
@@ -692,34 +745,7 @@ begin
                 micro_tdata.dbg_ip <= rr_tuser(15 downto 0);
 
                 case (rr_tdata.op) is
-                    when MULU =>
-                        fl_off; jmp_off; dbg_off; alu_off; mem_off;
-                        sp_inc_off; di_inc_off; si_inc_off;
-                        micro_tdata.unlk_fl <= '0';
-                        micro_tdata.cmd(MICRO_OP_CMD_MUL) <= '1';
-
-                        case rr_tdata.code is
-                            when IMUL_AXDX =>
-                                micro_tdata.mul_code <= rr_tdata.code;
-                                micro_tdata.mul_w <= rr_tdata.w;
-                                micro_tdata.mul_dreg <= rr_tdata.dreg;
-                                micro_tdata.mul_dmask <= rr_tdata.dmask;
-                                micro_tdata.mul_a_mem <= '0';
-                                micro_tdata.mul_a_val <= rr_tdata.sreg_val;
-                                micro_tdata.mul_b_mem <= '0';
-                                if (rr_tdata.w = '0') then
-                                    for i in 15 downto 8 loop
-                                        micro_tdata.mul_b_val(i) <= ax_s_tdata(7);
-                                    end loop;
-                                    micro_tdata.mul_b_val(7 downto 0) <= ax_s_tdata(7 downto 0);
-                                else
-                                    micro_tdata.mul_b_val <= ax_s_tdata;
-                                end if;
-                                micro_tdata.mul_wb <= '1';
-                            when others => null;
-                        end case;
-
-
+                    when MULU => do_mul_cmd_0;
                     when LFP =>
                         fl_off; dbg_off; jmp_off; mul_off;
                         sp_inc_off; di_inc_off; si_inc_off;
@@ -976,6 +1002,7 @@ begin
 
             elsif (micro_tvalid = '1' and micro_tready = '1') then
                 case rr_tdata_buf.op is
+                    when MULU => do_mul_cmd_1;
                     when LFP =>
                         case micro_cnt is
                             when 2 =>
