@@ -463,6 +463,18 @@ begin
             instr_tdata.lock_sp <= '0';
         end;
 
+        procedure lock_ax_dreg_only is begin
+            instr_tdata.lock_sreg <= '0';
+            instr_tdata.lock_dreg <= '1';
+            instr_tdata.lock_ax <= '1';
+            instr_tdata.lock_si <= '0';
+            instr_tdata.lock_di <= '0';
+            instr_tdata.lock_all <= '0';
+            instr_tdata.lock_ds <= '0';
+            instr_tdata.lock_es <= '0';
+            instr_tdata.lock_sp <= '0';
+        end procedure;
+
         procedure lock_les is begin
             instr_tdata.lock_sreg <= '0';
             instr_tdata.lock_dreg <= '1';
@@ -1301,7 +1313,6 @@ begin
 
         procedure decode_f6_f7(w : std_logic) is begin
             instr_tdata.w <= w;
-
             case u8_tdata(5 downto 3) is
                 when "000" => null;
                 when "001" => null;
@@ -1309,7 +1320,17 @@ begin
                 when "011" => null;
 
                 when "100" => null;
-                when "101" => instr_tdata.op <= MULU; instr_tdata.code <= IMUL_AX; lock_dreg_only; lock_fl('1');
+                when "101" =>
+                    instr_tdata.op <= MULU;
+                    instr_tdata.code <= IMUL_AXDX;
+                    instr_tdata.wait_ax <= '1';
+                    instr_tdata.wait_dx <= w;
+                    if (w = '1') then
+                        lock_ax_dreg_only;
+                    else
+                        lock_dreg_only;
+                    end if;
+                    lock_fl('1');
                 when "110" => null;
                 when "111" => null;
                 when others => null;

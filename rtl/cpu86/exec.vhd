@@ -42,7 +42,7 @@ architecture rtl of exec is
             wr_s_tvalid             : in std_logic;
             wr_s_tdata              : in std_logic_vector(DATA_WIDTH-1 downto 0);
             wr_s_tmask              : in std_logic_vector(1 downto 0);
-            wr_s_tkeep_lock         : in std_logic;
+            wr_s_tkeep_lock         : in std_logic;								   
 
             lock_s_tvalid           : in std_logic;
             unlk_s_tvalid           : in std_logic;
@@ -214,6 +214,7 @@ architecture rtl of exec is
             micro_m_tready          : in std_logic;
             micro_m_tdata           : out micro_op_t;
 
+            ax_s_tdata              : in std_logic_vector(15 downto 0);
             bx_s_tdata              : in std_logic_vector(15 downto 0);
             cx_s_tdata              : in std_logic_vector(15 downto 0);
             dx_s_tdata              : in std_logic_vector(15 downto 0);
@@ -982,6 +983,7 @@ begin
         micro_m_tready          => micro_tready,
         micro_m_tdata           => micro_tdata,
 
+        ax_s_tdata              => ax_tdata,
         bx_s_tdata              => bx_tdata,
         cx_s_tdata              => cx_tdata,
         dx_s_tdata              => dx_tdata,

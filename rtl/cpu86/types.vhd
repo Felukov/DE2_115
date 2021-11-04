@@ -65,7 +65,7 @@ package cpu86_types is
     constant CMPS_OP        : std_logic_vector (3 downto 0) := "1000";
     constant SCAS_OP        : std_logic_vector (3 downto 0) := "1001";
 
-    constant IMUL_AX        : std_logic_vector (3 downto 0) := "0000";
+    constant IMUL_AXDX      : std_logic_vector (3 downto 0) := "0000";
     constant IMUL_RR        : std_logic_vector (3 downto 0) := "0001";
 
     constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0000";
@@ -223,6 +223,17 @@ package cpu86_types is
         alu_b_mem       : std_logic;
         alu_b_val       : std_logic_vector(15 downto 0);
         alu_wb          : std_logic;
+
+        mul_code        : std_logic_vector(3 downto 0);
+        mul_w           : std_logic;
+        mul_dreg        : reg_t;
+        mul_dmask       : std_logic_vector(1 downto 0);
+        mul_a_mem       : std_logic;
+        mul_a_val       : std_logic_vector(15 downto 0);
+        mul_b_mem       : std_logic;
+        mul_b_val       : std_logic_vector(15 downto 0);
+        mul_wb          : std_logic;
+
         jump_cond       : micro_op_jmp_cond_t;
         jump_cs         : std_logic_vector(15 downto 0);
         jump_ip         : std_logic_vector(15 downto 0);
@@ -246,6 +257,56 @@ package cpu86_types is
         di_keep_lock    : std_logic;
         dbg_cs          : std_logic_vector(15 downto 0);
         dbg_ip          : std_logic_vector(15 downto 0);
+    end record;
+
+    type alu_req_t is record
+        code                    : std_logic_vector(3 downto 0);
+        w                       : std_logic;
+        wb                      : std_logic;
+        dreg                    : reg_t;
+        dmask                   : std_logic_vector(1 downto 0);
+        upd_fl                  : std_logic;
+        aval                    : std_logic_vector(15 downto 0);
+        bval                    : std_logic_vector(15 downto 0);
+    end record;
+
+    type alu_res_t is record
+        code                    : std_logic_vector(3 downto 0);
+        w                       : std_logic;
+        wb                      : std_logic;
+        dreg                    : reg_t;
+        dmask                   : std_logic_vector(1 downto 0);
+        upd_fl                  : std_logic;
+        aval                    : std_logic_vector(15 downto 0);
+        bval                    : std_logic_vector(15 downto 0);
+        dval                    : std_logic_vector(15 downto 0); --dest
+        rval                    : std_logic_vector(16 downto 0); --result
+    end record;
+
+    type alu_flg_t is record
+        code                    : std_logic_vector(3 downto 0);
+        dreg                    : reg_t;
+        dmask                   : std_logic_vector(1 downto 0);
+    end record;
+
+    type mul_req_t is record
+        code                    : std_logic_vector(3 downto 0);
+        w                       : std_logic;
+        wb                      : std_logic;
+        dreg                    : reg_t;
+        dmask                   : std_logic_vector(1 downto 0);
+        aval                    : std_logic_vector(15 downto 0);
+        bval                    : std_logic_vector(15 downto 0);
+    end record;
+
+    type mul_res_t is record
+        code                    : std_logic_vector(3 downto 0);
+        w                       : std_logic;
+        dreg                    : reg_t;
+        dmask                   : std_logic_vector(1 downto 0);
+        aval                    : std_logic_vector(15 downto 0);
+        bval                    : std_logic_vector(15 downto 0);
+        dval                    : std_logic_vector(31 downto 0); --dest
     end record;
 
     function decoded_instr_t_to_slv (decoded_instr : decoded_instr_t) return std_logic_vector;
@@ -387,5 +448,7 @@ package body cpu86_types is
         return d;
 
     end;
+
+
 
 end package body;

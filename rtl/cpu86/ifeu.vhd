@@ -20,6 +20,7 @@ entity ifeu is
         micro_m_tready          : in std_logic;
         micro_m_tdata           : out micro_op_t;
 
+        ax_s_tdata              : in std_logic_vector(15 downto 0);
         bx_s_tdata              : in std_logic_vector(15 downto 0);
         cx_s_tdata              : in std_logic_vector(15 downto 0);
         dx_s_tdata              : in std_logic_vector(15 downto 0);
@@ -409,8 +410,8 @@ begin
 
             when STR =>
                 case rr_tdata.code is
-                    when CMPS_OP => micro_cnt_next <= 5;
-                    when SCAS_OP => micro_cnt_next <= 4;
+                    when CMPS_OP => micro_cnt_next <= 6;
+                    when SCAS_OP => micro_cnt_next <= 5;
                     when LODS_OP => micro_cnt_next <= 1;
                     when MOVS_OP => micro_cnt_next <= 1;
                     when others => micro_cnt_next <= 0;
@@ -692,10 +693,32 @@ begin
 
                 case (rr_tdata.op) is
                     when MULU =>
-                        fl_off; jmp_off; dbg_off; alu_off;
+                        fl_off; jmp_off; dbg_off; alu_off; mem_off;
                         sp_inc_off; di_inc_off; si_inc_off;
                         micro_tdata.unlk_fl <= '0';
                         micro_tdata.cmd(MICRO_OP_CMD_MUL) <= '1';
+
+                        case rr_tdata.code is
+                            when IMUL_AXDX =>
+                                micro_tdata.mul_code <= rr_tdata.code;
+                                micro_tdata.mul_w <= rr_tdata.w;
+                                micro_tdata.mul_dreg <= rr_tdata.dreg;
+                                micro_tdata.mul_dmask <= rr_tdata.dmask;
+                                micro_tdata.mul_a_mem <= '0';
+                                micro_tdata.mul_a_val <= rr_tdata.sreg_val;
+                                micro_tdata.mul_b_mem <= '0';
+                                if (rr_tdata.w = '0') then
+                                    for i in 15 downto 8 loop
+                                        micro_tdata.mul_b_val(i) <= ax_s_tdata(7);
+                                    end loop;
+                                    micro_tdata.mul_b_val(7 downto 0) <= ax_s_tdata(7 downto 0);
+                                else
+                                    micro_tdata.mul_b_val <= ax_s_tdata;
+                                end if;
+                                micro_tdata.mul_wb <= '1';
+                            when others => null;
+                        end case;
+
 
                     when LFP =>
                         fl_off; dbg_off; jmp_off; mul_off;
@@ -957,7 +980,6 @@ begin
                         case micro_cnt is
                             when 2 =>
                                 micro_tdata.read_fifo <= '1';
-                                micro_tdata.alu_wb <= '1';
 
                                 micro_tdata.alu_wb <= '1';
                                 micro_tdata.alu_a_val <= x"0000";
@@ -998,7 +1020,7 @@ begin
                         case rr_tdata_buf.code is
                             when CMPS_OP =>
                                 case micro_cnt is
-                                    when 5 =>
+                                    when 6 =>
                                         di_inc_on; si_inc_off;
                                         micro_tdata.read_fifo <= '1';
                                         if rep_mode = '1' then
@@ -1012,7 +1034,7 @@ begin
                                         micro_tdata.mem_addr_src <= MEM_ADDR_SRC_EA;
                                         micro_tdata.mem_addr <= di_s_tdata;
                                         micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
-                                    when 4 =>
+                                    when 5 =>
                                         mem_off; di_inc_off; si_inc_off;
                                         micro_tdata.read_fifo <= '1';
 
@@ -1021,7 +1043,7 @@ begin
                                         micro_tdata.alu_wb <= '0';
                                         micro_tdata.alu_a_buf <= '1';
                                         micro_tdata.alu_b_mem <= '1';
-                                    when 3 =>
+                                    when 4 =>
                                         alu_off;
                                         micro_tdata.read_fifo <= '0';
 
@@ -1072,7 +1094,7 @@ begin
 
                             when SCAS_OP =>
                                 case micro_cnt is
-                                    when 4 =>
+                                    when 5 =>
                                         mem_off; di_inc_off;
                                         micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                                         micro_tdata.read_fifo <= '1';
@@ -1081,7 +1103,7 @@ begin
                                         micro_tdata.alu_wb <= '0';
                                         micro_tdata.alu_a_val <= rr_tdata_buf.sreg_val;
                                         micro_tdata.alu_b_mem <= '1';
-                                    when 3 =>
+                                    when 4 =>
                                         alu_off;
                                         micro_tdata.read_fifo <= '0';
                                     when 0 =>
