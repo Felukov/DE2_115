@@ -91,12 +91,10 @@ begin
                 mul_res_1_tvalid <= '0';
                 mul_res_2_tvalid <= '0';
             else
-
                 mul_0_tvalid <= req_s_tvalid;
                 mul_res_0_tvalid <= mul_0_tvalid;
                 mul_res_1_tvalid <= mul_res_0_tvalid;
                 mul_res_2_tvalid <= mul_res_1_tvalid;
-
             end if;
 
             mul_0_tdata <= req_s_tdata;
@@ -107,7 +105,12 @@ begin
             mul_res_0_tdata.dmask <= mul_0_tdata.dmask;
             mul_res_0_tdata.aval <= mul_0_tdata.aval;
             mul_res_0_tdata.bval <= mul_0_tdata.bval;
-            mul_res_0_tdata.dval <= std_logic_vector(signed(mul_0_tdata.aval) * signed(mul_0_tdata.bval));
+
+            if (mul_0_tdata.code = IMUL_RR or mul_0_tdata.code = IMUL_AXDX) then
+                mul_res_0_tdata.dval <= std_logic_vector(signed(mul_0_tdata.aval) * signed(mul_0_tdata.bval));
+            else
+                mul_res_0_tdata.dval <= std_logic_vector(unsigned(mul_0_tdata.aval) * unsigned(mul_0_tdata.bval));
+            end if;
 
             mul_res_1_tdata <= mul_res_0_tdata;
             mul_res_2_tdata <= mul_res_1_tdata;

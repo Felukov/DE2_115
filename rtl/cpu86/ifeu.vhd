@@ -408,6 +408,12 @@ begin
             when XCHG =>
                 micro_cnt_next <= 1;
 
+            when ONEU =>
+                case rr_tdata.dir is
+                    when M2M => micro_cnt_next <= 2;
+                    when others => micro_cnt_next <= 0;
+                end case;
+
             when MULU =>
                 case rr_tdata.dir is
                     when M2R => micro_cnt_next <= 1;
@@ -459,6 +465,10 @@ begin
 
         procedure alu_off is begin
             micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
+        end procedure;
+
+        procedure one_off is begin
+            micro_tdata.cmd(MICRO_OP_CMD_ONE) <= '0';
         end procedure;
 
         procedure dbg_off is begin
@@ -570,6 +580,16 @@ begin
             micro_tdata.mem_data_src <= MEM_DATA_SRC_ALU;
         end procedure;
 
+        procedure mem_write_one(seg, addr : std_logic_vector; w : std_logic) is begin
+            micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
+            micro_tdata.mem_cmd <= '1';
+            micro_tdata.mem_width <= w;
+            micro_tdata.mem_seg <= seg;
+            micro_tdata.mem_addr_src <= MEM_ADDR_SRC_EA;
+            micro_tdata.mem_addr <= addr;
+            micro_tdata.mem_data_src <= MEM_DATA_SRC_ONE;
+        end procedure;
+
         procedure mem_write_imm(seg, addr, val : std_logic_vector; w : std_logic) is begin
             micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
             micro_tdata.mem_cmd <= '1';
@@ -598,7 +618,7 @@ begin
         end;
 
         procedure do_mul_cmd_0 is begin
-            fl_off; jmp_off; dbg_off; alu_off;
+            fl_off; jmp_off; dbg_off; alu_off; one_off;
             sp_inc_off; di_inc_off; si_inc_off;
             micro_tdata.unlk_fl <= '0';
 
@@ -615,7 +635,6 @@ begin
                 when R2R =>
                     mem_off;
                     micro_tdata.cmd(MICRO_OP_CMD_MUL) <= '1';
-                    micro_tdata.mul_wb <= '1';
                     micro_tdata.mul_a_val <= rr_tdata.sreg_val;
 
                 when others => null;
@@ -641,7 +660,49 @@ begin
             mem_off;
             micro_tdata.read_fifo <= '1';
             micro_tdata.cmd(MICRO_OP_CMD_MUL) <= '1';
-            micro_tdata.mul_wb <= '1';
+        end procedure;
+
+        procedure do_one_cmd_0 is begin
+            fl_off; jmp_off; dbg_off; alu_off; mul_off;
+            sp_inc_off; di_inc_off; si_inc_off;
+            micro_tdata.unlk_fl <= '0';
+
+            micro_tdata.one_code <= rr_tdata.code;
+            micro_tdata.one_w <= rr_tdata.w;
+            micro_tdata.one_dreg <= rr_tdata.dreg;
+            micro_tdata.one_dmask <= rr_tdata.dmask;
+            micro_tdata.one_ival <= rr_tdata.data;
+            micro_tdata.one_sval <= rr_tdata.sreg_val;
+
+            case rr_tdata.dir is
+                when M2M =>
+                    one_off;
+                    mem_read(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
+                    micro_tdata.one_wb <= '0';
+
+                when R2R =>
+                    mem_off;
+                    micro_tdata.cmd(MICRO_OP_CMD_ONE) <= '1';
+                    micro_tdata.one_wb <= '1';
+
+                when others => null;
+            end case;
+
+        end procedure;
+
+        procedure do_one_cmd_1 is begin
+            case micro_cnt is
+                when 2 =>
+                    mem_off;
+                    micro_tdata.read_fifo <= '1';
+                    micro_tdata.cmd(MICRO_OP_CMD_ONE) <= '1';
+                when 1 =>
+                    one_off;
+                    micro_tdata.read_fifo <= '0';
+                    mem_write_one(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
+
+                when others => null;
+            end case;
         end procedure;
 
     begin
@@ -745,9 +806,10 @@ begin
                 micro_tdata.dbg_ip <= rr_tuser(15 downto 0);
 
                 case (rr_tdata.op) is
+                    when ONEU => do_one_cmd_0;
                     when MULU => do_mul_cmd_0;
                     when LFP =>
-                        fl_off; dbg_off; jmp_off; mul_off;
+                        fl_off; dbg_off; jmp_off; mul_off; one_off;
                         sp_inc_off; di_inc_off; si_inc_off;
                         micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
                         micro_tdata.unlk_fl <= '0';
@@ -760,7 +822,7 @@ begin
                         mem_read(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
 
                     when XCHG =>
-                        fl_off; dbg_off; jmp_off; mul_off;
+                        fl_off; dbg_off; jmp_off; mul_off; one_off;
                         sp_inc_off; di_inc_off; si_inc_off;
                         micro_tdata.unlk_fl <= '0';
 
@@ -770,14 +832,14 @@ begin
                         alu_put_in_b(rr_tdata.dreg_val);
 
                     when DBG =>
-                        fl_off; alu_off; jmp_off; mem_off; mul_off;
+                        fl_off; alu_off; jmp_off; mem_off; mul_off; one_off;
                         sp_inc_off; di_inc_off; si_inc_off;
                         micro_tdata.cmd(MICRO_OP_CMD_DBG) <= '1';
                         micro_tdata.unlk_fl <= '1';
                         micro_tdata.alu_wb <= '0';
 
                     when SET_FLAG =>
-                        alu_off; jmp_off; dbg_off; mem_off; mul_off;
+                        alu_off; jmp_off; dbg_off; mem_off; mul_off; one_off;
                         sp_inc_off; di_inc_off; si_inc_off;
                         micro_tdata.unlk_fl <= '0';
 
@@ -786,7 +848,7 @@ begin
                         flag_update(rr_tdata.code, rr_tdata.fl);
 
                     when STR =>
-                        fl_off; alu_off; jmp_off; dbg_off; mul_off;
+                        fl_off; alu_off; jmp_off; dbg_off; mul_off; one_off;
                         micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                         micro_tdata.unlk_fl <= '0';
                         micro_tdata.alu_wb <= '0';
@@ -822,7 +884,7 @@ begin
                         end case;
 
                     when STACKU =>
-                        fl_off; alu_off; jmp_off; dbg_off; mul_off;
+                        fl_off; alu_off; jmp_off; dbg_off; mul_off; one_off;
                         di_inc_off; si_inc_off; sp_inc_on;
                         micro_tdata.unlk_fl <= '0';
 
@@ -852,7 +914,7 @@ begin
                         end case;
 
                     when MOVU =>
-                        fl_off; jmp_off; dbg_off; mul_off;
+                        fl_off; jmp_off; dbg_off; mul_off; one_off;
                         sp_inc_off; di_inc_off; si_inc_off;
                         micro_tdata.alu_wb <= '0';
                         micro_tdata.unlk_fl <= '0';
@@ -908,7 +970,7 @@ begin
                         end case;
 
                     when ALU =>
-                        fl_off; jmp_off; dbg_off; mul_off;
+                        fl_off; jmp_off; dbg_off; mul_off; one_off;
                         sp_inc_off; di_inc_off; si_inc_off;
                         micro_tdata.unlk_fl <= '0';
 
@@ -986,7 +1048,7 @@ begin
                         end case;
 
                     when LOOPU =>
-                        mem_off; jmp_off; dbg_off; mul_off;
+                        mem_off; jmp_off; dbg_off; mul_off; one_off;
                         sp_inc_off; di_inc_off; si_inc_off;
                         micro_tdata.unlk_fl <= '0';
 
@@ -1002,6 +1064,7 @@ begin
 
             elsif (micro_tvalid = '1' and micro_tready = '1') then
                 case rr_tdata_buf.op is
+                    when ONEU => do_one_cmd_1;
                     when MULU => do_mul_cmd_1;
                     when LFP =>
                         case micro_cnt is
@@ -1041,7 +1104,7 @@ begin
                         micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
                         micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
                         -- write alu to memory
-                        mem_write_alu(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp, w => rr_tdata.w);
+                        mem_write_alu(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
 
                     when STR =>
                         case rr_tdata_buf.code is
@@ -1086,7 +1149,7 @@ begin
                                         else
                                             alu_off; di_inc_off; si_inc_on;
                                             update_si_keep_lock;
-                                            mem_read(seg => rr_tdata.seg_val, addr => si_s_tdata, w =>  rr_tdata.w);
+                                            mem_read(seg => rr_tdata_buf.seg_val, addr => si_s_tdata, w => rr_tdata_buf.w);
                                             micro_tdata.read_fifo <= '0';
 
                                         end if;
@@ -1140,7 +1203,7 @@ begin
                                             micro_tdata.di_inc_data <= x"0000";
                                         else
                                             update_di_keep_lock;
-                                            mem_read(seg => rr_tdata.es_seg_val, addr => di_s_tdata, w =>  rr_tdata.w);
+                                            mem_read(seg => rr_tdata_buf.es_seg_val, addr => di_s_tdata, w => rr_tdata_buf.w);
                                         end if;
                                     when others =>
                                         null;

@@ -21,7 +21,7 @@ package cpu86_types is
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU
     );
 
     type fl_action_t is (
@@ -39,6 +39,10 @@ package cpu86_types is
     constant ALU_OP_INC     : std_logic_vector (3 downto 0) := "1000";
     constant ALU_OP_DEC     : std_logic_vector (3 downto 0) := "1001";
     constant ALU_SF_ADD     : std_logic_vector (3 downto 0) := "1111";
+
+    constant ONE_OP_NOT     : std_logic_vector (3 downto 0) := "0000";
+    constant ONE_OP_NEG     : std_logic_vector (3 downto 0) := "0001";
+    constant ONE_OP_TST     : std_logic_vector (3 downto 0) := "0010";
 
     constant STACKU_POPM    : std_logic_vector (3 downto 0) := "0000";
     constant STACKU_POPR    : std_logic_vector (3 downto 0) := "0001";
@@ -67,6 +71,8 @@ package cpu86_types is
 
     constant IMUL_AXDX      : std_logic_vector (3 downto 0) := "0000";
     constant IMUL_RR        : std_logic_vector (3 downto 0) := "0001";
+    constant MUL_AXDX       : std_logic_vector (3 downto 0) := "0010";
+    constant MUL_RR         : std_logic_vector (3 downto 0) := "0011";
 
     constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0000";
     constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0001";
@@ -79,9 +85,10 @@ package cpu86_types is
     constant MEM_ADDR_SRC_ALU  : std_logic := '1';
     constant MEM_ADDR_SRC_EA   : std_logic := '0';
 
-    constant MEM_DATA_SRC_ALU  : std_logic_vector(1 downto 0) := "01";
     constant MEM_DATA_SRC_IMM  : std_logic_vector(1 downto 0) := "00";
-    constant MEM_DATA_SRC_FIFO : std_logic_vector(1 downto 0) := "10";
+    constant MEM_DATA_SRC_ALU  : std_logic_vector(1 downto 0) := "01";
+    constant MEM_DATA_SRC_ONE  : std_logic_vector(1 downto 0) := "10";
+    constant MEM_DATA_SRC_FIFO : std_logic_vector(1 downto 0) := "11";
 
     constant FLAG_15            : natural := 15;
     constant FLAG_14            : natural := 14;
@@ -196,13 +203,14 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 6;
+    constant MICRO_OP_CMD_WIDTH : natural := 7;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
     constant MICRO_OP_CMD_FLG : natural := 3;
     constant MICRO_OP_CMD_MUL : natural := 4;
     constant MICRO_OP_CMD_DBG : natural := 5;
+    constant MICRO_OP_CMD_ONE : natural := 6;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -228,11 +236,17 @@ package cpu86_types is
         mul_w           : std_logic;
         mul_dreg        : reg_t;
         mul_dmask       : std_logic_vector(1 downto 0);
-        --mul_a_mem       : std_logic;
         mul_a_val       : std_logic_vector(15 downto 0);
-        --mul_b_mem       : std_logic;
         mul_b_val       : std_logic_vector(15 downto 0);
-        mul_wb          : std_logic;
+        --mul_wb          : std_logic;
+
+        one_code        : std_logic_vector(3 downto 0);
+        one_w           : std_logic;
+        one_dreg        : reg_t;
+        one_dmask       : std_logic_vector(1 downto 0);
+        one_sval        : std_logic_vector(15 downto 0);
+        one_ival        : std_logic_vector(15 downto 0);
+        one_wb          : std_logic;
 
         jump_cond       : micro_op_jmp_cond_t;
         jump_cs         : std_logic_vector(15 downto 0);
@@ -260,53 +274,72 @@ package cpu86_types is
     end record;
 
     type alu_req_t is record
-        code                    : std_logic_vector(3 downto 0);
-        w                       : std_logic;
-        wb                      : std_logic;
-        dreg                    : reg_t;
-        dmask                   : std_logic_vector(1 downto 0);
-        upd_fl                  : std_logic;
-        aval                    : std_logic_vector(15 downto 0);
-        bval                    : std_logic_vector(15 downto 0);
+        code            : std_logic_vector(3 downto 0);
+        w               : std_logic;
+        wb              : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        upd_fl          : std_logic;
+        aval            : std_logic_vector(15 downto 0);
+        bval            : std_logic_vector(15 downto 0);
     end record;
 
     type alu_res_t is record
-        code                    : std_logic_vector(3 downto 0);
-        w                       : std_logic;
-        wb                      : std_logic;
-        dreg                    : reg_t;
-        dmask                   : std_logic_vector(1 downto 0);
-        upd_fl                  : std_logic;
-        aval                    : std_logic_vector(15 downto 0);
-        bval                    : std_logic_vector(15 downto 0);
-        dval                    : std_logic_vector(15 downto 0); --dest
-        rval                    : std_logic_vector(16 downto 0); --result
+        code            : std_logic_vector(3 downto 0);
+        w               : std_logic;
+        wb              : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        upd_fl          : std_logic;
+        aval            : std_logic_vector(15 downto 0);
+        bval            : std_logic_vector(15 downto 0);
+        dval            : std_logic_vector(15 downto 0); --dest
+        rval            : std_logic_vector(16 downto 0); --result
     end record;
 
     type alu_flg_t is record
-        code                    : std_logic_vector(3 downto 0);
-        dreg                    : reg_t;
-        dmask                   : std_logic_vector(1 downto 0);
+        code            : std_logic_vector(3 downto 0);
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
     end record;
 
     type mul_req_t is record
-        code                    : std_logic_vector(3 downto 0);
-        w                       : std_logic;
-        wb                      : std_logic;
-        dreg                    : reg_t;
-        dmask                   : std_logic_vector(1 downto 0);
-        aval                    : std_logic_vector(15 downto 0);
-        bval                    : std_logic_vector(15 downto 0);
+        code            : std_logic_vector(3 downto 0);
+        w               : std_logic;
+        wb              : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        aval            : std_logic_vector(15 downto 0);
+        bval            : std_logic_vector(15 downto 0);
     end record;
 
     type mul_res_t is record
-        code                    : std_logic_vector(3 downto 0);
-        w                       : std_logic;
-        dreg                    : reg_t;
-        dmask                   : std_logic_vector(1 downto 0);
-        aval                    : std_logic_vector(15 downto 0);
-        bval                    : std_logic_vector(15 downto 0);
-        dval                    : std_logic_vector(31 downto 0); --dest
+        code            : std_logic_vector(3 downto 0);
+        w               : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        aval            : std_logic_vector(15 downto 0);
+        bval            : std_logic_vector(15 downto 0);
+        dval            : std_logic_vector(31 downto 0); --dest
+    end record;
+
+    type one_req_t is record
+        code            : std_logic_vector(3 downto 0);
+        w               : std_logic;
+        wb              : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        sval            : std_logic_vector(15 downto 0);
+        ival            : std_logic_vector(15 downto 0);
+    end record;
+
+    type one_res_t is record
+        code            : std_logic_vector(3 downto 0);
+        wb              : std_logic;
+        w               : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        dval            : std_logic_vector(15 downto 0);
     end record;
 
     function decoded_instr_t_to_slv (decoded_instr : decoded_instr_t) return std_logic_vector;
