@@ -21,7 +21,7 @@ package cpu86_types is
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU
     );
 
     type fl_action_t is (
@@ -81,6 +81,16 @@ package cpu86_types is
     constant FEU_CBW        : std_logic_vector (3 downto 0) := "0000";
     constant FEU_CWD        : std_logic_vector (3 downto 0) := "0001";
     constant FEU_LEA        : std_logic_vector (3 downto 0) := "0010";
+
+    constant BCDU_AAA       : std_logic_vector (3 downto 0) := "0000";
+    constant BCDU_AAD       : std_logic_vector (3 downto 0) := "0001";
+    constant BCDU_AAS       : std_logic_vector (3 downto 0) := "0011";
+    constant BCDU_DAA       : std_logic_vector (3 downto 0) := "0100";
+    constant BCDU_DAS       : std_logic_vector (3 downto 0) := "0101";
+
+    constant DIVU_AAM       : std_logic_vector (3 downto 0) := "0000";
+    constant DIVU_DIV       : std_logic_vector (3 downto 0) := "0001";
+    constant DIVU_IDIV      : std_logic_vector (3 downto 0) := "0010";
 
     constant MEM_ADDR_SRC_ALU  : std_logic := '1';
     constant MEM_ADDR_SRC_EA   : std_logic := '0';
@@ -203,7 +213,7 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 7;
+    constant MICRO_OP_CMD_WIDTH : natural := 8;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
@@ -211,6 +221,7 @@ package cpu86_types is
     constant MICRO_OP_CMD_MUL : natural := 4;
     constant MICRO_OP_CMD_DBG : natural := 5;
     constant MICRO_OP_CMD_ONE : natural := 6;
+    constant MICRO_OP_CMD_BCD : natural := 7;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -238,7 +249,6 @@ package cpu86_types is
         mul_dmask       : std_logic_vector(1 downto 0);
         mul_a_val       : std_logic_vector(15 downto 0);
         mul_b_val       : std_logic_vector(15 downto 0);
-        --mul_wb          : std_logic;
 
         one_code        : std_logic_vector(3 downto 0);
         one_w           : std_logic;
@@ -247,6 +257,9 @@ package cpu86_types is
         one_sval        : std_logic_vector(15 downto 0);
         one_ival        : std_logic_vector(15 downto 0);
         one_wb          : std_logic;
+
+        bcd_code        : std_logic_vector(3 downto 0);
+        bcd_sval        : std_logic_vector(15 downto 0);
 
         jump_cond       : micro_op_jmp_cond_t;
         jump_cs         : std_logic_vector(15 downto 0);
@@ -338,6 +351,17 @@ package cpu86_types is
         wb              : std_logic;
         w               : std_logic;
         dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        dval            : std_logic_vector(15 downto 0);
+    end record;
+
+    type bcd_req_t is record
+        code            : std_logic_vector(3 downto 0);
+        sval            : std_logic_vector(15 downto 0);
+    end record;
+
+    type bcd_res_t is record
+        code            : std_logic_vector(3 downto 0);
         dmask           : std_logic_vector(1 downto 0);
         dval            : std_logic_vector(15 downto 0);
     end record;
