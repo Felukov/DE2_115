@@ -170,19 +170,32 @@ architecture rtl of mexec is
     signal alu_res_tuser        : std_logic_vector(15 downto 0);
 
     signal mul_req_tvalid       : std_logic;
-    signal mul_req_tdata        : mul_req_t;
+    signal mul_req_tdata        : mul_req_t := (
+        code => (others=>'0'), w => '0',
+        wb => '0', dreg => AX, dmask => "00",
+        aval => (others=>'0'),
+        bval => (others=>'0')
+    );
     signal mul_res_tvalid       : std_logic;
     signal mul_res_tdata        : mul_res_t;
     signal mul_res_tuser        : std_logic_vector(15 downto 0);
 
     signal one_req_tvalid       : std_logic;
-    signal one_req_tdata        : one_req_t;
+    signal one_req_tdata        : one_req_t := (
+        code => (others=>'0'), w => '0',
+        wb => '0', dreg => AX, dmask => "00",
+        sval => (others=>'0'),
+        ival => (others=>'0')
+    );
     signal one_res_tvalid       : std_logic;
     signal one_res_tdata        : one_res_t;
     signal one_res_tuser        : std_logic_vector(15 downto 0);
 
     signal bcd_req_tvalid       : std_logic;
-    signal bcd_req_tdata        : bcd_req_t;
+    signal bcd_req_tdata        : bcd_req_t := (
+        code => (others=>'0'),
+        sval => (others=>'0')
+    );
     signal bcd_res_tvalid       : std_logic;
     signal bcd_res_tdata        : bcd_res_t;
     signal bcd_res_tuser        : std_logic_vector(15 downto 0);
@@ -190,7 +203,7 @@ architecture rtl of mexec is
     signal res_tvalid           : std_logic;
     signal res_tdata            : res_t := (
         code => (others=>'0'),
-        dmask => "00",
+        dmask => (others=>'0'),
         dval_lo => (others=>'0'),
         dval_hi => (others=>'0')
     );
@@ -221,8 +234,8 @@ architecture rtl of mexec is
     signal mem_wait_one         : std_logic;
     signal mem_wait_alu         : std_logic;
     signal mem_wait_fifo        : std_logic;
-    signal mem_addr_wait_alu    : std_logic;
-    signal mem_data_wait_alu    : std_logic;
+    --signal mem_addr_wait_alu    : std_logic;
+    --signal mem_data_wait_alu    : std_logic;
 
     signal jmp_wait_alu         : std_logic;
     signal jmp_tvalid           : std_logic;
@@ -730,7 +743,7 @@ begin
                         flags_wr_be(FLAG_CF) <= alu_res_tdata.dmask(0);
                     else
                         case (alu_res_tdata.code) is
-                            when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR =>
+                            when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
                                 flags_wr_be(FLAG_15) <= '0';
                                 flags_wr_be(FLAG_14) <= '0';
                                 flags_wr_be(FLAG_13) <= '0';
@@ -742,7 +755,7 @@ begin
                                 flags_wr_be(FLAG_SF) <= '1';
                                 flags_wr_be(FLAG_ZF) <= '1';
                                 flags_wr_be(FLAG_05) <= '0';
-                                flags_wr_be(FLAG_AF) <= '0';
+                                flags_wr_be(FLAG_AF) <= '1';
                                 flags_wr_be(FLAG_03) <= '0';
                                 flags_wr_be(FLAG_PF) <= '1';
                                 flags_wr_be(FLAG_01) <= '0';
@@ -799,23 +812,6 @@ begin
                             flags_wr_be(FLAG_ZF) <= '1';
                             flags_wr_be(FLAG_05) <= '0';
                             flags_wr_be(FLAG_AF) <= '1';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '1';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '1';
-                        when ONE_OP_TST =>
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '1';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '1';
-                            flags_wr_be(FLAG_ZF) <= '1';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '0';
                             flags_wr_be(FLAG_03) <= '0';
                             flags_wr_be(FLAG_PF) <= '1';
                             flags_wr_be(FLAG_01) <= '0';
@@ -1035,7 +1031,7 @@ begin
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MEM) = '1') then
-                    if (micro_tdata.mem_addr_src = MEM_ADDR_SRC_ALU or (micro_tdata.mem_cmd = '1' and micro_tdata.mem_data_src = MEM_DATA_SRC_ALU)) then
+                    if (micro_tdata.mem_cmd = '1' and micro_tdata.mem_data_src = MEM_DATA_SRC_ALU) then
                         mem_wait_alu <= '1';
                     else
                         mem_wait_alu <= '0';
@@ -1065,11 +1061,13 @@ begin
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MEM) = '1') then
-                    if (micro_tdata.mem_addr_src = MEM_ADDR_SRC_EA and (micro_tdata.mem_cmd = '0' or
-                        (micro_tdata.mem_cmd = '1' and micro_tdata.mem_data_src = MEM_DATA_SRC_IMM))) then
-                        lsu_req_tvalid <= '1';
-                    else
+                    if (micro_tdata.mem_cmd = '1' and
+                        (micro_tdata.mem_data_src = MEM_DATA_SRC_ALU or
+                         micro_tdata.mem_data_src = MEM_DATA_SRC_ONE or
+                         micro_tdata.mem_data_src = MEM_DATA_SRC_FIFO)) then
                         lsu_req_tvalid <= '0';
+                    else
+                        lsu_req_tvalid <= '1';
                     end if;
                 elsif (mem_wait_alu = '1' or mem_wait_fifo = '1' or mem_wait_one = '1') and
                     not (alu_res_tvalid = '1' xor mem_wait_alu = '1') and
@@ -1087,26 +1085,8 @@ begin
                 lsu_req_twidth <= micro_tdata.mem_width;
                 lsu_req_taddr <= std_logic_vector(unsigned(micro_tdata.mem_seg & x"0") + unsigned(x"0" & micro_tdata.mem_addr));
                 lsu_req_tdata <= micro_tdata.mem_data;
-
-                if (micro_tdata.mem_addr_src = MEM_ADDR_SRC_ALU) then
-                    mem_addr_wait_alu <= '1';
-                else
-                    mem_addr_wait_alu <= '0';
-                end if;
-
-                if (micro_tdata.mem_data_src = MEM_DATA_SRC_ALU) then
-                    mem_data_wait_alu <= '1';
-                else
-                    mem_data_wait_alu <= '0';
-                end if;
-
             elsif (mem_wait_alu = '1' and alu_res_tvalid = '1') then
-                if (mem_addr_wait_alu = '1') then
-                    lsu_req_taddr <= std_logic_vector(unsigned(micro_tdata.mem_seg & x"0") + unsigned(x"0" & alu_res_tdata.dval(15 downto 0)));
-                end if;
-                if (mem_data_wait_alu = '1') then
-                    lsu_req_tdata <= alu_res_tdata.dval(15 downto 0);
-                end if;
+                lsu_req_tdata <= alu_res_tdata.dval(15 downto 0);
             elsif (mem_wait_one = '1' and one_res_tvalid = '1') then
                 lsu_req_tdata <= one_res_tdata.dval;
             elsif (mem_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then

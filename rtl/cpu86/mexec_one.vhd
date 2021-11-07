@@ -21,7 +21,6 @@ end entity mexec_one;
 architecture rtl of mexec_one is
     signal rval         : std_logic_vector(16 downto 0);
     signal rval_next    : std_logic_vector(16 downto 0);
-    signal of_cf_mask   : std_logic;
     signal sval         : std_logic_vector(15 downto 0);
     signal flags_of     : std_logic;
     signal flags_af     : std_logic;
@@ -35,7 +34,7 @@ begin
     res_m_tuser(FLAG_14) <= '0';
     res_m_tuser(FLAG_13) <= '0';
     res_m_tuser(FLAG_12) <= '0';
-    res_m_tuser(FLAG_OF) <= flags_of when of_cf_mask = '0' else '0';
+    res_m_tuser(FLAG_OF) <= flags_of;
     res_m_tuser(FLAG_DF) <= '0';
     res_m_tuser(FLAG_IF) <= '0';
     res_m_tuser(FLAG_TF) <= '0';
@@ -46,7 +45,7 @@ begin
     res_m_tuser(FLAG_03) <= '0';
     res_m_tuser(FLAG_PF) <= flags_pf;
     res_m_tuser(FLAG_01) <= '0';
-    res_m_tuser(FLAG_CF) <= flags_cf when of_cf_mask = '0' else '0';
+    res_m_tuser(FLAG_CF) <= flags_cf;
 
 
     process (all) begin
@@ -55,11 +54,8 @@ begin
                 for i in 15 downto 0 loop
                     rval_next(i) <= not req_s_tdata.sval(i);
                 end loop;
-            when ONE_OP_NEG =>
-                rval_next <= std_logic_vector(unsigned(not req_s_tdata.sval) + to_unsigned(1, 17));
             when others =>
-                rval_next(16) <= '0';
-                rval_next(15 downto 0) <= req_s_tdata.sval and req_s_tdata.ival;
+                rval_next <= std_logic_vector(unsigned(not req_s_tdata.sval) + to_unsigned(1, 17));
         end case;
     end process;
 
@@ -68,7 +64,7 @@ begin
         flags_pf <= not (rval(7) xor rval(6) xor rval(5) xor rval(4) xor
                          rval(3) xor rval(2) xor rval(1) xor rval(0));
 
-        flags_af <= sval(4) xor rval(4);
+        flags_af <= '0' xor sval(4) xor rval(4);
 
         if res_m_tdata.w = '0' then
             flags_sf <= rval(7);
@@ -123,17 +119,8 @@ begin
 
             if resetn = '0' then
                 res_m_tvalid <= '0';
-                of_cf_mask <= '0';
             else
                 res_m_tvalid <= req_s_tvalid;
-
-                if (req_s_tvalid = '1') then
-                    if (req_s_tdata.code = ONE_OP_TST) then
-                        of_cf_mask <= '1';
-                    else
-                        of_cf_mask <= '0';
-                    end if;
-                end if;
 
             end if;
 
@@ -146,7 +133,6 @@ begin
             case req_s_tdata.code is
                 when ONE_OP_NOT => res_m_tdata.dval <= rval_next(15 downto 0);
                 when ONE_OP_NEG => res_m_tdata.dval <= rval_next(15 downto 0);
-                when ONE_OP_TST => res_m_tdata.dval <= req_s_tdata.sval;
                 when others => null;
             end case;
 

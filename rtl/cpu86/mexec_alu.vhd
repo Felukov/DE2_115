@@ -65,6 +65,10 @@ begin
                 res_tdata_next.dval <= and_next(15 downto 0);
                 res_tdata_next.rval(15 downto 0) <= and_next;
                 res_tdata_next.rval(16) <= '0';
+            when ALU_OP_TST =>
+                res_tdata_next.dval <= req_s_tdata.aval;
+                res_tdata_next.rval(15 downto 0) <= and_next;
+                res_tdata_next.rval(16) <= '0';
             when ALU_OP_OR =>
                 res_tdata_next.dval <= or_next(15 downto 0);
                 res_tdata_next.rval(15 downto 0) <= or_next;
@@ -106,6 +110,13 @@ begin
                          res_m_tdata.rval(3) xor res_m_tdata.rval(2) xor res_m_tdata.rval(1) xor res_m_tdata.rval(0));
         flags_af <= res_m_tdata.aval(4) xor res_m_tdata.bval(4) xor res_m_tdata.rval(4);
 
+        case res_m_tdata.code is
+            when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
+                flags_af <= '0';
+            when others =>
+                flags_af <= res_m_tdata.aval(4) xor res_m_tdata.bval(4) xor res_m_tdata.rval(4);
+        end case;
+
         if res_m_tdata.w = '0' then
             if (res_m_tdata.rval(7 downto 0) = x"00") then
                 flags_zf <= '1';
@@ -127,7 +138,7 @@ begin
         end if;
 
         case res_m_tdata.code is
-            when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR =>
+            when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
                 flags_cf <= '0';
             when others =>
                 --ALU_OP_ADD | ALU_OP_SUB
@@ -139,7 +150,7 @@ begin
         end case;
 
         case res_m_tdata.code is
-            when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR =>
+            when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
                 flags_of <= '0';
 
             when ALU_OP_SUB | ALU_OP_DEC | ALU_OP_SBB | ALU_OP_CMP =>

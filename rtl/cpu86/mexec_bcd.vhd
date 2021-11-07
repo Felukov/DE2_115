@@ -60,7 +60,7 @@ begin
                 when BCDU_AAA =>
                     if (unsigned(req_s_tdata.sval(7 downto 0) and x"0F") > to_unsigned(9, 8)) or
                         (req_s_tuser(FLAG_AF) = '1') then
-                        calc_0_tdata <= std_logic_vector(unsigned(req_s_tdata.sval) + to_unsigned(262, 8)) and x"FF0F";
+                        calc_0_tdata <= std_logic_vector(unsigned(req_s_tdata.sval) + to_unsigned(262, 16)) and x"FF0F";
                         calc_0_fl_af <= '1';
                         calc_0_fl_cf <= '1';
                     else

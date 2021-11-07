@@ -38,11 +38,19 @@ package cpu86_types is
     constant ALU_OP_CMP     : std_logic_vector (3 downto 0) := "0111";
     constant ALU_OP_INC     : std_logic_vector (3 downto 0) := "1000";
     constant ALU_OP_DEC     : std_logic_vector (3 downto 0) := "1001";
+    constant ALU_OP_TST     : std_logic_vector (3 downto 0) := "1010";
     constant ALU_SF_ADD     : std_logic_vector (3 downto 0) := "1111";
 
     constant ONE_OP_NOT     : std_logic_vector (3 downto 0) := "0000";
     constant ONE_OP_NEG     : std_logic_vector (3 downto 0) := "0001";
-    constant ONE_OP_TST     : std_logic_vector (3 downto 0) := "0010";
+
+    constant SHF_OP_ROL     : std_logic_vector (3 downto 0) := "0000";
+    constant SHF_OP_ROR     : std_logic_vector (3 downto 0) := "0001";
+    constant SHF_OP_RCL     : std_logic_vector (3 downto 0) := "0010";
+    constant SHF_OP_RCR     : std_logic_vector (3 downto 0) := "0011";
+    constant SHF_OP_SHL     : std_logic_vector (3 downto 0) := "0100";
+    constant SHF_OP_SHR     : std_logic_vector (3 downto 0) := "0101";
+    constant SHF_OP_SAR     : std_logic_vector (3 downto 0) := "0110";
 
     constant STACKU_POPM    : std_logic_vector (3 downto 0) := "0000";
     constant STACKU_POPR    : std_logic_vector (3 downto 0) := "0001";
@@ -91,9 +99,6 @@ package cpu86_types is
     constant DIVU_AAM       : std_logic_vector (3 downto 0) := "0000";
     constant DIVU_DIV       : std_logic_vector (3 downto 0) := "0001";
     constant DIVU_IDIV      : std_logic_vector (3 downto 0) := "0010";
-
-    constant MEM_ADDR_SRC_ALU  : std_logic := '1';
-    constant MEM_ADDR_SRC_EA   : std_logic := '0';
 
     constant MEM_DATA_SRC_IMM  : std_logic_vector(1 downto 0) := "00";
     constant MEM_DATA_SRC_ALU  : std_logic_vector(1 downto 0) := "01";
@@ -267,7 +272,6 @@ package cpu86_types is
         mem_cmd         : std_logic;
         mem_width       : std_logic;
         mem_seg         : std_logic_vector(15 downto 0);
-        mem_addr_src    : std_logic;
         mem_addr        : std_logic_vector(15 downto 0);
         mem_data_src    : std_logic_vector(1 downto 0);
         mem_data        : std_logic_vector(15 downto 0);

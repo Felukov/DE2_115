@@ -192,7 +192,7 @@ begin
                                     instr_tvalid <= '0';
 
                                 when x"05" | x"0D" | x"15" | x"1D" | x"25" | x"2D" | x"35" | x"3D" | x"68" | x"B8" | x"B9" | x"BA" |
-                                     x"BB" | x"BC" | x"BD" | x"BE" | x"BF" | x"C2" | x"CA" =>
+                                     x"BB" | x"BC" | x"BD" | x"BE" | x"BF" | x"C2" | x"CA" | x"A9" =>
                                     byte_pos_chain(0) <= data_low;
                                     byte_pos_chain(1) <= data_high;
                                     byte_pos_chain(2) <= first_byte;
@@ -1235,6 +1235,8 @@ begin
                 when x"81" => no_lock; no_wait; lock_fl('0');
                 when x"82" => no_lock; no_wait; lock_fl('1');
                 when x"83" => no_lock; no_wait; lock_fl('1');
+                when x"84" => set_op(ALU, ALU_OP_TST, '0'); no_lock; no_wait; lock_fl('1');
+                when x"85" => set_op(ALU, ALU_OP_TST, '1'); no_lock; no_wait; lock_fl('1');
                 when x"86" => set_op(XCHG, "0000", '0'); no_lock; no_wait; lock_fl('0');
                 when x"87" => set_op(XCHG, "0000", '1'); no_lock; no_wait; lock_fl('0');
                 when x"88" => set_op(MOVU, "0000", '0'); no_lock; no_wait; lock_fl('0');
@@ -1273,8 +1275,8 @@ begin
                 when x"A5" => set_op(STR, MOVS_OP, '1'); lock_movs; wait_movs; lock_fl('0');
                 when x"A6" => set_op(STR, CMPS_OP, '0'); lock_cmps; wait_cmps; lock_fl('0');
                 when x"A7" => set_op(STR, CMPS_OP, '1'); lock_cmps; wait_cmps; lock_fl('0');
-                when x"A8" => set_op(ONEU, ONE_OP_TST, '0'); lock_ax; wait_ax_only; lock_fl('1');
-                when x"A9" => set_op(ONEU, ONE_OP_TST, '1'); lock_ax; wait_ax_only; lock_fl('1');
+                when x"A8" => set_op(ALU, ALU_OP_TST, '0'); lock_ax; wait_ax_only; lock_fl('1');
+                when x"A9" => set_op(ALU, ALU_OP_TST, '1'); lock_ax; wait_ax_only; lock_fl('1');
                 when x"AA" => set_op(STR, STOS_OP, '0'); lock_stos; wait_stos; lock_fl('0');
                 when x"AB" => set_op(STR, STOS_OP, '1'); lock_stos; wait_stos; lock_fl('0');
                 when x"AC" => set_op(STR, LODS_OP, '0'); lock_lods; wait_lods; lock_fl('0');
@@ -1327,8 +1329,8 @@ begin
             end case;
         end;
 
-        procedure decode_f6_one_op(code : std_logic_vector) is begin
-            instr_tdata.op <= ONEU;
+        procedure decode_f6_one_op(op : op_t; code : std_logic_vector) is begin
+            instr_tdata.op <= op;
             instr_tdata.code <= code;
 
             if (u8_tdata(7 downto 6) = "11") then
@@ -1350,8 +1352,8 @@ begin
             lock_fl('1');
         end procedure;
 
-        procedure decode_f7_one_op(code : std_logic_vector) is begin
-            instr_tdata.op <= ONEU;
+        procedure decode_f7_one_op(op : op_t; code : std_logic_vector) is begin
+            instr_tdata.op <= op;
             instr_tdata.code <= code;
 
             if (u8_tdata(7 downto 6) = "11") then
@@ -1390,10 +1392,10 @@ begin
         procedure decode_f6(w : std_logic) is begin
             instr_tdata.w <= w;
             case u8_tdata(5 downto 3) is
-                when "000" => decode_f6_one_op(ONE_OP_TST);
+                when "000" => decode_f6_one_op(ALU, ALU_OP_TST);
                 when "001" => null;
-                when "010" => decode_f6_one_op(ONE_OP_NOT);
-                when "011" => decode_f6_one_op(ONE_OP_NEG);
+                when "010" => decode_f6_one_op(ONEU, ONE_OP_NOT);
+                when "011" => decode_f6_one_op(ONEU, ONE_OP_NEG);
                 when "100" => decode_f6_f7_mul_op(MUL_AXDX, w);
                 when "101" => decode_f6_f7_mul_op(IMUL_AXDX, w);
                 when "110" => null;
@@ -1405,10 +1407,10 @@ begin
         procedure decode_f7(w : std_logic) is begin
             instr_tdata.w <= w;
             case u8_tdata(5 downto 3) is
-                when "000" => decode_f7_one_op(ONE_OP_TST);
+                when "000" => decode_f7_one_op(ALU, ALU_OP_TST);
                 when "001" => null;
-                when "010" => decode_f7_one_op(ONE_OP_NOT);
-                when "011" => decode_f7_one_op(ONE_OP_NEG);
+                when "010" => decode_f7_one_op(ONEU, ONE_OP_NOT);
+                when "011" => decode_f7_one_op(ONEU, ONE_OP_NEG);
                 when "100" => decode_f6_f7_mul_op(MUL_AXDX, w);
                 when "101" => decode_f6_f7_mul_op(IMUL_AXDX, w);
                 when "110" => null;

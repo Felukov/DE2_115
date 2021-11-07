@@ -166,17 +166,41 @@ begin
             end case;
         end if;
 
-        case instr_tdata.dreg is
-            when AX => dreg_tdata <= ax_s_tdata;
-            when BX => dreg_tdata <= bx_s_tdata;
-            when CX => dreg_tdata <= cx_s_tdata;
-            when DX => dreg_tdata <= dx_s_tdata;
-            when BP => dreg_tdata <= bp_s_tdata;
-            when SI => dreg_tdata <= si_s_tdata;
-            when DI => dreg_tdata <= di_s_tdata;
-            when SP => dreg_tdata <= sp_s_tdata;
-            when FL => dreg_tdata <= flags_s_tdata;
-            when others => dreg_tdata <= ax_s_tdata;
+        case instr_tdata.dmask is
+            when "01" =>
+                dreg_tdata(15 downto 8) <= (others => '0');
+                case instr_tdata.dreg is
+                    when AX => dreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
+                    when BX => dreg_tdata(7 downto 0) <= bx_s_tdata(7 downto 0);
+                    when CX => dreg_tdata(7 downto 0) <= cx_s_tdata(7 downto 0);
+                    when DX => dreg_tdata(7 downto 0) <= dx_s_tdata(7 downto 0);
+                    when FL => dreg_tdata(7 downto 0) <= flags_s_tdata(7 downto 0);
+                    when others => dreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
+                end case;
+
+            when "10" =>
+                dreg_tdata(15 downto 8) <= (others => '0');
+                case instr_tdata.dreg is
+                    when AX => dreg_tdata(7 downto 0) <= ax_s_tdata(15 downto 8);
+                    when BX => dreg_tdata(7 downto 0) <= bx_s_tdata(15 downto 8);
+                    when CX => dreg_tdata(7 downto 0) <= cx_s_tdata(15 downto 8);
+                    when DX => dreg_tdata(7 downto 0) <= dx_s_tdata(15 downto 8);
+                    when others => dreg_tdata(7 downto 0) <= ax_s_tdata(15 downto 8);
+                end case;
+
+            when others =>
+                case instr_tdata.dreg is
+                    when AX => dreg_tdata <= ax_s_tdata;
+                    when BX => dreg_tdata <= bx_s_tdata;
+                    when CX => dreg_tdata <= cx_s_tdata;
+                    when DX => dreg_tdata <= dx_s_tdata;
+                    when BP => dreg_tdata <= bp_s_tdata;
+                    when SI => dreg_tdata <= si_s_tdata;
+                    when DI => dreg_tdata <= di_s_tdata;
+                    when SP => dreg_tdata <= sp_s_tdata;
+                    when FL => dreg_tdata <= flags_s_tdata;
+                    when others => dreg_tdata <= ax_s_tdata;
+                end case;
         end case;
 
         case instr_tdata.ea is
