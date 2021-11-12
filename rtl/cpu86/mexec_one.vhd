@@ -121,7 +121,6 @@ begin
                 res_m_tvalid <= '0';
             else
                 res_m_tvalid <= req_s_tvalid;
-
             end if;
 
             res_m_tdata.code <= req_s_tdata.code;
@@ -129,12 +128,7 @@ begin
             res_m_tdata.wb <= req_s_tdata.wb;
             res_m_tdata.dreg <= req_s_tdata.dreg;
             res_m_tdata.dmask <= req_s_tdata.dmask;
-
-            case req_s_tdata.code is
-                when ONE_OP_NOT => res_m_tdata.dval <= rval_next(15 downto 0);
-                when ONE_OP_NEG => res_m_tdata.dval <= rval_next(15 downto 0);
-                when others => null;
-            end case;
+            res_m_tdata.dval <= rval_next(15 downto 0);
 
             rval <= rval_next;
             sval <= req_s_tdata.sval;

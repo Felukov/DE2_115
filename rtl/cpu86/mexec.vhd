@@ -149,6 +149,24 @@ architecture rtl of mexec is
         );
     end component mexec_bcd;
 
+    component mexec_shf is
+        generic (
+            DATA_WIDTH      : natural := 16
+        );
+        port (
+            clk             : in std_logic;
+            resetn          : in std_logic;
+
+            req_s_tvalid    : in std_logic;
+            req_s_tdata     : in shf_req_t;
+            req_s_tuser     : in std_logic_vector(15 downto 0);
+
+            res_m_tvalid    : out std_logic;
+            res_m_tdata     : out shf_res_t;
+            res_m_tuser     : out std_logic_vector(15 downto 0)
+        );
+    end component mexec_shf;
+
     signal micro_tvalid         : std_logic;
     signal micro_tready         : std_logic;
     signal micro_tdata          : micro_op_t;
@@ -200,6 +218,18 @@ architecture rtl of mexec is
     signal bcd_res_tdata        : bcd_res_t;
     signal bcd_res_tuser        : std_logic_vector(15 downto 0);
 
+    signal shf8_req_tvalid      : std_logic;
+    signal shf8_req_tdata       : shf_req_t;
+    signal shf8_res_tvalid      : std_logic;
+    signal shf8_res_tdata       : shf_res_t;
+    signal shf8_res_tuser       : std_logic_vector(15 downto 0);
+
+    signal shf16_req_tvalid     : std_logic;
+    signal shf16_req_tdata      : shf_req_t;
+    signal shf16_res_tvalid     : std_logic;
+    signal shf16_res_tdata      : shf_res_t;
+    signal shf16_res_tuser      : std_logic_vector(15 downto 0);
+
     signal res_tvalid           : std_logic;
     signal res_tdata            : res_t := (
         code => (others=>'0'),
@@ -227,15 +257,15 @@ architecture rtl of mexec is
     signal mexec_wait_fifo      : std_logic;
     signal mexec_wait_mul       : std_logic;
     signal mexec_wait_bcd       : std_logic;
+    signal mexec_wait_shf       : std_logic;
 
     signal alu_wait_fifo        : std_logic;
     signal mul_wait_fifo        : std_logic;
     signal one_wait_fifo        : std_logic;
+    signal shf_wait_fifo        : std_logic;
     signal mem_wait_one         : std_logic;
     signal mem_wait_alu         : std_logic;
     signal mem_wait_fifo        : std_logic;
-    --signal mem_addr_wait_alu    : std_logic;
-    --signal mem_data_wait_alu    : std_logic;
 
     signal jmp_wait_alu         : std_logic;
     signal jmp_tvalid           : std_logic;
@@ -295,6 +325,36 @@ begin
         res_m_tuser     => bcd_res_tuser
     );
 
+    mexec_shf8_inst : mexec_shf generic map (
+        DATA_WIDTH      => 8
+    ) port map (
+        clk             => clk,
+        resetn          => resetn,
+
+        req_s_tvalid    => shf8_req_tvalid,
+        req_s_tdata     => shf8_req_tdata,
+        req_s_tuser     => flags_s_tdata,
+
+        res_m_tvalid    => shf8_res_tvalid,
+        res_m_tdata     => shf8_res_tdata,
+        res_m_tuser     => shf8_res_tuser
+    );
+
+    mexec_shf16_inst : mexec_shf generic map (
+        DATA_WIDTH      => 16
+    ) port map (
+        clk             => clk,
+        resetn          => resetn,
+
+        req_s_tvalid    => shf16_req_tvalid,
+        req_s_tdata     => shf16_req_tdata,
+        req_s_tuser     => flags_s_tdata,
+
+        res_m_tvalid    => shf16_res_tvalid,
+        res_m_tdata     => shf16_res_tdata,
+        res_m_tuser     => shf16_res_tuser
+    );
+
     micro_tvalid <= micro_s_tvalid;
     micro_s_tready <= micro_tready;
     micro_tdata <= micro_s_tdata;
@@ -324,7 +384,7 @@ begin
     es_m_wr_tdata <= res_tdata.dval_lo;
     ss_m_wr_tdata <= res_tdata.dval_lo;
 
-    micro_tready <= '1' when mexec_busy = '0' and mem_wait_alu = '0' and mem_wait_one = '0' and mexec_wait_bcd = '0' and
+    micro_tready <= '1' when mexec_busy = '0' and mem_wait_alu = '0' and mem_wait_one = '0' and mexec_wait_bcd = '0' and mexec_wait_shf = '0' and
         (lsu_req_tvalid = '0' or (lsu_req_tvalid = '1' and lsu_req_tready = '1')) else '0';
 
     lsu_rd_s_tready <= mexec_wait_fifo;
@@ -354,17 +414,21 @@ begin
                 mexec_wait_fifo <= '0';
                 mexec_wait_mul <= '0';
                 mexec_wait_bcd <= '0';
+                mexec_wait_shf <= '0';
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1') or
-                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BCD) = '1')
+                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BCD) = '1') or
+                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1')
                 then
                     mexec_busy <= '1';
                 elsif (mexec_busy = '1') then
                     if not (mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1') and
                         not (mexec_wait_mul = '1' xor mul_res_tvalid = '1') and
-                        not (mexec_wait_bcd = '1' xor bcd_res_tvalid = '1') then
+                        not (mexec_wait_bcd = '1' xor bcd_res_tvalid = '1') and
+                        not (mexec_wait_shf = '1' xor (shf8_res_tvalid = '1' or shf16_res_tvalid = '1'))
+                    then
                         mexec_busy <= '0';
                     end if;
                 end if;
@@ -387,6 +451,12 @@ begin
                     mexec_wait_bcd <= '1';
                 elsif (bcd_res_tvalid = '1') then
                     mexec_wait_bcd <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1') then
+                    mexec_wait_shf <= '1';
+                elsif (shf8_res_tvalid = '1' or shf16_res_tvalid = '1') then
+                    mexec_wait_shf <= '0';
                 end if;
 
             end if;
@@ -481,19 +551,90 @@ begin
                     one_wait_fifo <= '0';
                 end if;
 
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_ONE) = '1') then
-                    one_req_tdata.code <= micro_tdata.one_code;
-                    one_req_tdata.w <= micro_tdata.one_w;
-                    one_req_tdata.wb <= micro_tdata.one_wb;
-                    one_req_tdata.sval <= micro_tdata.one_sval;
-                    one_req_tdata.ival <= micro_tdata.one_ival;
-                    one_req_tdata.dreg <= micro_tdata.one_dreg;
-                    one_req_tdata.dmask <= micro_tdata.one_dmask;
+            end if;
 
-                elsif (one_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
-                    one_req_tdata.sval <= lsu_rd_s_tdata;
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_ONE) = '1') then
+                one_req_tdata.code <= micro_tdata.one_code;
+                one_req_tdata.w <= micro_tdata.one_w;
+                one_req_tdata.wb <= micro_tdata.one_wb;
+                one_req_tdata.sval <= micro_tdata.one_sval;
+                one_req_tdata.ival <= micro_tdata.one_ival;
+                one_req_tdata.dreg <= micro_tdata.one_dreg;
+                one_req_tdata.dmask <= micro_tdata.one_dmask;
+
+            elsif (one_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                one_req_tdata.sval <= lsu_rd_s_tdata;
+            end if;
+
+        end if;
+
+    end process;
+
+    shf_proc : process (clk) begin
+
+        if rising_edge(clk) then
+            if resetn = '0' then
+                shf8_req_tvalid <= '0';
+                shf16_req_tvalid <= '0';
+                shf_wait_fifo <= '0';
+            else
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' and
+                    micro_tdata.read_fifo = '0' and micro_tdata.shf_w = '0')
+                then
+                    shf8_req_tvalid <= '1';
+                elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    shf8_req_tvalid <= '1';
+                else
+                    shf8_req_tvalid <= '0';
                 end if;
 
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' and
+                    micro_tdata.read_fifo = '0' and micro_tdata.shf_w = '1')
+                then
+                    shf16_req_tvalid <= '1';
+                elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    shf16_req_tvalid <= '1';
+                else
+                    shf16_req_tvalid <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1') then
+                    if (micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' and micro_tdata.read_fifo = '1') then
+                        shf_wait_fifo <= '1';
+                    else
+                        shf_wait_fifo <= '0';
+                    end if;
+                elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    shf_wait_fifo <= '0';
+                end if;
+
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' and micro_tdata.shf_w  = '0') then
+                shf8_req_tdata.code <= micro_tdata.shf_code;
+                shf8_req_tdata.w <= micro_tdata.shf_w;
+                shf8_req_tdata.wb <= micro_tdata.shf_wb;
+                shf8_req_tdata.sval <= micro_tdata.shf_sval;
+                shf8_req_tdata.ival <= micro_tdata.shf_ival;
+                shf8_req_tdata.dreg <= micro_tdata.shf_dreg;
+                shf8_req_tdata.dmask <= micro_tdata.shf_dmask;
+
+            elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                shf8_req_tdata.sval <= lsu_rd_s_tdata;
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' and micro_tdata.shf_w  = '1') then
+                shf16_req_tdata.code <= micro_tdata.shf_code;
+                shf16_req_tdata.w <= micro_tdata.shf_w;
+                shf16_req_tdata.wb <= micro_tdata.shf_wb;
+                shf16_req_tdata.sval <= micro_tdata.shf_sval;
+                shf16_req_tdata.ival <= micro_tdata.shf_ival;
+                shf16_req_tdata.dreg <= micro_tdata.shf_dreg;
+                shf16_req_tdata.dmask <= micro_tdata.shf_dmask;
+
+            elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                shf16_req_tdata.sval <= lsu_rd_s_tdata;
             end if;
 
         end if;
@@ -585,6 +726,18 @@ begin
                 res_tdata.dval_lo <= bcd_res_tdata.dval(15 downto 0);
                 res_tdata.dval_hi <= bcd_res_tdata.dval(15 downto 0);
                 res_tuser <= bcd_res_tuser;
+            elsif (shf8_res_tvalid = '1') then
+                res_tdata.code <= shf8_res_tdata.code;
+                res_tdata.dmask <= shf8_res_tdata.dmask;
+                res_tdata.dval_lo(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
+                res_tdata.dval_hi(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
+                res_tuser <= shf8_res_tuser;
+            elsif (shf16_res_tvalid = '1') then
+                res_tdata.code <= shf16_res_tdata.code;
+                res_tdata.dmask <= shf16_res_tdata.dmask;
+                res_tdata.dval_lo <= shf16_res_tdata.dval(15 downto 0);
+                res_tdata.dval_hi <= shf16_res_tdata.dval(15 downto 0);
+                res_tuser <= shf16_res_tuser;
             elsif (mul_res_tvalid = '1') then
                 res_tdata.code <= mul_res_tdata.code;
                 res_tdata.dmask <= mul_res_tdata.dmask;
@@ -620,6 +773,8 @@ begin
                     (mul_res_tvalid = '1' and (mul_res_tdata.dreg = AX or (mul_res_tdata.code = IMUL_AXDX and
                         mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = AX) or
+                    (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = AX) or
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = AX) or
                     (bcd_res_tvalid = '1')) then
                     ax_m_wr_tvalid <= '1';
                 else
@@ -628,7 +783,9 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = BX) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = BX) or
-                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = BX)) then
+                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = BX) or
+                    (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = BX) or
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = BX)) then
                     bx_m_wr_tvalid <= '1';
                 else
                     bx_m_wr_tvalid <= '0';
@@ -636,7 +793,9 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = CX) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = CX) or
-                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = CX)) then
+                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = CX) or
+                    (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = CX) or
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = CX)) then
                     cx_m_wr_tvalid <= '1';
                 else
                     cx_m_wr_tvalid <= '0';
@@ -644,7 +803,9 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = DX) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = DX) or
-                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = DX)) then
+                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = DX) or
+                    (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = DX) or
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = DX)) then
                     dx_m_wr_tvalid <= '1';
                 else
                     dx_m_wr_tvalid <= '0';
@@ -652,7 +813,9 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = BP) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = BP) or
-                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = BP)) then
+                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = BP) or
+                    (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = BP) or
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = BP)) then
                     bp_m_wr_tvalid <= '1';
                 else
                     bp_m_wr_tvalid <= '0';
@@ -660,7 +823,9 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = SP) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = SP) or
-                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = SP)) then
+                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = SP) or
+                    (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = SP) or
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = SP)) then
                     sp_m_wr_tvalid <= '1';
                 else
                     sp_m_wr_tvalid <= '0';
@@ -668,7 +833,9 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = DI) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = DI) or
-                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = DI)) then
+                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = DI) or
+                    (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = DI) or
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = DI)) then
                     di_m_wr_tvalid <= '1';
                 else
                     di_m_wr_tvalid <= '0';
@@ -676,7 +843,9 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = SI) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = SI) or
-                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = SI)) then
+                    (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = SI) or
+                    (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = SI) or
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = SI)) then
                     si_m_wr_tvalid <= '1';
                 else
                     si_m_wr_tvalid <= '0';
@@ -712,8 +881,9 @@ begin
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_FLG) = '1') then
                     flags_m_wr_tvalid <= '1';
-                elsif (alu_res_tvalid = '1' and alu_res_tdata.upd_fl = '1') or
-                    mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1' then
+                elsif ((alu_res_tvalid = '1' and alu_res_tdata.upd_fl = '1') or
+                       mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1' or
+                       shf8_res_tvalid = '1' or shf16_res_tvalid = '1') then
                     flags_m_wr_tvalid <= '1';
                 else
                     flags_m_wr_tvalid <= '0';
@@ -875,6 +1045,46 @@ begin
                         when others =>
                             flags_wr_be <= (others => '0');
                     end case;
+                elsif (shf8_res_tvalid = '1' or shf16_res_tvalid = '1') then
+                    case (one_res_tdata.code) is
+                        when SHF_OP_ROL | SHF_OP_ROR |
+                             SHF_OP_RCL | SHF_OP_RCR =>
+                            flags_wr_be(FLAG_15) <= '0';
+                            flags_wr_be(FLAG_14) <= '0';
+                            flags_wr_be(FLAG_13) <= '0';
+                            flags_wr_be(FLAG_12) <= '0';
+                            flags_wr_be(FLAG_OF) <= '1';
+                            flags_wr_be(FLAG_DF) <= '0';
+                            flags_wr_be(FLAG_IF) <= '0';
+                            flags_wr_be(FLAG_TF) <= '0';
+                            flags_wr_be(FLAG_SF) <= '0';
+                            flags_wr_be(FLAG_ZF) <= '0';
+                            flags_wr_be(FLAG_05) <= '0';
+                            flags_wr_be(FLAG_AF) <= '0';
+                            flags_wr_be(FLAG_03) <= '0';
+                            flags_wr_be(FLAG_PF) <= '0';
+                            flags_wr_be(FLAG_01) <= '0';
+                            flags_wr_be(FLAG_CF) <= '1';
+                        when SHF_OP_SHL | SHF_OP_SAR | SHF_OP_SHR =>
+                            flags_wr_be(FLAG_15) <= '0';
+                            flags_wr_be(FLAG_14) <= '0';
+                            flags_wr_be(FLAG_13) <= '0';
+                            flags_wr_be(FLAG_12) <= '0';
+                            flags_wr_be(FLAG_OF) <= '1';
+                            flags_wr_be(FLAG_DF) <= '0';
+                            flags_wr_be(FLAG_IF) <= '0';
+                            flags_wr_be(FLAG_TF) <= '0';
+                            flags_wr_be(FLAG_SF) <= '0';
+                            flags_wr_be(FLAG_ZF) <= '1';
+                            flags_wr_be(FLAG_05) <= '0';
+                            flags_wr_be(FLAG_AF) <= '0';
+                            flags_wr_be(FLAG_03) <= '0';
+                            flags_wr_be(FLAG_PF) <= '1';
+                            flags_wr_be(FLAG_01) <= '0';
+                            flags_wr_be(FLAG_CF) <= '1';
+                        when others =>
+                            flags_wr_be <= (others => '0');
+                    end case;
                 elsif (mul_res_tvalid = '1') then
 
                     flags_wr_be(FLAG_15) <= '0';
@@ -906,7 +1116,8 @@ begin
                 else
                     flags_src <= RES_USER;
                 end if;
-            elsif (mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1') then
+            elsif (mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1' or
+                   shf8_res_tvalid = '1' or shf16_res_tvalid = '1') then
                 flags_src <= RES_USER;
             end if;
 

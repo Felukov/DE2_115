@@ -218,7 +218,7 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 8;
+    constant MICRO_OP_CMD_WIDTH : natural := 9;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
@@ -227,6 +227,7 @@ package cpu86_types is
     constant MICRO_OP_CMD_DBG : natural := 5;
     constant MICRO_OP_CMD_ONE : natural := 6;
     constant MICRO_OP_CMD_BCD : natural := 7;
+    constant MICRO_OP_CMD_SHF : natural := 8;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -262,6 +263,14 @@ package cpu86_types is
         one_sval        : std_logic_vector(15 downto 0);
         one_ival        : std_logic_vector(15 downto 0);
         one_wb          : std_logic;
+
+        shf_code        : std_logic_vector(3 downto 0);
+        shf_w           : std_logic;
+        shf_dreg        : reg_t;
+        shf_dmask       : std_logic_vector(1 downto 0);
+        shf_sval        : std_logic_vector(15 downto 0);
+        shf_ival        : std_logic_vector(4 downto 0);
+        shf_wb          : std_logic;
 
         bcd_code        : std_logic_vector(3 downto 0);
         bcd_sval        : std_logic_vector(15 downto 0);
@@ -351,6 +360,25 @@ package cpu86_types is
     end record;
 
     type one_res_t is record
+        code            : std_logic_vector(3 downto 0);
+        wb              : std_logic;
+        w               : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        dval            : std_logic_vector(15 downto 0);
+    end record;
+
+    type shf_req_t is record
+        code            : std_logic_vector(3 downto 0);
+        w               : std_logic;
+        wb              : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        sval            : std_logic_vector(15 downto 0);
+        ival            : std_logic_vector(4 downto 0);
+    end record;
+
+    type shf_res_t is record
         code            : std_logic_vector(3 downto 0);
         wb              : std_logic;
         w               : std_logic;

@@ -140,12 +140,12 @@ begin
                                     decode_chain(mod_reg_rm, disp_low, disp_high, first_byte);
                                     instr_tvalid <= '0';
 
-                                when x"C0" | x"C1" | x"D0" | x"D1" | x"D2" | x"D3" | x"D8" | x"D9" | x"DA" | x"DB" |
+                                when x"D0" | x"D1" | x"D2" | x"D3" | x"D8" | x"D9" | x"DA" | x"DB" |
                                      x"DC" | x"DD" | x"DE" | x"DF" | x"FE" | x"FF" | x"8F" | x"C4" | x"C5" =>
                                     decode_chain(mod_aux_rm, disp_low, disp_high, first_byte);
                                     instr_tvalid <= '0';
 
-                                when x"C6" =>
+                                when x"C0" | x"C1" | x"C6" =>
                                     decode_chain(mod_aux_rm, disp_low, disp_high, data8, first_byte);
                                     instr_tvalid <= '0';
 
@@ -1301,11 +1301,18 @@ begin
                 when x"BD" => set_op(MOVU, "0000", '1'); lock_dreg_only; wait_bp_only; lock_fl('0');
                 when x"BE" => set_op(MOVU, "0000", '1'); lock_dreg_only; wait_si_only; lock_fl('0');
                 when x"BF" => set_op(MOVU, "0000", '1'); lock_dreg_only; wait_di_only; lock_fl('0');
-
+                when x"C0" => no_lock; no_wait; lock_fl('0');
+                when x"C1" => no_lock; no_wait; lock_fl('0');
                 when x"C4" => set_op(LFP, LFP_LES, '1'); lock_les; wait_les; lock_fl('0');
                 when x"C5" => set_op(LFP, LFP_LDS, '1'); lock_lds; wait_lds; lock_fl('0');
                 when x"C6" => set_op(MOVU, "0000", '0'); no_lock; no_wait; lock_fl('0');
                 when x"C7" => set_op(MOVU, "0000", '1'); no_lock; no_wait; lock_fl('0');
+
+                when x"D0" => no_lock; no_wait; lock_fl('0');
+                when x"D1" => no_lock; no_wait; lock_fl('0');
+                when x"D2" => no_lock; no_wait; lock_fl('0');
+                when x"D3" => no_lock; no_wait; lock_fl('0');
+
                 when x"D4" => set_op(BCDU, DIVU_AAM);
                 when x"D5" => set_op(BCDU, BCDU_AAD);
                 when x"E2" => set_op(LOOPU, LOOP_OP, '1'); lock_dreg_only; wait_cx_only; lock_fl('0');
@@ -1328,6 +1335,141 @@ begin
                     instr_tdata.code <= "0000";
             end case;
         end;
+
+        procedure decode_c0_d0 is begin
+            instr_tdata.op <= SHFU;
+            instr_tdata.w <= '0';
+            case u8_tdata_reg is
+                when "000" => instr_tdata.code <= SHF_OP_ROL;
+                when "001" => instr_tdata.code <= SHF_OP_ROR;
+                when "010" => instr_tdata.code <= SHF_OP_RCL;
+                when "011" => instr_tdata.code <= SHF_OP_RCR;
+                when "100" => instr_tdata.code <= SHF_OP_SHL;
+                when "101" => instr_tdata.code <= SHF_OP_SHR;
+                when "110" => null;
+                when "111" => instr_tdata.code <= SHF_OP_SAR;
+                when others => null;
+            end case;
+
+            if (u8_tdata(7 downto 6) = "11") then
+                case u8_tdata_rm is
+                    when "000" => instr_tdata.wait_ax <= '1';
+                    when "001" => instr_tdata.wait_cx <= '1';
+                    when "010" => instr_tdata.wait_dx <= '1';
+                    when "011" => instr_tdata.wait_bx <= '1';
+                    when "100" => instr_tdata.wait_ax <= '1';
+                    when "101" => instr_tdata.wait_cx <= '1';
+                    when "110" => instr_tdata.wait_dx <= '1';
+                    when "111" => instr_tdata.wait_bx <= '1';
+                    when others => null;
+                end case;
+
+                lock_dreg_only;
+            end if;
+
+            lock_fl('1');
+        end procedure;
+
+        procedure decode_c1_d1 is begin
+            instr_tdata.op <= SHFU;
+            instr_tdata.w <= '1';
+            case u8_tdata_reg is
+                when "000" => instr_tdata.code <= SHF_OP_ROL;
+                when "001" => instr_tdata.code <= SHF_OP_ROR;
+                when "010" => instr_tdata.code <= SHF_OP_RCL;
+                when "011" => instr_tdata.code <= SHF_OP_RCR;
+                when "100" => instr_tdata.code <= SHF_OP_SHL;
+                when "101" => instr_tdata.code <= SHF_OP_SHR;
+                when "110" => null;
+                when "111" => instr_tdata.code <= SHF_OP_SAR;
+                when others => null;
+            end case;
+
+            if (u8_tdata(7 downto 6) = "11") then
+                case u8_tdata_rm is
+                    when "000" => instr_tdata.wait_ax <= '1';
+                    when "001" => instr_tdata.wait_cx <= '1';
+                    when "010" => instr_tdata.wait_dx <= '1';
+                    when "011" => instr_tdata.wait_bx <= '1';
+                    when "100" => instr_tdata.wait_sp <= '1';
+                    when "101" => instr_tdata.wait_bp <= '1';
+                    when "110" => instr_tdata.wait_si <= '1';
+                    when "111" => instr_tdata.wait_di <= '1';
+                    when others => null;
+                end case;
+
+                lock_dreg_only;
+            end if;
+
+            lock_fl('1');
+        end procedure;
+
+        procedure decode_d2 is begin
+            instr_tdata.op <= SHFU;
+            instr_tdata.w <= '0';
+            case u8_tdata_reg is
+                when "000" => instr_tdata.code <= SHF_OP_ROL;
+                when "001" => instr_tdata.code <= SHF_OP_ROR;
+                when "010" => instr_tdata.code <= SHF_OP_RCL;
+                when "011" => instr_tdata.code <= SHF_OP_RCR;
+                when "100" => instr_tdata.code <= SHF_OP_SHL;
+                when "101" => instr_tdata.code <= SHF_OP_SHR;
+                when "110" => null;
+                when "111" => instr_tdata.code <= SHF_OP_SAR;
+                when others => null;
+            end case;
+
+            instr_tdata.wait_cx <= '1';
+            if (u8_tdata(7 downto 6) = "11") then
+                case u8_tdata_rm is
+                    when "000" => instr_tdata.wait_ax <= '1';
+                    when "010" => instr_tdata.wait_dx <= '1';
+                    when "011" => instr_tdata.wait_bx <= '1';
+                    when "100" => instr_tdata.wait_ax <= '1';
+                    when "110" => instr_tdata.wait_dx <= '1';
+                    when "111" => instr_tdata.wait_bx <= '1';
+                    when others => null;
+                end case;
+
+                lock_dreg_only;
+            end if;
+
+            lock_fl('1');
+        end procedure;
+
+        procedure decode_d3 is begin
+            instr_tdata.op <= SHFU;
+            instr_tdata.w <= '1';
+            case u8_tdata_reg is
+                when "000" => instr_tdata.code <= SHF_OP_ROL;
+                when "001" => instr_tdata.code <= SHF_OP_ROR;
+                when "010" => instr_tdata.code <= SHF_OP_RCL;
+                when "011" => instr_tdata.code <= SHF_OP_RCR;
+                when "100" => instr_tdata.code <= SHF_OP_SHL;
+                when "101" => instr_tdata.code <= SHF_OP_SHR;
+                when "110" => null;
+                when "111" => instr_tdata.code <= SHF_OP_SAR;
+                when others => null;
+            end case;
+
+            instr_tdata.wait_cx <= '1';
+            if (u8_tdata(7 downto 6) = "11") then
+                case u8_tdata_rm is
+                    when "000" => instr_tdata.wait_ax <= '1';
+                    when "010" => instr_tdata.wait_dx <= '1';
+                    when "011" => instr_tdata.wait_bx <= '1';
+                    when "100" => instr_tdata.wait_sp <= '1';
+                    when "101" => instr_tdata.wait_bp <= '1';
+                    when "110" => instr_tdata.wait_si <= '1';
+                    when "111" => instr_tdata.wait_di <= '1';
+                    when others => null;
+                end case;
+
+                lock_dreg_only;
+            end if;
+
+            lock_fl('1');
+        end procedure;
 
         procedure decode_f6_one_op(op : op_t; code : std_logic_vector) is begin
             instr_tdata.op <= op;
@@ -1445,6 +1587,12 @@ begin
                 when x"81" => decode_80_81_83('1');
                 when x"83" => decode_80_81_83('1');
                 when x"8F" => set_stack_op(STACKU_POPM); lock_stack_pop; instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
+                when x"C0" => decode_c0_d0;
+                when x"C1" => decode_c1_d1;
+                when x"D0" => decode_c0_d0;
+                when x"D1" => decode_c1_d1;
+                when x"D2" => decode_d2;
+                when x"D3" => decode_d3;
                 when x"F6" => decode_f6('0');
                 when x"F7" => decode_f7('1');
                 when x"FE" =>
@@ -1602,7 +1750,18 @@ begin
 
                 when x"F6" => decode_dir_f6_f7;
                 when x"F7" => decode_dir_f6_f7;
-
+                when x"C0" | x"C1" | x"D0" | x"D1" =>
+                    if (u8_tdata(7 downto 6) = "11") then
+                        instr_tdata.dir <= I2R;
+                    else
+                        instr_tdata.dir <= I2M;
+                    end if;
+                when x"D2" | x"D3" =>
+                    if (u8_tdata(7 downto 6) = "11") then
+                        instr_tdata.dir <= R2R;
+                    else
+                        instr_tdata.dir <= R2M;
+                    end if;
                 when x"80" | x"81" | x"83" =>
                     if (u8_tdata(7 downto 6) = "11") then
                         instr_tdata.dir <= I2R;
@@ -2002,7 +2161,7 @@ begin
                         end case;
                         instr_tdata.dmask <= "11";
 
-                    when x"80" =>
+                    when x"C0" | x"D0" | x"D2" | x"80" =>
                         case u8_tdata_rm is
                             when "000" => instr_tdata.dreg <= AX;
                             when "001" => instr_tdata.dreg <= CX;
@@ -2021,7 +2180,7 @@ begin
                             instr_tdata.dmask <= "10";
                         end if;
 
-                    when x"81" | x"83" =>
+                    when x"C1" | x"D1" | x"D3" | x"81" | x"83" =>
                         case u8_tdata_rm is
                             when "000" => instr_tdata.dreg <= AX;
                             when "001" => instr_tdata.dreg <= CX;
@@ -2126,7 +2285,7 @@ begin
                     when x"A9" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
                     when x"AA" | x"AE" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
                     when x"AB" | x"AF" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
-
+                    when x"D2" | x"D3" => instr_tdata.sreg <= CX; instr_tdata.smask <= "01";
                     when x"F2" | x"F3" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
 
                     when others => null;
@@ -2259,6 +2418,40 @@ begin
             elsif (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = mod_aux_rm) then
 
                 case byte0 is
+
+                    when x"C0" | x"D0" | x"D2"  =>
+                        case u8_tdata_rm is
+                            when "000" => instr_tdata.sreg <= AX;
+                            when "001" => instr_tdata.sreg <= CX;
+                            when "010" => instr_tdata.sreg <= DX;
+                            when "011" => instr_tdata.sreg <= BX;
+                            when "100" => instr_tdata.sreg <= AX;
+                            when "101" => instr_tdata.sreg <= CX;
+                            when "110" => instr_tdata.sreg <= DX;
+                            when "111" => instr_tdata.sreg <= BX;
+                            when others => null;
+                        end case;
+
+                        if (u8_tdata_rm(2) = '0') then
+                            instr_tdata.smask <= "01";
+                        else
+                            instr_tdata.smask <= "10";
+                        end if;
+
+                    when x"C1" | x"D1" | x"D3"  =>
+                        case u8_tdata_rm is
+                            when "000" => instr_tdata.sreg <= AX;
+                            when "001" => instr_tdata.sreg <= CX;
+                            when "010" => instr_tdata.sreg <= DX;
+                            when "011" => instr_tdata.sreg <= BX;
+                            when "100" => instr_tdata.sreg <= SP;
+                            when "101" => instr_tdata.sreg <= BP;
+                            when "110" => instr_tdata.sreg <= SI;
+                            when "111" => instr_tdata.sreg <= DI;
+                            when others => null;
+                        end case;
+                        instr_tdata.smask <= "11";
+
                     when x"F6" =>
                         case u8_tdata_rm is
                             when "000" => instr_tdata.sreg <= AX;
