@@ -23,6 +23,7 @@ entity mexec_shf is
 end entity mexec_shf;
 
 architecture rtl of mexec_shf is
+    signal sval         : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rval         : std_logic_vector(16 downto 0);
     signal rval_next    : std_logic_vector(16 downto 0);
     signal flags_of     : std_logic;
@@ -30,7 +31,7 @@ architecture rtl of mexec_shf is
     signal flags_zf     : std_logic;
     signal flags_sf     : std_logic;
     signal flags_cf     : std_logic;
-    signal ival         : natural range 0 to 32;
+    signal shf_cnt      : natural range 0 to 32;
 begin
 
     res_m_tuser(FLAG_15) <= '0';
@@ -50,12 +51,6 @@ begin
     res_m_tuser(FLAG_01) <= '0';
     res_m_tuser(FLAG_CF) <= flags_cf;
 
-    -- filler_gen: if DATA_WIDTH < 16 generate
-
-    --     res_m_tdata.dval(15 downto DATA_WIDTH) <= (others => '0');
-
-    -- end generate ;
-
     process (all) begin
         rval_next <= rval;
         case res_m_tdata.code is
@@ -72,26 +67,47 @@ begin
         end case;
     end process;
 
+    flags_proc : process (all) begin
+
+        flags_pf <= not (rval(7) xor rval(6) xor rval(5) xor rval(4) xor
+            rval(3) xor rval(2) xor rval(1) xor rval(0));
+
+        if (unsigned(rval(DATA_WIDTH-1 downto 0)) = to_unsigned(0, DATA_WIDTH)) then
+            flags_zf <= '1';
+        else
+            flags_zf <= '0';
+        end if;
+
+        flags_sf <= rval(DATA_WIDTH-1);
+        flags_cf <= rval(DATA_WIDTH);
+        flags_of <= rval(DATA_WIDTH-1) xor sval(DATA_WIDTH-1);
+
+    end process;
+
     shf_proc : process (clk) begin
 
         if rising_edge(clk) then
             if resetn = '0' then
                 res_m_tvalid <= '0';
-                ival <= 0;
+                shf_cnt <= 0;
             else
 
                 if (req_s_tvalid = '1') then
-                    ival <= to_integer(unsigned(req_s_tdata.ival));
-                elsif (ival > 0) then
-                    ival <= ival - 1;
+                    shf_cnt <= to_integer(unsigned(req_s_tdata.ival(4 downto 0)));
+                elsif (shf_cnt > 0) then
+                    shf_cnt <= shf_cnt - 1;
                 end if;
 
                 if (req_s_tvalid = '1') then
-                    if to_integer(unsigned(req_s_tdata.ival)) = 0 then
+                    sval <= req_s_tdata.sval(DATA_WIDTH-1 downto 0);
+                end if;
+
+                if (req_s_tvalid = '1') then
+                    if to_integer(unsigned(req_s_tdata.ival(4 downto 0))) = 0 then
                         res_m_tvalid <= '1';
                     end if;
-                elsif (ival > 0) then
-                    if (ival = 1) then
+                elsif (shf_cnt > 0) then
+                    if (shf_cnt = 1) then
                         res_m_tvalid <= '1';
                     else
                         res_m_tvalid <= '0';
@@ -116,68 +132,11 @@ begin
 
                 rval(DATA_WIDTH-1 downto 0) <= req_s_tdata.sval(DATA_WIDTH-1 downto 0);
 
-            elsif (ival > 0) then
+            elsif (shf_cnt > 0) then
 
                 rval <= rval_next;
 
-                flags_pf <= not (rval_next(7) xor rval_next(6) xor rval_next(5) xor rval_next(4) xor
-                    rval_next(3) xor rval_next(2) xor rval_next(1) xor rval_next(0));
-
-                if (unsigned(rval_next(DATA_WIDTH-1 downto 0)) = to_unsigned(0, DATA_WIDTH)) then
-                    flags_zf <= '1';
-                else
-                    flags_zf <= '0';
-                end if;
-
-                flags_sf <= rval_next(DATA_WIDTH-1);
-                flags_cf <= rval_next(DATA_WIDTH);
                 res_m_tdata.dval(DATA_WIDTH-1 downto 0) <= rval_next(DATA_WIDTH-1 downto 0);
-
-                case res_m_tdata.code is
-                    when SHF_OP_ROL =>
-                        if (unsigned(req_s_tdata.ival) = to_unsigned(1, 5)) then
-                            if (rval_next(DATA_WIDTH) /= req_s_tuser(FLAG_CF)) then
-                                flags_of <= '1';
-                            else
-                                flags_of <= '0';
-                            end if;
-                        else
-                            flags_of <= req_s_tuser(FLAG_OF);
-                        end if;
-                    when SHF_OP_ROR =>
-                        if (unsigned(req_s_tdata.ival) = to_unsigned(1, 5)) then
-                            if (rval_next(DATA_WIDTH-1) /= rval_next(0)) then
-                                flags_of <= '1';
-                            else
-                                flags_of <= '0';
-                            end if;
-                        else
-                            flags_of <= req_s_tuser(FLAG_OF);
-                        end if;
-                    when SHF_OP_SHL =>
-                        if (unsigned(req_s_tdata.ival) = to_unsigned(1, 5)) then
-                            if (rval_next(DATA_WIDTH) /= req_s_tuser(FLAG_CF)) then
-                                flags_of <= '1';
-                            else
-                                flags_of <= '0';
-                            end if;
-                        else
-                            flags_of <= req_s_tuser(FLAG_OF);
-                        end if;
-                    when SHF_OP_SAR =>
-                        flags_of <= '0';
-                    when SHF_OP_SHR =>
-                        if (unsigned(req_s_tdata.ival) = to_unsigned(1, 5)) then
-                            if (rval_next(DATA_WIDTH) /= req_s_tuser(FLAG_CF)) then
-                                flags_of <= '1';
-                            else
-                                flags_of <= '0';
-                            end if;
-                        else
-                            flags_of <= req_s_tuser(FLAG_OF);
-                        end if;
-                    when others => null;
-                end case;
 
             end if;
 

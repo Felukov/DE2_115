@@ -412,13 +412,14 @@ begin
 
             when ONEU =>
                 case rr_tdata.dir is
-                    when M2M => micro_cnt_next <= 2;
+                    when M2M => micro_cnt_next <= 1;
                     when others => micro_cnt_next <= 0;
                 end case;
 
             when SHFU =>
                 case rr_tdata.DIR is
-                    when I2R => micro_cnt_next <= 0;
+                    when I2M => micro_cnt_next <= 1;
+                    when R2M => micro_cnt_next <= 1;
                     when others => micro_cnt_next <= 0;
                 end case;
 
@@ -459,8 +460,8 @@ begin
             when ALU =>
                 case rr_tdata.dir is
                     when M2R => micro_cnt_next <= 1;
-                    when R2M => micro_cnt_next <= 2;
-                    when M2M => micro_cnt_next <= 2;
+                    when R2M => micro_cnt_next <= 1;
+                    when M2M => micro_cnt_next <= 1;
                     when others => micro_cnt_next <= 0;
                 end case;
 
@@ -602,6 +603,15 @@ begin
             micro_tdata.mem_data_src <= MEM_DATA_SRC_ONE;
         end procedure;
 
+        procedure mem_write_shf(seg, addr : std_logic_vector; w : std_logic) is begin
+            micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
+            micro_tdata.mem_cmd <= '1';
+            micro_tdata.mem_width <= w;
+            micro_tdata.mem_seg <= seg;
+            micro_tdata.mem_addr <= addr;
+            micro_tdata.mem_data_src <= MEM_DATA_SRC_SHF;
+        end procedure;
+
         procedure mem_write_imm(seg, addr, val : std_logic_vector; w : std_logic) is begin
             micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
             micro_tdata.mem_cmd <= '1';
@@ -665,6 +675,7 @@ begin
                     end if;
                 when others => null;
             end case;
+
         end procedure;
 
         procedure do_mul_cmd_1 is begin
@@ -707,18 +718,10 @@ begin
         end procedure;
 
         procedure do_one_cmd_1 is begin
-            case micro_cnt is
-                when 2 =>
-                    mem_off;
-                    micro_tdata.read_fifo <= '1';
-                    micro_tdata.cmd(MICRO_OP_CMD_ONE) <= '1';
-                when 1 =>
-                    one_off; bcd_off; shf_off;
-                    micro_tdata.read_fifo <= '0';
-                    mem_write_one(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
-
-                when others => null;
-            end case;
+            mem_off;
+            micro_tdata.read_fifo <= '1';
+            micro_tdata.cmd(MICRO_OP_CMD_ONE) <= '1';
+            mem_write_one(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
         end procedure;
 
         procedure do_bcd_cmd is begin
@@ -737,37 +740,19 @@ begin
 
             case rr_tdata.dir is
                 when M2M =>
-                    -- read from memory
                     alu_off;
-                    micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                     micro_tdata.alu_wb <= '0';
-
-                    micro_tdata.mem_cmd <= '0';
-                    micro_tdata.mem_width <= rr_tdata.w;
-                    micro_tdata.mem_seg <= rr_tdata.seg_val;
-                    micro_tdata.mem_addr <= ea_val_plus_disp_next;
+                    mem_read(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
 
                 when M2R =>
-                    -- read from memory
                     alu_off;
-                    micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                     micro_tdata.alu_wb <= '0';
-
-                    micro_tdata.mem_cmd <= '0';
-                    micro_tdata.mem_width <= rr_tdata.w;
-                    micro_tdata.mem_seg <= rr_tdata.seg_val;
-                    micro_tdata.mem_addr <= ea_val_plus_disp_next;
+                    mem_read(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
 
                 when R2M =>
-                    -- read from memory
                     alu_off;
-                    micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                     micro_tdata.alu_wb <= '0';
-
-                    micro_tdata.mem_cmd <= '0';
-                    micro_tdata.mem_width <= rr_tdata.w;
-                    micro_tdata.mem_seg <= rr_tdata.seg_val;
-                    micro_tdata.mem_addr <= ea_val_plus_disp_next;
+                    mem_read(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
 
                 when I2R =>
                     micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
@@ -811,34 +796,20 @@ begin
 
             case rr_tdata_buf.dir is
                 when M2M =>
-                    if (micro_cnt = 2) then
-                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
-                        mem_off;
+                    micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+                    micro_tdata.read_fifo <= '1';
+                    micro_tdata.alu_code <= rr_tdata_buf.code;
+                    micro_tdata.alu_wb <= '0';
+                    micro_tdata.alu_a_mem <= '1';
+                    micro_tdata.alu_b_val <= rr_tdata_buf.data;
+                    micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
+                    micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
 
-                        micro_tdata.read_fifo <= '1';
-
-                        micro_tdata.alu_code <= rr_tdata_buf.code;
-                        micro_tdata.alu_wb <= '0';
-                        micro_tdata.alu_a_mem <= '1';
-                        micro_tdata.alu_b_val <= rr_tdata_buf.data;
-                        micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
-                        micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
-                    else
-                        alu_off;
-                        micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-
-                        micro_tdata.read_fifo <= '0';
-
-                        micro_tdata.alu_wb <= '0';
-                        micro_tdata.alu_a_mem <= '0';
-
-                        micro_tdata.mem_cmd <= '1';
-                        micro_tdata.mem_width <= rr_tdata_buf.w;
-                        micro_tdata.mem_seg <= rr_tdata_buf.seg_val;
-                        micro_tdata.mem_addr <= ea_val_plus_disp;
-                        micro_tdata.mem_data_src <= MEM_DATA_SRC_ALU;
-                        micro_tdata.mem_data <= rr_tdata_buf.sreg_val;
-                    end if;
+                    micro_tdata.mem_cmd <= '1';
+                    micro_tdata.mem_width <= rr_tdata_buf.w;
+                    micro_tdata.mem_seg <= rr_tdata_buf.seg_val;
+                    micro_tdata.mem_addr <= ea_val_plus_disp;
+                    micro_tdata.mem_data_src <= MEM_DATA_SRC_ALU;
 
                 when M2R =>
                     micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
@@ -854,35 +825,27 @@ begin
                     micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
 
                 when R2M =>
-                    if (micro_cnt = 2) then
-                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+                    micro_tdata.read_fifo <= '1';
+
+                    micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+                    micro_tdata.alu_code <= rr_tdata_buf.code;
+                    micro_tdata.alu_wb <= '0';
+                    micro_tdata.alu_a_mem <= '1';
+                    micro_tdata.alu_b_val <= rr_tdata_buf.sreg_val;
+                    micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
+                    micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
+
+                    if (rr_tdata_buf.code = ALU_OP_CMP or rr_tdata_buf.code = ALU_OP_TST) then
                         mem_off;
-
-                        micro_tdata.read_fifo <= '1';
-
-                        micro_tdata.alu_code <= rr_tdata_buf.code;
-                        micro_tdata.alu_wb <= '0';
-                        micro_tdata.alu_a_mem <= '1';
-                        micro_tdata.alu_b_val <= rr_tdata_buf.sreg_val;
-                        micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
-                        micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
                     else
-                        micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
-                        if (rr_tdata_buf.code = ALU_OP_CMP or rr_tdata_buf.code = ALU_OP_TST) then
-                            mem_off;
-                        else
-                            micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                        end if;
-
-                        micro_tdata.read_fifo <= '0';
-                        micro_tdata.alu_wb <= '0';
-
-                        micro_tdata.mem_cmd <= '1';
-                        micro_tdata.mem_width <= rr_tdata_buf.w;
-                        micro_tdata.mem_seg <= rr_tdata_buf.seg_val;
-                        micro_tdata.mem_addr <= ea_val_plus_disp;
-                        micro_tdata.mem_data_src <= MEM_DATA_SRC_ALU;
+                        micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
                     end if;
+
+                    micro_tdata.mem_cmd <= '1';
+                    micro_tdata.mem_width <= rr_tdata_buf.w;
+                    micro_tdata.mem_seg <= rr_tdata_buf.seg_val;
+                    micro_tdata.mem_addr <= ea_val_plus_disp;
+                    micro_tdata.mem_data_src <= MEM_DATA_SRC_ALU;
 
                 when others => null;
             end case;
@@ -934,12 +897,23 @@ begin
             micro_tdata.shf_sval <= rr_tdata.sreg_val;
 
             case rr_tdata.dir is
+                when I2M =>
+                    shf_off;
+                    micro_tdata.shf_wb <= '0';
+                    mem_read(seg =>rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
+                    micro_tdata.shf_ival <= rr_tdata.data;
 
                 when I2R =>
                     mem_off;
                     micro_tdata.cmd(MICRO_OP_CMD_SHF) <= '1';
                     micro_tdata.shf_wb <= '1';
-                    micro_tdata.shf_ival <= rr_tdata.data(4 downto 0);
+                    micro_tdata.shf_ival <= rr_tdata.data;
+
+                when R2R =>
+                    mem_off;
+                    micro_tdata.cmd(MICRO_OP_CMD_SHF) <= '1';
+                    micro_tdata.shf_wb <= '1';
+                    micro_tdata.shf_ival <= x"00" & cx_s_tdata(7 downto 0);
 
                 when others => null;
             end case;
@@ -947,7 +921,9 @@ begin
         end procedure;
 
         procedure do_shf_cmd_1 is begin
-            null;
+            micro_tdata.read_fifo <= '1';
+            micro_tdata.cmd(MICRO_OP_CMD_SHF) <= '1';
+            mem_write_shf(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
         end procedure;
 
     begin

@@ -6,36 +6,36 @@ use work.cpu86_types.all;
 
 entity mexec_alu is
     port (
-        clk             : in std_logic;
-        resetn          : in std_logic;
+        clk                 : in std_logic;
+        resetn              : in std_logic;
 
-        req_s_tvalid    : in std_logic;
-        req_s_tdata     : in alu_req_t;
-        req_s_tuser     : in std_logic;
+        req_s_tvalid        : in std_logic;
+        req_s_tdata         : in alu_req_t;
+        req_s_tuser         : in std_logic;
 
-        res_m_tvalid    : out std_logic;
-        res_m_tdata     : out alu_res_t;
-        res_m_tuser     : out std_logic_vector(15 downto 0)
+        res_m_tvalid        : out std_logic;
+        res_m_tdata         : out alu_res_t;
+        res_m_tuser         : out std_logic_vector(15 downto 0)
     );
 end entity mexec_alu;
 
 architecture rtl of mexec_alu is
-    signal carry                : std_logic_vector(16 downto 0);
-    signal add_next             : std_logic_vector(16 downto 0);
-    signal sub_next             : std_logic_vector(16 downto 0);
-    signal adc_next             : std_logic_vector(16 downto 0);
-    signal sbb_next             : std_logic_vector(16 downto 0);
-    signal and_next             : std_logic_vector(15 downto 0);
-    signal or_next              : std_logic_vector(15 downto 0);
-    signal xor_next             : std_logic_vector(15 downto 0);
-    signal res_tdata_next       : alu_res_t;
+    signal carry            : std_logic_vector(16 downto 0);
+    signal add_next         : std_logic_vector(16 downto 0);
+    signal sub_next         : std_logic_vector(16 downto 0);
+    signal adc_next         : std_logic_vector(16 downto 0);
+    signal sbb_next         : std_logic_vector(16 downto 0);
+    signal and_next         : std_logic_vector(15 downto 0);
+    signal or_next          : std_logic_vector(15 downto 0);
+    signal xor_next         : std_logic_vector(15 downto 0);
+    signal res_tdata_next   : alu_res_t;
 
-    signal flags_cf             : std_logic;
-    signal flags_pf             : std_logic;
-    signal flags_zf             : std_logic;
-    signal flags_of             : std_logic;
-    signal flags_sf             : std_logic;
-    signal flags_af             : std_logic;
+    signal flags_cf         : std_logic;
+    signal flags_pf         : std_logic;
+    signal flags_zf         : std_logic;
+    signal flags_of         : std_logic;
+    signal flags_sf         : std_logic;
+    signal flags_af         : std_logic;
 begin
 
     add_next <= std_logic_vector(unsigned('0' & req_s_tdata.aval) + unsigned('0' & req_s_tdata.bval));

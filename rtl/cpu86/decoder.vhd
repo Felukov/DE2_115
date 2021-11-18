@@ -2546,6 +2546,8 @@ begin
                                 instr_tdata.data <= x"FFFE";
                             when x"1F" | x"17" | x"07" =>
                                 instr_tdata.data <= x"0002";
+                            when x"D0" | x"D1" =>
+                                instr_tdata.data <= x"0001";
                             when others =>
                                 null;
                         end case;

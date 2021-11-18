@@ -24,6 +24,10 @@ package cpu86_types is
         MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU
     );
 
+    type mem_data_src_t is (
+        MEM_DATA_SRC_IMM, MEM_DATA_SRC_ALU, MEM_DATA_SRC_ONE, MEM_DATA_SRC_SHF, MEM_DATA_SRC_FIFO
+    );
+
     type fl_action_t is (
         SET, CLR, TOGGLE
     );
@@ -99,11 +103,6 @@ package cpu86_types is
     constant DIVU_AAM       : std_logic_vector (3 downto 0) := "0000";
     constant DIVU_DIV       : std_logic_vector (3 downto 0) := "0001";
     constant DIVU_IDIV      : std_logic_vector (3 downto 0) := "0010";
-
-    constant MEM_DATA_SRC_IMM  : std_logic_vector(1 downto 0) := "00";
-    constant MEM_DATA_SRC_ALU  : std_logic_vector(1 downto 0) := "01";
-    constant MEM_DATA_SRC_ONE  : std_logic_vector(1 downto 0) := "10";
-    constant MEM_DATA_SRC_FIFO : std_logic_vector(1 downto 0) := "11";
 
     constant FLAG_15            : natural := 15;
     constant FLAG_14            : natural := 14;
@@ -269,7 +268,7 @@ package cpu86_types is
         shf_dreg        : reg_t;
         shf_dmask       : std_logic_vector(1 downto 0);
         shf_sval        : std_logic_vector(15 downto 0);
-        shf_ival        : std_logic_vector(4 downto 0);
+        shf_ival        : std_logic_vector(15 downto 0);
         shf_wb          : std_logic;
 
         bcd_code        : std_logic_vector(3 downto 0);
@@ -282,7 +281,7 @@ package cpu86_types is
         mem_width       : std_logic;
         mem_seg         : std_logic_vector(15 downto 0);
         mem_addr        : std_logic_vector(15 downto 0);
-        mem_data_src    : std_logic_vector(1 downto 0);
+        mem_data_src    : mem_data_src_t;
         mem_data        : std_logic_vector(15 downto 0);
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
@@ -375,7 +374,7 @@ package cpu86_types is
         dreg            : reg_t;
         dmask           : std_logic_vector(1 downto 0);
         sval            : std_logic_vector(15 downto 0);
-        ival            : std_logic_vector(4 downto 0);
+        ival            : std_logic_vector(15 downto 0);
     end record;
 
     type shf_res_t is record

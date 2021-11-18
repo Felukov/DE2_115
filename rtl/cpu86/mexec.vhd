@@ -262,9 +262,11 @@ architecture rtl of mexec is
     signal alu_wait_fifo        : std_logic;
     signal mul_wait_fifo        : std_logic;
     signal one_wait_fifo        : std_logic;
-    signal shf_wait_fifo        : std_logic;
+    signal shf8_wait_fifo       : std_logic;
+    signal shf16_wait_fifo      : std_logic;
     signal mem_wait_one         : std_logic;
     signal mem_wait_alu         : std_logic;
+    signal mem_wait_shf         : std_logic;
     signal mem_wait_fifo        : std_logic;
 
     signal jmp_wait_alu         : std_logic;
@@ -272,6 +274,8 @@ architecture rtl of mexec is
 
     signal dbg_0_tvalid         : std_logic;
     signal dbg_1_tvalid         : std_logic;
+
+    signal res_tdata_selector   : std_logic_vector(5 downto 0);
 
 begin
 
@@ -496,7 +500,6 @@ begin
                 mul_req_tdata.bval <= micro_tdata.mul_b_val;
                 mul_req_tdata.dreg <= micro_tdata.mul_dreg;
                 mul_req_tdata.dmask <= micro_tdata.mul_dmask;
-
             elsif (mul_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 mul_req_tdata.aval <= lsu_rd_s_tdata;
             end if;
@@ -576,14 +579,15 @@ begin
             if resetn = '0' then
                 shf8_req_tvalid <= '0';
                 shf16_req_tvalid <= '0';
-                shf_wait_fifo <= '0';
+                shf8_wait_fifo <= '0';
+                shf16_wait_fifo <= '0';
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' and
                     micro_tdata.read_fifo = '0' and micro_tdata.shf_w = '0')
                 then
                     shf8_req_tvalid <= '1';
-                elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                elsif (shf8_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                     shf8_req_tvalid <= '1';
                 else
                     shf8_req_tvalid <= '0';
@@ -593,20 +597,30 @@ begin
                     micro_tdata.read_fifo = '0' and micro_tdata.shf_w = '1')
                 then
                     shf16_req_tvalid <= '1';
-                elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                elsif (shf16_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                     shf16_req_tvalid <= '1';
                 else
                     shf16_req_tvalid <= '0';
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1') then
-                    if (micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' and micro_tdata.read_fifo = '1') then
-                        shf_wait_fifo <= '1';
+                    if (micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1'  and micro_tdata.shf_w = '0' and micro_tdata.read_fifo = '1') then
+                        shf8_wait_fifo <= '1';
                     else
-                        shf_wait_fifo <= '0';
+                        shf8_wait_fifo <= '0';
                     end if;
-                elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
-                    shf_wait_fifo <= '0';
+                elsif (shf8_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    shf8_wait_fifo <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1') then
+                    if (micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1'  and micro_tdata.shf_w = '1' and micro_tdata.read_fifo = '1') then
+                        shf16_wait_fifo <= '1';
+                    else
+                        shf16_wait_fifo <= '0';
+                    end if;
+                elsif (shf16_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    shf16_wait_fifo <= '0';
                 end if;
 
             end if;
@@ -619,8 +633,7 @@ begin
                 shf8_req_tdata.ival <= micro_tdata.shf_ival;
                 shf8_req_tdata.dreg <= micro_tdata.shf_dreg;
                 shf8_req_tdata.dmask <= micro_tdata.shf_dmask;
-
-            elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+            elsif (shf8_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 shf8_req_tdata.sval <= lsu_rd_s_tdata;
             end if;
 
@@ -632,8 +645,7 @@ begin
                 shf16_req_tdata.ival <= micro_tdata.shf_ival;
                 shf16_req_tdata.dreg <= micro_tdata.shf_dreg;
                 shf16_req_tdata.dmask <= micro_tdata.shf_dmask;
-
-            elsif (shf_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+            elsif (shf16_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 shf16_req_tdata.sval <= lsu_rd_s_tdata;
             end if;
 
@@ -705,50 +717,58 @@ begin
         end if;
     end process;
 
+    res_tdata_selector(0) <= alu_res_tvalid;
+    res_tdata_selector(1) <= one_res_tvalid;
+    res_tdata_selector(2) <= bcd_res_tvalid;
+    res_tdata_selector(3) <= shf8_res_tvalid;
+    res_tdata_selector(4) <= shf16_res_tvalid;
+    res_tdata_selector(5) <= mul_res_tvalid;
+
     res_proc : process (clk) begin
         if rising_edge(clk) then
 
-            if (alu_res_tvalid = '1') then
-                res_tdata.code <= alu_res_tdata.code;
-                res_tdata.dmask <= alu_res_tdata.dmask;
-                res_tdata.dval_lo <= alu_res_tdata.dval(15 downto 0);
-                res_tdata.dval_hi <= alu_res_tdata.dval(15 downto 0);
-                res_tuser <= alu_res_tuser;
-            elsif (one_res_tvalid = '1') then
-                res_tdata.code <= one_res_tdata.code;
-                res_tdata.dmask <= one_res_tdata.dmask;
-                res_tdata.dval_lo <= one_res_tdata.dval(15 downto 0);
-                res_tdata.dval_hi <= one_res_tdata.dval(15 downto 0);
-                res_tuser <= one_res_tuser;
-            elsif (bcd_res_tvalid = '1') then
-                res_tdata.code <= bcd_res_tdata.code;
-                res_tdata.dmask <= bcd_res_tdata.dmask;
-                res_tdata.dval_lo <= bcd_res_tdata.dval(15 downto 0);
-                res_tdata.dval_hi <= bcd_res_tdata.dval(15 downto 0);
-                res_tuser <= bcd_res_tuser;
-            elsif (shf8_res_tvalid = '1') then
-                res_tdata.code <= shf8_res_tdata.code;
-                res_tdata.dmask <= shf8_res_tdata.dmask;
-                res_tdata.dval_lo(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
-                res_tdata.dval_hi(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
-                res_tuser <= shf8_res_tuser;
-            elsif (shf16_res_tvalid = '1') then
-                res_tdata.code <= shf16_res_tdata.code;
-                res_tdata.dmask <= shf16_res_tdata.dmask;
-                res_tdata.dval_lo <= shf16_res_tdata.dval(15 downto 0);
-                res_tdata.dval_hi <= shf16_res_tdata.dval(15 downto 0);
-                res_tuser <= shf16_res_tuser;
-            elsif (mul_res_tvalid = '1') then
-                res_tdata.code <= mul_res_tdata.code;
-                res_tdata.dmask <= mul_res_tdata.dmask;
-                res_tdata.dval_lo <= mul_res_tdata.dval(15 downto 0);
-                if ((mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX)) then
-                    res_tdata.dval_hi <= mul_res_tdata.dval(31 downto 16);
-                else
-                    res_tdata.dval_hi <= mul_res_tdata.dval(15 downto 0);
-                end if;
-                res_tuser <= mul_res_tuser;
-            end if;
+            case res_tdata_selector is
+                when "000010" =>
+                    res_tdata.code <= one_res_tdata.code;
+                    res_tdata.dmask <= one_res_tdata.dmask;
+                    res_tdata.dval_lo <= one_res_tdata.dval(15 downto 0);
+                    res_tdata.dval_hi <= one_res_tdata.dval(15 downto 0);
+                    res_tuser <= one_res_tuser;
+                when "000100" =>
+                    res_tdata.code <= bcd_res_tdata.code;
+                    res_tdata.dmask <= bcd_res_tdata.dmask;
+                    res_tdata.dval_lo <= bcd_res_tdata.dval(15 downto 0);
+                    res_tdata.dval_hi <= bcd_res_tdata.dval(15 downto 0);
+                    res_tuser <= bcd_res_tuser;
+                when "001000" =>
+                    res_tdata.code <= shf8_res_tdata.code;
+                    res_tdata.dmask <= shf8_res_tdata.dmask;
+                    res_tdata.dval_lo(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
+                    res_tdata.dval_hi(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
+                    res_tuser <= shf8_res_tuser;
+                when "010000" =>
+                    res_tdata.code <= shf16_res_tdata.code;
+                    res_tdata.dmask <= shf16_res_tdata.dmask;
+                    res_tdata.dval_lo <= shf16_res_tdata.dval(15 downto 0);
+                    res_tdata.dval_hi <= shf16_res_tdata.dval(15 downto 0);
+                    res_tuser <= shf16_res_tuser;
+                when "100000" =>
+                    res_tdata.code <= mul_res_tdata.code;
+                    res_tdata.dmask <= mul_res_tdata.dmask;
+                    res_tdata.dval_lo <= mul_res_tdata.dval(15 downto 0);
+                    if ((mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX)) then
+                        res_tdata.dval_hi <= mul_res_tdata.dval(31 downto 16);
+                    else
+                        res_tdata.dval_hi <= mul_res_tdata.dval(15 downto 0);
+                    end if;
+                    res_tuser <= mul_res_tuser;
+                when others =>
+                    res_tdata.code <= alu_res_tdata.code;
+                    res_tdata.dmask <= alu_res_tdata.dmask;
+                    res_tdata.dval_lo <= alu_res_tdata.dval(15 downto 0);
+                    res_tdata.dval_hi <= alu_res_tdata.dval(15 downto 0);
+                    res_tuser <= alu_res_tuser;
+            end case;
 
         end if;
     end process;
@@ -898,8 +918,8 @@ begin
                         end if;
                     end loop;
                 elsif (alu_res_tvalid = '1' and alu_res_tdata.upd_fl = '1') then
-
                     if (alu_res_tdata.dreg = FL) then
+
                         for i in 15 downto 8 loop
                             flags_wr_be(i) <= alu_res_tdata.dmask(1);
                         end loop;
@@ -911,6 +931,7 @@ begin
                         flags_wr_be(FLAG_PF) <= alu_res_tdata.dmask(0);
                         flags_wr_be(FLAG_01) <= '0';
                         flags_wr_be(FLAG_CF) <= alu_res_tdata.dmask(0);
+
                     else
                         case (alu_res_tdata.code) is
                             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
@@ -1045,10 +1066,9 @@ begin
                         when others =>
                             flags_wr_be <= (others => '0');
                     end case;
-                elsif (shf8_res_tvalid = '1' or shf16_res_tvalid = '1') then
-                    case (one_res_tdata.code) is
-                        when SHF_OP_ROL | SHF_OP_ROR |
-                             SHF_OP_RCL | SHF_OP_RCR =>
+                elsif (shf8_res_tvalid = '1') then
+                    case (shf8_res_tdata.code) is
+                        when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
                             flags_wr_be(FLAG_15) <= '0';
                             flags_wr_be(FLAG_14) <= '0';
                             flags_wr_be(FLAG_13) <= '0';
@@ -1074,7 +1094,46 @@ begin
                             flags_wr_be(FLAG_DF) <= '0';
                             flags_wr_be(FLAG_IF) <= '0';
                             flags_wr_be(FLAG_TF) <= '0';
+                            flags_wr_be(FLAG_SF) <= '1';
+                            flags_wr_be(FLAG_ZF) <= '1';
+                            flags_wr_be(FLAG_05) <= '0';
+                            flags_wr_be(FLAG_AF) <= '0';
+                            flags_wr_be(FLAG_03) <= '0';
+                            flags_wr_be(FLAG_PF) <= '1';
+                            flags_wr_be(FLAG_01) <= '0';
+                            flags_wr_be(FLAG_CF) <= '1';
+                        when others =>
+                            flags_wr_be <= (others => '0');
+                    end case;
+                elsif (shf16_res_tvalid = '1') then
+                    case (shf16_res_tdata.code) is
+                        when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
+                            flags_wr_be(FLAG_15) <= '0';
+                            flags_wr_be(FLAG_14) <= '0';
+                            flags_wr_be(FLAG_13) <= '0';
+                            flags_wr_be(FLAG_12) <= '0';
+                            flags_wr_be(FLAG_OF) <= '1';
+                            flags_wr_be(FLAG_DF) <= '0';
+                            flags_wr_be(FLAG_IF) <= '0';
+                            flags_wr_be(FLAG_TF) <= '0';
                             flags_wr_be(FLAG_SF) <= '0';
+                            flags_wr_be(FLAG_ZF) <= '0';
+                            flags_wr_be(FLAG_05) <= '0';
+                            flags_wr_be(FLAG_AF) <= '0';
+                            flags_wr_be(FLAG_03) <= '0';
+                            flags_wr_be(FLAG_PF) <= '0';
+                            flags_wr_be(FLAG_01) <= '0';
+                            flags_wr_be(FLAG_CF) <= '1';
+                        when SHF_OP_SHL | SHF_OP_SAR | SHF_OP_SHR =>
+                            flags_wr_be(FLAG_15) <= '0';
+                            flags_wr_be(FLAG_14) <= '0';
+                            flags_wr_be(FLAG_13) <= '0';
+                            flags_wr_be(FLAG_12) <= '0';
+                            flags_wr_be(FLAG_OF) <= '1';
+                            flags_wr_be(FLAG_DF) <= '0';
+                            flags_wr_be(FLAG_IF) <= '0';
+                            flags_wr_be(FLAG_TF) <= '0';
+                            flags_wr_be(FLAG_SF) <= '1';
                             flags_wr_be(FLAG_ZF) <= '1';
                             flags_wr_be(FLAG_05) <= '0';
                             flags_wr_be(FLAG_AF) <= '0';
@@ -1086,7 +1145,6 @@ begin
                             flags_wr_be <= (others => '0');
                     end case;
                 elsif (mul_res_tvalid = '1') then
-
                     flags_wr_be(FLAG_15) <= '0';
                     flags_wr_be(FLAG_14) <= '0';
                     flags_wr_be(FLAG_13) <= '0';
@@ -1103,7 +1161,6 @@ begin
                     flags_wr_be(FLAG_PF) <= '1';
                     flags_wr_be(FLAG_01) <= '0';
                     flags_wr_be(FLAG_CF) <= '1';
-
                 end if;
 
             end if;
@@ -1222,6 +1279,7 @@ begin
                     jmp_tvalid <= '0';
                 end if;
                 jump_m_tvalid <= jmp_tvalid;
+
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1') then
@@ -1239,6 +1297,7 @@ begin
                 mem_wait_alu <= '0';
                 mem_wait_one <= '0';
                 mem_wait_fifo <= '0';
+                mem_wait_shf <= '0';
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MEM) = '1') then
@@ -1262,6 +1321,16 @@ begin
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MEM) = '1') then
+                    if (micro_tdata.mem_cmd = '1' and micro_tdata.mem_data_src = MEM_DATA_SRC_SHF) then
+                        mem_wait_shf <= '1';
+                    else
+                        mem_wait_shf <= '0';
+                    end if;
+                elsif (mem_wait_shf = '1' and (shf16_res_tvalid = '1' or shf8_res_tvalid = '1')) then
+                    mem_wait_shf <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MEM) = '1') then
                     if (micro_tdata.mem_cmd = '1' and micro_tdata.mem_data_src = MEM_DATA_SRC_FIFO) then
                         mem_wait_fifo <= '1';
                     else
@@ -1275,15 +1344,17 @@ begin
                     if (micro_tdata.mem_cmd = '1' and
                         (micro_tdata.mem_data_src = MEM_DATA_SRC_ALU or
                          micro_tdata.mem_data_src = MEM_DATA_SRC_ONE or
+                         micro_tdata.mem_data_src = MEM_DATA_SRC_SHF or
                          micro_tdata.mem_data_src = MEM_DATA_SRC_FIFO)) then
                         lsu_req_tvalid <= '0';
                     else
                         lsu_req_tvalid <= '1';
                     end if;
-                elsif (mem_wait_alu = '1' or mem_wait_fifo = '1' or mem_wait_one = '1') and
+                elsif (mem_wait_alu = '1' or mem_wait_fifo = '1' or mem_wait_one = '1' or mem_wait_shf = '1') and
                     not (alu_res_tvalid = '1' xor mem_wait_alu = '1') and
                     not (one_res_tvalid = '1' xor mem_wait_one = '1') and
-                    not (lsu_rd_s_tvalid = '1' xor mem_wait_fifo = '1') then
+                    not (lsu_rd_s_tvalid = '1' xor mem_wait_fifo = '1') and
+                    not ((shf8_res_tvalid = '1' or shf16_res_tvalid = '1') xor mem_wait_shf = '1') then
                     lsu_req_tvalid <= '1';
                 elsif (lsu_req_tready = '1') then
                     lsu_req_tvalid <= '0';
@@ -1295,11 +1366,18 @@ begin
                 lsu_req_tcmd <= micro_tdata.mem_cmd;
                 lsu_req_twidth <= micro_tdata.mem_width;
                 lsu_req_taddr <= std_logic_vector(unsigned(micro_tdata.mem_seg & x"0") + unsigned(x"0" & micro_tdata.mem_addr));
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1') then
                 lsu_req_tdata <= micro_tdata.mem_data;
             elsif (mem_wait_alu = '1' and alu_res_tvalid = '1') then
                 lsu_req_tdata <= alu_res_tdata.dval(15 downto 0);
             elsif (mem_wait_one = '1' and one_res_tvalid = '1') then
                 lsu_req_tdata <= one_res_tdata.dval;
+            elsif (mem_wait_shf = '1' and shf8_res_tvalid = '1') then
+                lsu_req_tdata <= shf8_res_tdata.dval;
+            elsif (mem_wait_shf = '1' and shf16_res_tvalid = '1') then
+                lsu_req_tdata <= shf16_res_tdata.dval;
             elsif (mem_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 lsu_req_tdata <= lsu_rd_s_tdata;
             end if;
