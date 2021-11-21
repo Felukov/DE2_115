@@ -26,6 +26,9 @@ architecture rtl of mexec_shf is
     signal sval         : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rval         : std_logic_vector(16 downto 0);
     signal rval_next    : std_logic_vector(16 downto 0);
+    signal use_of_1     : std_logic;
+    signal flags_of_1   : std_logic;
+    signal flags_of_n   : std_logic;
     signal flags_of     : std_logic;
     signal flags_pf     : std_logic;
     signal flags_zf     : std_logic;
@@ -55,8 +58,12 @@ begin
         rval_next <= rval;
         case res_m_tdata.code is
             when SHF_OP_ROL =>
+                rval_next(DATA_WIDTH downto 0) <= rval(DATA_WIDTH-1 downto 0) & rval(DATA_WIDTH-1);
+            when SHF_OP_RCL =>
                 rval_next(DATA_WIDTH downto 0) <= rval(DATA_WIDTH-1 downto 0) & rval(DATA_WIDTH);
             when SHF_OP_ROR =>
+                rval_next(DATA_WIDTH downto 0) <= rval(0) & rval(0) & rval(DATA_WIDTH-1 downto 1);
+            when SHF_OP_RCR =>
                 rval_next(DATA_WIDTH downto 0) <= rval(0) & rval(DATA_WIDTH downto 1);
             when SHF_OP_SHL =>
                 rval_next(DATA_WIDTH downto 0) <= rval(DATA_WIDTH-1 downto 0) & '0';
@@ -80,7 +87,15 @@ begin
 
         flags_sf <= rval(DATA_WIDTH-1);
         flags_cf <= rval(DATA_WIDTH);
-        flags_of <= rval(DATA_WIDTH-1) xor sval(DATA_WIDTH-1);
+
+        flags_of_1 <= rval(DATA_WIDTH-1) xor sval(DATA_WIDTH-1);
+
+
+        if (use_of_1 = '1') then
+            flags_of <= flags_of_1;
+        else
+            flags_of <= flags_of_n;
+        end if;
 
     end process;
 
@@ -90,12 +105,44 @@ begin
             if resetn = '0' then
                 res_m_tvalid <= '0';
                 shf_cnt <= 0;
+                use_of_1 <= '0';
+                flags_of_n <= '0';
             else
 
                 if (req_s_tvalid = '1') then
                     shf_cnt <= to_integer(unsigned(req_s_tdata.ival(4 downto 0)));
                 elsif (shf_cnt > 0) then
                     shf_cnt <= shf_cnt - 1;
+                end if;
+
+                if (req_s_tvalid = '1') then
+                    case res_m_tdata.code is
+                        when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCR | SHF_OP_RCL =>
+                            if (req_s_tdata.ival(4 downto 0) = "0001") then
+                                use_of_1 <= '1';
+                            else
+                                use_of_1 <= '0';
+                            end if;
+                        when others =>
+                            use_of_1 <= '1';
+                    end case;
+                end if;
+
+                if (req_s_tvalid = '1') then
+                    case res_m_tdata.code is
+                        when SHF_OP_ROR =>
+                            flags_of_n <= req_s_tdata.sval(DATA_WIDTH-1) xor req_s_tdata.sval(0);
+                        when SHF_OP_RCR =>
+
+                            if req_s_tdata.sval(DATA_WIDTH-1) = '0' then
+                                flags_of_n <= req_s_tuser(FLAG_OF);
+                            else
+                                flags_of_n <= not req_s_tuser(FLAG_OF);
+                            end if;
+                        when SHF_OP_ROL | SHF_OP_RCL =>
+                            flags_of_n <= req_s_tdata.sval(DATA_WIDTH-2) xor req_s_tdata.sval(DATA_WIDTH-1);
+                        when others => null;
+                    end case;
                 end if;
 
                 if (req_s_tvalid = '1') then
