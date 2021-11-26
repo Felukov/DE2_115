@@ -269,7 +269,11 @@ architecture rtl of mexec is
     signal mem_wait_shf         : std_logic;
     signal mem_wait_fifo        : std_logic;
 
+    signal jmp_busy             : std_logic;
     signal jmp_wait_alu         : std_logic;
+    signal jmp_wait_mem_cs      : std_logic;
+    signal jmp_wait_mem_ip      : std_logic;
+    signal jmp_cond             : micro_op_jmp_cond_t;
     signal jmp_tvalid           : std_logic;
 
     signal dbg_0_tvalid         : std_logic;
@@ -1257,7 +1261,15 @@ begin
                 jump_m_tvalid <= '0';
                 jmp_tvalid <= '0';
                 jmp_wait_alu <= '0';
+                jmp_busy <= '0';
+                jmp_wait_mem_cs <= '0';
+                jmp_wait_mem_ip <= '0';
+                jmp_cond <= j_never;
             else
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
+                    jmp_cond <= micro_tdata.jump_cond;
+                end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
                     if (micro_tdata.jump_cond = cx_ne_0) then
@@ -1269,21 +1281,81 @@ begin
                     jmp_wait_alu <= '0';
                 end if;
 
-                if (jmp_wait_alu = '1' and alu_res_tvalid = '1') then
-                    if (alu_res_tdata.dval(15 downto 0) /= x"00") then
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1' and micro_tdata.jump_cs_mem = '1') then
+                    jmp_wait_mem_cs <= '1';
+                elsif (jmp_wait_mem_cs = '1' and lsu_rd_s_tvalid = '1') then
+                    jmp_wait_mem_cs <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1' and micro_tdata.jump_ip_mem = '1') then
+                    jmp_wait_mem_ip <= '1';
+                elsif (jmp_wait_mem_ip = '1' and lsu_rd_s_tvalid = '1') then
+                    jmp_wait_mem_ip <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1' and
+                    (micro_tdata.jump_cs_mem = '1' or micro_tdata.jump_ip_mem = '1' or micro_tdata.jump_cond = cx_ne_0)) then
+                    jmp_busy <= '1';
+                elsif (jmp_busy = '1') then
+                    if not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
+                        not (jmp_wait_alu = '1' xor alu_res_tvalid = '1')
+                    then
+                        jmp_busy <= '0';
+                    end if;
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
+                    if (micro_tdata.jump_cs_mem = '0' and micro_tdata.jump_ip_mem = '0' and micro_tdata.jump_cond = j_always) then
                         jmp_tvalid <= '1';
+                    else
+                        jmp_tvalid <= '0';
+                    end if;
+                elsif (jmp_busy = '1') then
+                    if not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
+                        not (jmp_wait_alu = '1' xor alu_res_tvalid = '1')
+                    then
+                        case jmp_cond is
+                            when j_always =>
+                                jmp_tvalid <= '1';
+                            when cx_ne_0 =>
+                                if alu_res_tdata.dval(15 downto 0) /= x"00" then
+                                    jmp_tvalid <= '1';
+                                else
+                                    jmp_tvalid <= '0';
+                                end if;
+                            when others =>
+                                jmp_tvalid <= '0';
+                        end case;
                     else
                         jmp_tvalid <= '0';
                     end if;
                 else
                     jmp_tvalid <= '0';
                 end if;
+
+                -- if (jmp_wait_alu = '1' and alu_res_tvalid = '1') then
+                --     if (alu_res_tdata.dval(15 downto 0) /= x"00") then
+                --         jmp_tvalid <= '1';
+                --     else
+                --         jmp_tvalid <= '0';
+                --     end if;
+                -- else
+                --     jmp_tvalid <= '0';
+                -- end if;
                 jump_m_tvalid <= jmp_tvalid;
 
             end if;
 
-            if (micro_tvalid = '1' and micro_tready = '1') then
-                jump_m_tdata <= micro_tdata.jump_cs & micro_tdata.jump_ip;
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.jump_imm = '1') then
+                jump_m_tdata(31 downto 16) <= micro_tdata.jump_cs;
+            elsif (jmp_wait_mem_cs = '1' and lsu_rd_s_tvalid = '1') then
+                jump_m_tdata(31 downto 16) <= lsu_rd_s_tdata;
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.jump_imm = '1') then
+                jump_m_tdata(15 downto 0) <= micro_tdata.jump_ip;
+            elsif (jmp_wait_mem_ip = '1' and lsu_rd_s_tvalid = '1') then
+                jump_m_tdata(15 downto 0) <= lsu_rd_s_tdata;
             end if;
 
         end if;

@@ -89,6 +89,10 @@ package cpu86_types is
     constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0000";
     constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0001";
     constant SYS_DBG_OP     : std_logic_vector (3 downto 0) := "0010";
+    constant SYS_IRET_OP    : std_logic_vector (3 downto 0) := "0101";
+    constant SYS_INT_OP     : std_logic_vector (3 downto 0) := "1000";
+    constant SYS_INTO_OP    : std_logic_vector (3 downto 0) := "1001";
+    constant SYS_INT3_OP    : std_logic_vector (3 downto 0) := "1010";
 
     constant FEU_CBW        : std_logic_vector (3 downto 0) := "0000";
     constant FEU_CWD        : std_logic_vector (3 downto 0) := "0001";
@@ -230,7 +234,7 @@ package cpu86_types is
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
-    type micro_op_jmp_cond_t is (cx_ne_0, cx_ne_0_and_zf, cx_ne_0_and_nzf);
+    type micro_op_jmp_cond_t is (j_always, j_never, cx_ne_0, cx_ne_0_and_zf, cx_ne_0_and_nzf);
 
     type micro_op_t is record
         cmd             : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0);
@@ -275,8 +279,12 @@ package cpu86_types is
         bcd_sval        : std_logic_vector(15 downto 0);
 
         jump_cond       : micro_op_jmp_cond_t;
+        jump_imm        : std_logic;
+        jump_cs_mem     : std_logic;
         jump_cs         : std_logic_vector(15 downto 0);
+        jump_ip_mem     : std_logic;
         jump_ip         : std_logic_vector(15 downto 0);
+
         mem_cmd         : std_logic;
         mem_width       : std_logic;
         mem_seg         : std_logic_vector(15 downto 0);
