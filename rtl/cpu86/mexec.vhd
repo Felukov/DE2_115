@@ -258,6 +258,7 @@ architecture rtl of mexec is
     signal mexec_wait_mul       : std_logic;
     signal mexec_wait_bcd       : std_logic;
     signal mexec_wait_shf       : std_logic;
+    signal mexec_wait_jmp       : std_logic;
 
     signal alu_wait_fifo        : std_logic;
     signal mul_wait_fifo        : std_logic;
@@ -274,7 +275,9 @@ architecture rtl of mexec is
     signal jmp_wait_mem_cs      : std_logic;
     signal jmp_wait_mem_ip      : std_logic;
     signal jmp_cond             : micro_op_jmp_cond_t;
+
     signal jmp_tvalid           : std_logic;
+    signal jmp_tdata            : std_logic;
 
     signal dbg_0_tvalid         : std_logic;
     signal dbg_1_tvalid         : std_logic;
@@ -392,7 +395,12 @@ begin
     es_m_wr_tdata <= res_tdata.dval_lo;
     ss_m_wr_tdata <= res_tdata.dval_lo;
 
-    micro_tready <= '1' when mexec_busy = '0' and mem_wait_alu = '0' and mem_wait_one = '0' and mexec_wait_bcd = '0' and mexec_wait_shf = '0' and
+    micro_tready <= '1' when mexec_busy = '0' and
+        mem_wait_alu = '0' and
+        mem_wait_one = '0' and
+        --mexec_wait_bcd = '0' and
+        --mexec_wait_shf = '0' and
+        --mexec_wait_jmp = '0' and
         (lsu_req_tvalid = '0' or (lsu_req_tvalid = '1' and lsu_req_tready = '1')) else '0';
 
     lsu_rd_s_tready <= mexec_wait_fifo;
@@ -423,19 +431,22 @@ begin
                 mexec_wait_mul <= '0';
                 mexec_wait_bcd <= '0';
                 mexec_wait_shf <= '0';
+                mexec_wait_jmp <= '0';
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BCD) = '1') or
-                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1')
+                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1') or
+                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1')
                 then
                     mexec_busy <= '1';
                 elsif (mexec_busy = '1') then
                     if not (mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1') and
                         not (mexec_wait_mul = '1' xor mul_res_tvalid = '1') and
                         not (mexec_wait_bcd = '1' xor bcd_res_tvalid = '1') and
-                        not (mexec_wait_shf = '1' xor (shf8_res_tvalid = '1' or shf16_res_tvalid = '1'))
+                        not (mexec_wait_shf = '1' xor (shf8_res_tvalid = '1' or shf16_res_tvalid = '1')) and
+                        not (mexec_wait_jmp = '1' xor jmp_tvalid = '1')
                     then
                         mexec_busy <= '0';
                     end if;
@@ -465,6 +476,12 @@ begin
                     mexec_wait_shf <= '1';
                 elsif (shf8_res_tvalid = '1' or shf16_res_tvalid = '1') then
                     mexec_wait_shf <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
+                    mexec_wait_jmp <= '1';
+                elsif (jmp_tvalid = '1') then
+                    mexec_wait_jmp <= '0';
                 end if;
 
             end if;
@@ -1258,13 +1275,14 @@ begin
         if rising_edge(clk) then
 
             if resetn = '0' then
-                jump_m_tvalid <= '0';
                 jmp_tvalid <= '0';
+                jmp_tdata <= '0';
                 jmp_wait_alu <= '0';
                 jmp_busy <= '0';
                 jmp_wait_mem_cs <= '0';
                 jmp_wait_mem_ip <= '0';
                 jmp_cond <= j_never;
+                jump_m_tvalid <= '0';
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
@@ -1314,18 +1332,7 @@ begin
                     if not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
                         not (jmp_wait_alu = '1' xor alu_res_tvalid = '1')
                     then
-                        case jmp_cond is
-                            when j_always =>
-                                jmp_tvalid <= '1';
-                            when cx_ne_0 =>
-                                if alu_res_tdata.dval(15 downto 0) /= x"00" then
-                                    jmp_tvalid <= '1';
-                                else
-                                    jmp_tvalid <= '0';
-                                end if;
-                            when others =>
-                                jmp_tvalid <= '0';
-                        end case;
+                        jmp_tvalid <= '1';
                     else
                         jmp_tvalid <= '0';
                     end if;
@@ -1333,16 +1340,34 @@ begin
                     jmp_tvalid <= '0';
                 end if;
 
-                -- if (jmp_wait_alu = '1' and alu_res_tvalid = '1') then
-                --     if (alu_res_tdata.dval(15 downto 0) /= x"00") then
-                --         jmp_tvalid <= '1';
-                --     else
-                --         jmp_tvalid <= '0';
-                --     end if;
-                -- else
-                --     jmp_tvalid <= '0';
-                -- end if;
-                jump_m_tvalid <= jmp_tvalid;
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
+                    if (micro_tdata.jump_cs_mem = '0' and micro_tdata.jump_ip_mem = '0' and micro_tdata.jump_cond = j_always) then
+                        jmp_tdata <= '1';
+                    else
+                        jmp_tdata <= '0';
+                    end if;
+                elsif (jmp_busy = '1') then
+                    if not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
+                        not (jmp_wait_alu = '1' xor alu_res_tvalid = '1')
+                    then
+                        case jmp_cond is
+                            when j_always =>
+                                jmp_tdata <= '1';
+                            when cx_ne_0 =>
+                                if alu_res_tdata.dval(15 downto 0) /= x"00" then
+                                    jmp_tdata <= '1';
+                                else
+                                    jmp_tdata <= '0';
+                                end if;
+                            when others =>
+                                jmp_tdata <= '0';
+                        end case;
+                    end if;
+                end if;
+
+                if (jmp_tvalid = '1') then
+                    jump_m_tvalid <= jmp_tdata;
+                end if;
 
             end if;
 

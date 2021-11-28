@@ -140,8 +140,8 @@ begin
 
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
         ((rr_tdata.op = LOOPU) or
-         (rr_tdata.op = STACKU and rr_tdata.code = STACKU_PUSHA) or
          (rr_tdata.op = DBG) or
+         (rr_tdata.op = STACKU and rr_tdata.code = STACKU_PUSHA) or
          (rr_tdata.op = SYS and (rr_tdata.code = SYS_INT_OP))) else '0';
 
     ea_val_plus_disp_next <= std_logic_vector(unsigned(rr_tdata.ea_val) + unsigned(rr_tdata.disp));

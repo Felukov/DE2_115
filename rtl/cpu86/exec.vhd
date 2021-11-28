@@ -42,7 +42,7 @@ architecture rtl of exec is
             wr_s_tvalid             : in std_logic;
             wr_s_tdata              : in std_logic_vector(DATA_WIDTH-1 downto 0);
             wr_s_tmask              : in std_logic_vector(1 downto 0);
-            wr_s_tkeep_lock         : in std_logic;								   
+            wr_s_tkeep_lock         : in std_logic;
 
             lock_s_tvalid           : in std_logic;
             unlk_s_tvalid           : in std_logic;
@@ -607,7 +607,7 @@ begin
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
-        resetn                  => resetn,
+        resetn                  => exec_resetn,
 
         wr_s_tvalid             => jmp_lock_wr_tvalid,
         wr_s_tdata              => (others => '0') ,
@@ -884,25 +884,30 @@ begin
         fifo_m_tdata            => fifo_instr_m_tdata
     );
 
-    axis_reg_0 : axis_reg generic map (
-        DATA_WIDTH              => DECODED_INSTR_T_WIDTH + 32
-    ) port map (
-        clk                     => clk,
-        resetn                  => exec_resetn,
+    -- axis_reg_0 : axis_reg generic map (
+    --     DATA_WIDTH              => DECODED_INSTR_T_WIDTH + 32
+    -- ) port map (
+    --     clk                     => clk,
+    --     resetn                  => exec_resetn,
 
-        in_s_tvalid             => fifo_instr_m_tvalid,
-        in_s_tready             => fifo_instr_m_tready,
-        in_s_tdata              => fifo_instr_m_tdata,
+    --     in_s_tvalid             => fifo_instr_m_tvalid,
+    --     in_s_tready             => fifo_instr_m_tready,
+    --     in_s_tdata              => fifo_instr_m_tdata,
 
-        out_m_tvalid            => reg_instr_m_tvalid,
-        out_m_tready            => reg_instr_m_tready,
-        out_m_tdata             => reg_instr_m_tdata
-    );
+    --     out_m_tvalid            => reg_instr_m_tvalid,
+    --     out_m_tready            => reg_instr_m_tready,
+    --     out_m_tdata             => reg_instr_m_tdata
+    -- );
 
-    instr_tvalid <= reg_instr_m_tvalid;
-    reg_instr_m_tready <= instr_tready;
-    instr_tdata <= slv_to_decoded_instr_t(reg_instr_m_tdata(DECODED_INSTR_T_WIDTH+32-1 downto 32));
-    instr_tuser <= reg_instr_m_tdata(31 downto 0);
+    -- instr_tvalid <= reg_instr_m_tvalid;
+    -- reg_instr_m_tready <= instr_tready;
+    -- instr_tdata <= slv_to_decoded_instr_t(reg_instr_m_tdata(DECODED_INSTR_T_WIDTH+32-1 downto 32));
+    -- instr_tuser <= reg_instr_m_tdata(31 downto 0);
+
+    instr_tvalid <= fifo_instr_m_tvalid;
+    fifo_instr_m_tready <= instr_tready;
+    instr_tdata <= slv_to_decoded_instr_t(fifo_instr_m_tdata(DECODED_INSTR_T_WIDTH+32-1 downto 32));
+    instr_tuser <= fifo_instr_m_tdata(31 downto 0);
 
     register_reader_inst : register_reader port map (
         clk                     => clk,
