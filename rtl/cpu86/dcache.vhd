@@ -38,7 +38,8 @@ architecture rtl of dcache is
     signal tag                  : std_logic_vector(19 downto CACHE_LINE_WIDTH-1);
 begin
 
-    dcache_m_tvalid <= '1' when lsu_req_s_tvalid = '1' and lsu_req_s_tready = '1' and d_valid(index) = '1' and d_tags(index) = tag and lsu_req_s_taddr(0) = '0' else '0';
+    -- dcache_m_tvalid <= '1' when lsu_req_s_tvalid = '1' and lsu_req_s_tready = '1' and d_valid(index) = '1' and d_tags(index) = tag and lsu_req_s_taddr(0) = '0' else '0';
+    dcache_m_tvalid <= '1' when d_valid(index) = '1' and d_tags(index) = tag and lsu_req_s_taddr(0) = '0' else '0';
     dcache_m_tdata <= d_data(index);
 
     index <= to_integer(unsigned(lsu_req_s_taddr(CACHE_LINE_WIDTH downto 1)));
