@@ -442,7 +442,7 @@ begin
                 then
                     mexec_busy <= '1';
                 elsif (mexec_busy = '1') then
-                    if not (mexec_wait_fifo = '1' xor lsu_rd_s_tvalid = '1') and
+                    if not (mexec_wait_fifo = '1' xor (lsu_rd_s_tvalid = '1' and mexec_wait_fifo = '1')) and
                         not (mexec_wait_mul = '1' xor mul_res_tvalid = '1') and
                         not (mexec_wait_bcd = '1' xor bcd_res_tvalid = '1') and
                         not (mexec_wait_shf = '1' xor (shf8_res_tvalid = '1' or shf16_res_tvalid = '1')) and

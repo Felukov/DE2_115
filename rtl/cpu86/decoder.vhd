@@ -1309,6 +1309,7 @@ begin
                 when x"C7" => set_op(MOVU, "0000", '1'); no_lock; no_wait; lock_fl('0');
 
                 when x"CD" => set_op(SYS, SYS_INT_OP, '1'); no_lock; no_wait; lock_fl('0');
+                when x"CF" => set_op(SYS, SYS_IRET_OP, '1'); no_lock; no_wait; lock_fl('0');
 
                 when x"D0" => no_lock; no_wait; lock_fl('0');
                 when x"D1" => no_lock; no_wait; lock_fl('0');

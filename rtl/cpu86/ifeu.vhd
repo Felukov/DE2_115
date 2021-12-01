@@ -418,6 +418,7 @@ begin
             when SYS =>
                 case rr_tdata.code is
                     when SYS_INT_OP => micro_cnt_next <= 6;
+                    when SYS_IRET_OP => micro_cnt_next <= 6;
                     when others => micro_cnt_next <= 0;
                 end case;
 
@@ -942,9 +943,8 @@ begin
 
         procedure do_sys_cmd_int_0 is begin
             fl_off; alu_off; jmp_off; dbg_off; mul_off; one_off; bcd_off; shf_off; mem_off;
-            di_inc_off; sp_inc_on;
+            si_inc_off; di_inc_off; sp_inc_on;
             micro_tdata.unlk_fl <= '0';
-            -- push flags
             micro_tdata.sp_keep_lock <= '1';
         end;
 
@@ -991,22 +991,44 @@ begin
 
         procedure do_sys_cmd_iret_0 is begin
             fl_off; alu_off; jmp_off; dbg_off; mul_off; one_off; bcd_off; shf_off; mem_off;
+            si_inc_off; di_inc_off; sp_inc_on;
             micro_tdata.unlk_fl <= '0';
-            micro_tdata.alu_wb <= '0';
+            micro_tdata.sp_keep_lock <= '1';
 
             mem_read_word(seg =>rr_tdata.ss_seg_val, addr => sp_s_tdata);
-            micro_tdata.sp_keep_lock <= '0';
         end procedure;
 
         procedure do_sys_cmd_iret_1 is begin
+            micro_tdata.mem_addr <= sp_s_tdata_next;
             case micro_cnt is
-                when 5 =>
-                when 3 =>
+                when 5 => null;
+                when 4 =>
                     micro_tdata.sp_keep_lock <= '0';
                     mem_off;
                     sp_inc_off;
                     micro_tdata.read_fifo <= '1';
                     micro_tdata.unlk_fl <= '0';
+                    micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '1';
+                    micro_tdata.jump_ip_mem <= '1';
+                when 3 =>
+                    micro_tdata.jump_ip_mem <= '0';
+                    micro_tdata.jump_cs_mem <= '1';
+                when 2 =>
+                    micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '0';
+                    micro_tdata.jump_cs_mem <= '0';
+                    micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+                    micro_tdata.alu_code <= ALU_SF_ADD;
+                    micro_tdata.alu_wb <= '1';
+                    micro_tdata.alu_a_val <= x"0000";
+                    micro_tdata.alu_b_mem <= '1';
+                    micro_tdata.alu_dreg <= FL;
+                    micro_tdata.alu_dmask <= "11";
+                when 1 =>
+                    micro_tdata.read_fifo <= '0';
+                    micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '0';
+                    micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '1';
+                    micro_tdata.unlk_fl <= '1';
+                    micro_tdata.jump_cond <= j_always;
                 when others => null;
             end case;
         end procedure;
@@ -1020,6 +1042,20 @@ begin
             mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
             -- put value from register into alu
             alu_put_in_b(rr_tdata.dreg_val);
+        end procedure;
+
+        procedure do_xchg_cmd_1 is begin
+            micro_tdata.read_fifo <= '1';
+
+            -- put value from memory into alu and write it to register
+            micro_tdata.alu_wb <= '1';
+            micro_tdata.alu_code <= ALU_SF_ADD;
+            micro_tdata.alu_a_val <= x"0000";
+            micro_tdata.alu_b_mem <= '1';
+            micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
+            micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
+            -- write alu to memory
+            mem_write_alu(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
         end procedure;
 
         procedure do_dbg_cmd_0 is begin
@@ -1460,6 +1496,7 @@ begin
                     when SYS =>
                         case rr_tdata.code is
                             when SYS_INT_OP => do_sys_cmd_int_0;
+                            when SYS_IRET_OP => do_sys_cmd_iret_0;
                             when others => null;
                         end case;
                     when others => null;
@@ -1471,26 +1508,16 @@ begin
                     when ONEU => do_one_cmd_1;
                     when MULU => do_mul_cmd_1;
                     when SHFU => do_shf_cmd_1;
+                    when XCHG => do_xchg_cmd_1;
                     when LFP => do_lfp_cmd_1;
                     when STACKU => do_stack_cmd_1;
                     when LOOPU => do_loop_cmd_1;
                     when SYS =>
                         case rr_tdata_buf.code is
                             when SYS_INT_OP => do_sys_cmd_int_1;
+                            when SYS_IRET_OP => do_sys_cmd_iret_1;
                             when others => null;
                         end case;
-                    when XCHG =>
-                        micro_tdata.read_fifo <= '1';
-
-                        -- put value from memory into alu and write it to register
-                        micro_tdata.alu_wb <= '1';
-                        micro_tdata.alu_code <= ALU_SF_ADD;
-                        micro_tdata.alu_a_val <= x"0000";
-                        micro_tdata.alu_b_mem <= '1';
-                        micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
-                        micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
-                        -- write alu to memory
-                        mem_write_alu(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
 
                     when STR =>
                         case rr_tdata_buf.code is
@@ -1654,9 +1681,6 @@ begin
 
                             when others => null;
                         end case;
-
-
-
 
                     when others => null;
                 end case;
