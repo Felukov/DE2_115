@@ -259,6 +259,13 @@ package cpu86_types is
         mul_a_val       : std_logic_vector(15 downto 0);
         mul_b_val       : std_logic_vector(15 downto 0);
 
+        div_code        : std_logic_vector(3 downto 0);
+        div_w           : std_logic;
+        div_dreg        : reg_t;
+        div_dmask       : std_logic_vector(1 downto 0);
+        div_a_val       : std_logic_vector(31 downto 0);
+        div_b_val       : std_logic_vector(15 downto 0);
+
         one_code        : std_logic_vector(3 downto 0);
         one_w           : std_logic;
         one_dreg        : reg_t;
@@ -544,7 +551,5 @@ package body cpu86_types is
         return d;
 
     end;
-
-
 
 end package body;
