@@ -93,6 +93,7 @@ package cpu86_types is
     constant SYS_INT_OP     : std_logic_vector (3 downto 0) := "1000";
     constant SYS_INTO_OP    : std_logic_vector (3 downto 0) := "1001";
     constant SYS_INT3_OP    : std_logic_vector (3 downto 0) := "1010";
+    constant SYS_DIV_INT_OP : std_logic_vector (3 downto 0) := "1111";
 
     constant FEU_CBW        : std_logic_vector (3 downto 0) := "0000";
     constant FEU_CWD        : std_logic_vector (3 downto 0) := "0001";
@@ -108,22 +109,22 @@ package cpu86_types is
     constant DIVU_DIV       : std_logic_vector (3 downto 0) := "0001";
     constant DIVU_IDIV      : std_logic_vector (3 downto 0) := "0010";
 
-    constant FLAG_15            : natural := 15;
-    constant FLAG_14            : natural := 14;
-    constant FLAG_13            : natural := 13;
-    constant FLAG_12            : natural := 12;
-    constant FLAG_OF            : natural := 11;
-    constant FLAG_DF            : natural := 10;
-    constant FLAG_IF            : natural := 9;
-    constant FLAG_TF            : natural := 8;
-    constant FLAG_SF            : natural := 7;
-    constant FLAG_ZF            : natural := 6;
-    constant FLAG_05            : natural := 5;
-    constant FLAG_AF            : natural := 4;
-    constant FLAG_03            : natural := 3;
-    constant FLAG_PF            : natural := 2;
-    constant FLAG_01            : natural := 1;
-    constant FLAG_CF            : natural := 0;
+    constant FLAG_15        : natural := 15;
+    constant FLAG_14        : natural := 14;
+    constant FLAG_13        : natural := 13;
+    constant FLAG_12        : natural := 12;
+    constant FLAG_OF        : natural := 11;
+    constant FLAG_DF        : natural := 10;
+    constant FLAG_IF        : natural := 9;
+    constant FLAG_TF        : natural := 8;
+    constant FLAG_SF        : natural := 7;
+    constant FLAG_ZF        : natural := 6;
+    constant FLAG_05        : natural := 5;
+    constant FLAG_AF        : natural := 4;
+    constant FLAG_03        : natural := 3;
+    constant FLAG_PF        : natural := 2;
+    constant FLAG_01        : natural := 1;
+    constant FLAG_CF        : natural := 0;
 
     constant DECODED_INSTR_T_WIDTH : integer := 86;
 
@@ -201,6 +202,17 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
+    subtype user_t is std_logic_vector(47 downto 0);
+    subtype USER_T_IP is natural range 47 downto 32;
+    subtype USER_T_CS is natural range 31 downto 16;
+    subtype USER_T_IP_NEXT is natural range 15 downto 0;
+
+    subtype div_intr_t is std_logic_vector(63 downto 0);
+    subtype DIV_INTR_T_SS is natural range 63 downto 48;
+    subtype DIV_INTR_T_IP is natural range 47 downto 32;
+    subtype DIV_INTR_T_CS is natural range 31 downto 16;
+    subtype DIV_INTR_T_IP_NEXT is natural range 15 downto 0;
+
     type rr_instr_t is record
         es_seg_val  : std_logic_vector(15 downto 0);
         seg_val     : std_logic_vector(15 downto 0);
@@ -221,7 +233,7 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 9;
+    constant MICRO_OP_CMD_WIDTH : natural := 10;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
@@ -231,6 +243,7 @@ package cpu86_types is
     constant MICRO_OP_CMD_ONE : natural := 6;
     constant MICRO_OP_CMD_BCD : natural := 7;
     constant MICRO_OP_CMD_SHF : natural := 8;
+    constant MICRO_OP_CMD_DIV : natural := 9;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -265,6 +278,10 @@ package cpu86_types is
         div_dmask       : std_logic_vector(1 downto 0);
         div_a_val       : std_logic_vector(31 downto 0);
         div_b_val       : std_logic_vector(15 downto 0);
+        div_ss_val      : std_logic_vector(15 downto 0);
+        div_cs_val      : std_logic_vector(15 downto 0);
+        div_ip_val      : std_logic_vector(15 downto 0);
+        div_ip_next_val : std_logic_vector(15 downto 0);
 
         one_code        : std_logic_vector(3 downto 0);
         one_w           : std_logic;
@@ -361,6 +378,34 @@ package cpu86_types is
         aval            : std_logic_vector(15 downto 0);
         bval            : std_logic_vector(15 downto 0);
         dval            : std_logic_vector(31 downto 0); --dest
+    end record;
+
+    type div_req_t is record
+        code            : std_logic_vector(3 downto 0);
+        w               : std_logic;
+        wb              : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        nval            : std_logic_vector(31 downto 0);
+        dval            : std_logic_vector(15 downto 0);
+        ss_val          : std_logic_vector(15 downto 0);
+        cs_val          : std_logic_vector(15 downto 0);
+        ip_val          : std_logic_vector(15 downto 0);
+        ip_next_val     : std_logic_vector(15 downto 0);
+    end record;
+
+    type div_res_t is record
+        code            : std_logic_vector(3 downto 0);
+        w               : std_logic;
+        dreg            : reg_t;
+        dmask           : std_logic_vector(1 downto 0);
+        qval            : std_logic_vector(15 downto 0); --quotient
+        rval            : std_logic_vector(15 downto 0); --remainder
+        overflow        : std_logic;
+        ss_val          : std_logic_vector(15 downto 0);
+        cs_val          : std_logic_vector(15 downto 0);
+        ip_val          : std_logic_vector(15 downto 0);
+        ip_next_val     : std_logic_vector(15 downto 0);
     end record;
 
     type one_req_t is record

@@ -12,7 +12,7 @@ entity exec is
         instr_s_tvalid              : in std_logic;
         instr_s_tready              : out std_logic;
         instr_s_tdata               : in decoded_instr_t;
-        instr_s_tuser               : in std_logic_vector(31 downto 0);
+        instr_s_tuser               : in user_t;
 
         req_m_tvalid                : out std_logic;
         req_m_tdata                 : out std_logic_vector(31 downto 0);
@@ -74,26 +74,26 @@ architecture rtl of exec is
 
     component cpu_reg_acc is
         generic (
-            DATA_WIDTH          : integer := 16
+            DATA_WIDTH              : integer := 16
         );
         port (
-            clk                 : in std_logic;
-            resetn              : in std_logic;
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
 
-            wr_s_tvalid         : in std_logic;
-            wr_s_tdata          : in std_logic_vector(DATA_WIDTH-1 downto 0);
-            wr_s_tmask          : in std_logic_vector(1 downto 0);
+            wr_s_tvalid             : in std_logic;
+            wr_s_tdata              : in std_logic_vector(DATA_WIDTH-1 downto 0);
+            wr_s_tmask              : in std_logic_vector(1 downto 0);
 
-            inc_s_tvalid        : in std_logic;
-            inc_s_tdata         : in std_logic_vector(15 downto 0);
-            inc_s_tkeep_lock    : in std_logic;
+            inc_s_tvalid            : in std_logic;
+            inc_s_tdata             : in std_logic_vector(15 downto 0);
+            inc_s_tkeep_lock        : in std_logic;
 
-            lock_s_tvalid       : in std_logic;
-            unlk_s_tvalid       : in std_logic;
+            lock_s_tvalid           : in std_logic;
+            unlk_s_tvalid           : in std_logic;
 
-            reg_m_tvalid        : out std_logic;
-            reg_m_tdata         : out std_logic_vector(DATA_WIDTH-1 downto 0);
-            reg_m_tdata_next    : out std_logic_vector(DATA_WIDTH-1 downto 0)
+            reg_m_tvalid            : out std_logic;
+            reg_m_tdata             : out std_logic_vector(DATA_WIDTH-1 downto 0);
+            reg_m_tdata_next        : out std_logic_vector(DATA_WIDTH-1 downto 0)
         );
     end component cpu_reg_acc;
 
@@ -141,7 +141,7 @@ architecture rtl of exec is
             instr_s_tvalid          : in std_logic;
             instr_s_tready          : out std_logic;
             instr_s_tdata           : in decoded_instr_t;
-            instr_s_tuser           : in std_logic_vector(31 downto 0);
+            instr_s_tuser           : in user_t;
 
             ds_s_tvalid             : in std_logic;
             ds_s_tdata              : in std_logic_vector(15 downto 0);
@@ -194,7 +194,7 @@ architecture rtl of exec is
             rr_m_tvalid             : out std_logic;
             rr_m_tready             : in std_logic;
             rr_m_tdata              : out rr_instr_t;
-            rr_m_tuser              : out std_logic_vector(31 downto 0)
+            rr_m_tuser              : out user_t
         );
     end component register_reader;
 
@@ -208,7 +208,11 @@ architecture rtl of exec is
             rr_s_tvalid             : in std_logic;
             rr_s_tready             : out std_logic;
             rr_s_tdata              : in rr_instr_t;
-            rr_s_tuser              : in std_logic_vector(31 downto 0);
+            rr_s_tuser              : in user_t;
+
+            div_intr_s_tvalid       : in std_logic;
+            div_intr_s_tready       : out std_logic;
+            div_intr_s_tdata        : in div_intr_t;
 
             micro_m_tvalid          : out std_logic;
             micro_m_tready          : in std_logic;
@@ -333,7 +337,10 @@ architecture rtl of exec is
             lsu_req_m_tdata         : out std_logic_vector(15 downto 0);
 
             dbg_m_tvalid            : out std_logic;
-            dbg_m_tdata             : out std_logic_vector(31 downto 0)
+            dbg_m_tdata             : out std_logic_vector(31 downto 0);
+
+            div_intr_m_tvalid       : out std_logic;
+            div_intr_m_tdata        : out div_intr_t
         );
     end component mexec;
 
@@ -484,7 +491,7 @@ architecture rtl of exec is
     signal rr_tvalid                : std_logic;
     signal rr_tready                : std_logic;
     signal rr_tdata                 : rr_instr_t;
-    signal rr_tuser                 : std_logic_vector(31 downto 0);
+    signal rr_tuser                 : user_t;
 
     signal micro_tvalid             : std_logic;
     signal micro_tready             : std_logic;
@@ -578,25 +585,24 @@ architecture rtl of exec is
     signal dcache_tvalid            : std_logic;
     signal dcache_tdata             : std_logic_vector(15 downto 0);
 
-    signal fifo_instr_s_tvalid      : std_logic;
-    signal fifo_instr_s_tready      : std_logic;
-    signal fifo_instr_s_tdata       : std_logic_vector(DECODED_INSTR_T_WIDTH+32-1 downto 0);
+    signal fifo_instr_s_tdata       : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
+    signal fifo_instr_m_tdata       : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
 
-    signal fifo_instr_m_tvalid      : std_logic;
-    signal fifo_instr_m_tready      : std_logic;
-    signal fifo_instr_m_tdata       : std_logic_vector(DECODED_INSTR_T_WIDTH+32-1 downto 0);
-
-    signal reg_instr_m_tvalid       : std_logic;
-    signal reg_instr_m_tready       : std_logic;
-    signal reg_instr_m_tdata        : std_logic_vector(DECODED_INSTR_T_WIDTH+32-1 downto 0);
-
-    signal instr_tvalid             : std_logic;
-    signal instr_tready             : std_logic;
-    signal instr_tdata              : decoded_instr_t;
-    signal instr_tuser              : std_logic_vector(31 downto 0);
+    signal instr_m_tvalid           : std_logic;
+    signal instr_m_tready           : std_logic;
+    signal instr_m_tdata            : decoded_instr_t;
+    signal instr_m_tuser            : user_t;
 
     signal mexec_dbg_tvalid         : std_logic;
     signal mexec_dbg_tdata          : std_logic_vector(31 downto 0);
+
+    signal div_intr_s_tvalid        : std_logic;
+    signal div_intr_s_tready        : std_logic;
+    signal div_intr_s_tdata         : div_intr_t;
+
+    signal div_intr_m_tvalid        : std_logic;
+    signal div_intr_m_tready        : std_logic;
+    signal div_intr_m_tdata         : div_intr_t;
 
 begin
 
@@ -861,62 +867,68 @@ begin
         reg_m_tdata             => flags_tdata
     );
 
+    div_interrupt_reg_inst : axis_reg generic map (
+        DATA_WIDTH              => div_intr_s_tdata'length
+    ) port map (
+        clk                     => clk,
+        resetn                  => resetn,
 
-    fifo_instr_s_tvalid <= instr_s_tvalid;
-    instr_s_tready <= fifo_instr_s_tready;
-    fifo_instr_s_tdata(DECODED_INSTR_T_WIDTH+32-1 downto 32) <= decoded_instr_t_to_slv(instr_s_tdata);
-    fifo_instr_s_tdata(31 downto 0) <= instr_s_tuser;
+        in_s_tvalid             => div_intr_s_tvalid,
+        in_s_tready             => div_intr_s_tready,
+        in_s_tdata              => div_intr_s_tdata,
+
+        out_m_tvalid            => div_intr_m_tvalid,
+        out_m_tready            => div_intr_m_tready,
+        out_m_tdata             => div_intr_m_tdata
+
+    );
+
+    fifo_instr_s_tdata <= decoded_instr_t_to_slv(instr_s_tdata);
 
     axis_fifo_inst_0 : axis_fifo generic map (
         FIFO_DEPTH              => 16,
-        FIFO_WIDTH              => DECODED_INSTR_T_WIDTH + 32,
+        FIFO_WIDTH              => DECODED_INSTR_T_WIDTH,
         REGISTER_OUTPUT         => '1'
     ) port map (
         clk                     => clk,
         resetn                  => exec_resetn,
 
-        fifo_s_tvalid           => fifo_instr_s_tvalid,
-        fifo_s_tready           => fifo_instr_s_tready,
+        fifo_s_tvalid           => instr_s_tvalid,
+        fifo_s_tready           => instr_s_tready,
         fifo_s_tdata            => fifo_instr_s_tdata,
 
-        fifo_m_tvalid           => fifo_instr_m_tvalid,
-        fifo_m_tready           => fifo_instr_m_tready,
+        fifo_m_tvalid           => instr_m_tvalid,
+        fifo_m_tready           => instr_m_tready,
         fifo_m_tdata            => fifo_instr_m_tdata
     );
 
-    -- axis_reg_0 : axis_reg generic map (
-    --     DATA_WIDTH              => DECODED_INSTR_T_WIDTH + 32
-    -- ) port map (
-    --     clk                     => clk,
-    --     resetn                  => exec_resetn,
+    axis_fifo_inst_1 : axis_fifo generic map (
+        FIFO_DEPTH              => 16,
+        FIFO_WIDTH              => 48,
+        REGISTER_OUTPUT         => '1'
+    ) port map (
+        clk                     => clk,
+        resetn                  => exec_resetn,
 
-    --     in_s_tvalid             => fifo_instr_m_tvalid,
-    --     in_s_tready             => fifo_instr_m_tready,
-    --     in_s_tdata              => fifo_instr_m_tdata,
+        fifo_s_tvalid           => instr_s_tvalid and instr_s_tready,
+        fifo_s_tready           => open,
+        fifo_s_tdata            => instr_s_tuser,
 
-    --     out_m_tvalid            => reg_instr_m_tvalid,
-    --     out_m_tready            => reg_instr_m_tready,
-    --     out_m_tdata             => reg_instr_m_tdata
-    -- );
+        fifo_m_tvalid           => open,
+        fifo_m_tready           => instr_m_tready,
+        fifo_m_tdata            => instr_m_tuser
+    );
 
-    -- instr_tvalid <= reg_instr_m_tvalid;
-    -- reg_instr_m_tready <= instr_tready;
-    -- instr_tdata <= slv_to_decoded_instr_t(reg_instr_m_tdata(DECODED_INSTR_T_WIDTH+32-1 downto 32));
-    -- instr_tuser <= reg_instr_m_tdata(31 downto 0);
-
-    instr_tvalid <= fifo_instr_m_tvalid;
-    fifo_instr_m_tready <= instr_tready;
-    instr_tdata <= slv_to_decoded_instr_t(fifo_instr_m_tdata(DECODED_INSTR_T_WIDTH+32-1 downto 32));
-    instr_tuser <= fifo_instr_m_tdata(31 downto 0);
+    instr_m_tdata <= slv_to_decoded_instr_t(fifo_instr_m_tdata);
 
     register_reader_inst : register_reader port map (
         clk                     => clk,
         resetn                  => exec_resetn,
 
-        instr_s_tvalid          => instr_tvalid,
-        instr_s_tready          => instr_tready,
-        instr_s_tdata           => instr_tdata,
-        instr_s_tuser           => instr_tuser,
+        instr_s_tvalid          => instr_m_tvalid,
+        instr_s_tready          => instr_m_tready,
+        instr_s_tdata           => instr_m_tdata,
+        instr_s_tuser           => instr_m_tuser,
 
         ds_s_tvalid             => ds_tvalid,
         ds_s_tdata              => ds_tdata,
@@ -983,6 +995,10 @@ begin
         rr_s_tready             => rr_tready,
         rr_s_tdata              => rr_tdata,
         rr_s_tuser              => rr_tuser,
+
+        div_intr_s_tvalid       => div_intr_m_tvalid,
+        div_intr_s_tready       => div_intr_m_tready,
+        div_intr_s_tdata        => div_intr_m_tdata,
 
         micro_m_tvalid          => micro_tvalid,
         micro_m_tready          => micro_tready,
@@ -1107,7 +1123,11 @@ begin
         lsu_req_m_tdata         => lsu_req_tdata,
 
         dbg_m_tvalid            => mexec_dbg_tvalid,
-        dbg_m_tdata             => mexec_dbg_tdata
+        dbg_m_tdata             => mexec_dbg_tdata,
+
+        div_intr_m_tvalid       => div_intr_s_tvalid,
+        div_intr_m_tdata        => div_intr_s_tdata
+
     );
 
     lsu_inst : lsu port map (

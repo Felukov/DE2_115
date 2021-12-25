@@ -12,7 +12,7 @@ entity register_reader is
         instr_s_tvalid          : in std_logic;
         instr_s_tready          : out std_logic;
         instr_s_tdata           : in decoded_instr_t;
-        instr_s_tuser           : in std_logic_vector(31 downto 0);
+        instr_s_tuser           : in user_t;
 
         ds_s_tvalid             : in std_logic;
         ds_s_tdata              : in std_logic_vector(15 downto 0);
@@ -65,7 +65,7 @@ entity register_reader is
         rr_m_tvalid             : out std_logic;
         rr_m_tready             : in std_logic;
         rr_m_tdata              : out rr_instr_t;
-        rr_m_tuser              : out std_logic_vector(31 downto 0)
+        rr_m_tuser              : out user_t
     );
 end entity register_reader;
 
@@ -74,12 +74,12 @@ architecture rtl of register_reader is
     signal instr_tvalid         : std_logic;
     signal instr_tready         : std_logic;
     signal instr_tdata          : decoded_instr_t;
-    signal instr_tuser          : std_logic_vector(31 downto 0);
+    signal instr_tuser          : user_t;
 
     signal rr_tvalid            : std_logic;
     signal rr_tready            : std_logic;
     signal rr_tdata             : rr_instr_t;
-    signal rr_tuser             : std_logic_vector(31 downto 0);
+    signal rr_tuser             : user_t;
 
     signal seg_tdata            : std_logic_vector(15 downto 0);
     signal sreg_tdata           : std_logic_vector(15 downto 0);

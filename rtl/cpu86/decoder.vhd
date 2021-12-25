@@ -18,7 +18,7 @@ entity decoder is
         instr_m_tvalid      : out std_logic;
         instr_m_tready      : in std_logic;
         instr_m_tdata       : out decoded_instr_t;
-        instr_m_tuser       : out std_logic_vector(31 downto 0)
+        instr_m_tuser       : out user_t
     );
 end entity decoder;
 
@@ -56,7 +56,7 @@ architecture rtl of decoder is
     signal instr_tvalid         : std_logic;
     signal instr_tready         : std_logic;
     signal instr_tdata          : decoded_instr_t;
-    signal instr_tuser          : std_logic_vector(31 downto 0);
+    signal instr_tuser          : user_t;
 
     signal byte0                : std_logic_vector(7 downto 0);
     signal byte1                : std_logic_vector(7 downto 0);
@@ -372,13 +372,17 @@ begin
             end if;
 
             if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
-                instr_tuser(31 downto 16) <= u8_s_tuser(31 downto 16);
+                instr_tuser(USER_T_IP) <= u8_s_tuser(15 downto 0);
             end if;
 
             if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
-                instr_tuser(15 downto 0) <= std_logic_vector(unsigned(u8_s_tuser(15 downto 0)) + to_unsigned(1, 16));
+                instr_tuser(USER_T_CS) <= u8_s_tuser(31 downto 16);
+            end if;
+
+            if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
+                instr_tuser(USER_T_IP_NEXT) <= std_logic_vector(unsigned(u8_s_tuser(15 downto 0)) + to_unsigned(1, 16));
             elsif (u8_tvalid = '1' and u8_tready = '1') then
-                instr_tuser(15 downto 0) <= std_logic_vector(unsigned(instr_tuser(15 downto 0)) + to_unsigned(1, 16));
+                instr_tuser(USER_T_IP_NEXT) <= std_logic_vector(unsigned(instr_tuser(15 downto 0)) + to_unsigned(1, 16));
             end if;
 
         end if;
@@ -1109,6 +1113,8 @@ begin
                     when "110" =>
                         if (u8_tdata(7 downto 6) /= "00") then
                             instr_tdata.wait_bp <= '1'; instr_tdata.wait_ss <= '1';
+                        else
+                            instr_tdata.wait_ds <= '1';
                         end if;
                     when "111" => instr_tdata.wait_bx <= '1'; instr_tdata.wait_ds <= '1';
                     when others => null;
@@ -1534,6 +1540,20 @@ begin
             lock_fl('1');
         end procedure;
 
+        procedure decode_f6_f7_div_op(code : std_logic_vector; w: std_logic) is begin
+            instr_tdata.op <= DIVU;
+            instr_tdata.code <= code;
+            instr_tdata.wait_ax <= '1';
+            instr_tdata.wait_dx <= w;
+
+            if (w = '1') then
+                lock_ax_dreg_only;
+            else
+                lock_dreg_only;
+            end if;
+            lock_fl('0');
+        end procedure;
+
         procedure decode_f6(w : std_logic) is begin
             instr_tdata.w <= w;
             case u8_tdata(5 downto 3) is
@@ -1543,8 +1563,8 @@ begin
                 when "011" => decode_f6_one_op(ONEU, ONE_OP_NEG);
                 when "100" => decode_f6_f7_mul_op(MUL_AXDX, w);
                 when "101" => decode_f6_f7_mul_op(IMUL_AXDX, w);
-                when "110" => null;
-                when "111" => null;
+                when "110" => decode_f6_f7_div_op(DIVU_DIV, w);
+                when "111" => decode_f6_f7_div_op(DIVU_IDIV, w);
                 when others => null;
             end case;
         end;
@@ -1558,8 +1578,8 @@ begin
                 when "011" => decode_f7_one_op(ONEU, ONE_OP_NEG);
                 when "100" => decode_f6_f7_mul_op(MUL_AXDX, w);
                 when "101" => decode_f6_f7_mul_op(IMUL_AXDX, w);
-                when "110" => null;
-                when "111" => null;
+                when "110" => decode_f6_f7_div_op(DIVU_DIV, w);
+                when "111" => decode_f6_f7_div_op(DIVU_IDIV, w);
                 when others => null;
             end case;
         end;
@@ -2113,10 +2133,9 @@ begin
                                 end case;
 
                             when "100" => null;
-                            when "101" =>
-                                instr_tdata.dreg <= AX;
-                            when "110" => null;
-                            when "111" => null;
+                            when "101" => instr_tdata.dreg <= AX;
+                            when "110" => instr_tdata.dreg <= AX;
+                            when "111" => instr_tdata.dreg <= AX;
                             when others => null;
                         end case;
 
@@ -2142,10 +2161,9 @@ begin
                                 end case;
 
                             when "100" => null;
-                            when "101" =>
-                                instr_tdata.dreg <= DX;
-                            when "110" => null;
-                            when "111" => null;
+                            when "101" => instr_tdata.dreg <= DX;
+                            when "110" => instr_tdata.dreg <= DX;
+                            when "111" => instr_tdata.dreg <= DX;
                             when others => null;
                         end case;
                         instr_tdata.dmask <= "11";

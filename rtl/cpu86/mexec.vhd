@@ -76,7 +76,10 @@ entity mexec is
         lsu_req_m_tdata         : out std_logic_vector(15 downto 0);
 
         dbg_m_tvalid            : out std_logic;
-        dbg_m_tdata             : out std_logic_vector(31 downto 0)
+        dbg_m_tdata             : out std_logic_vector(31 downto 0);
+
+        div_intr_m_tvalid       : out std_logic;
+        div_intr_m_tdata        : out div_intr_t
     );
 end entity mexec;
 
@@ -93,77 +96,90 @@ architecture rtl of mexec is
 
     component mexec_alu is
         port (
-            clk             : in std_logic;
-            resetn          : in std_logic;
+            clk                 : in std_logic;
+            resetn              : in std_logic;
 
-            req_s_tvalid    : in std_logic;
-            req_s_tdata     : in alu_req_t;
-            req_s_tuser     : in std_logic;
+            req_s_tvalid        : in std_logic;
+            req_s_tdata         : in alu_req_t;
+            req_s_tuser         : in std_logic;
 
-            res_m_tvalid    : out std_logic;
-            res_m_tdata     : out alu_res_t;
-            res_m_tuser     : out std_logic_vector(15 downto 0)
+            res_m_tvalid        : out std_logic;
+            res_m_tdata         : out alu_res_t;
+            res_m_tuser         : out std_logic_vector(15 downto 0)
         );
     end component mexec_alu;
 
     component mexec_mul is
         port (
-            clk             : in std_logic;
-            resetn          : in std_logic;
+            clk                 : in std_logic;
+            resetn              : in std_logic;
 
-            req_s_tvalid    : in std_logic;
-            req_s_tdata     : in mul_req_t;
+            req_s_tvalid        : in std_logic;
+            req_s_tdata         : in mul_req_t;
 
-            res_m_tvalid    : out std_logic;
-            res_m_tdata     : out mul_res_t;
-            res_m_tuser     : out std_logic_vector(15 downto 0)
+            res_m_tvalid        : out std_logic;
+            res_m_tdata         : out mul_res_t;
+            res_m_tuser         : out std_logic_vector(15 downto 0)
         );
     end component mexec_mul;
 
+    component mexec_div is
+        port (
+            clk                 : in std_logic;
+            resetn              : in std_logic;
+
+            req_s_tvalid        : in std_logic;
+            req_s_tdata         : in div_req_t;
+
+            res_m_tvalid        : out std_logic;
+            res_m_tdata         : out div_res_t
+        );
+    end component mexec_div;
+
     component mexec_one is
         port (
-            clk             : in std_logic;
-            resetn          : in std_logic;
+            clk                 : in std_logic;
+            resetn              : in std_logic;
 
-            req_s_tvalid    : in std_logic;
-            req_s_tdata     : in one_req_t;
+            req_s_tvalid        : in std_logic;
+            req_s_tdata         : in one_req_t;
 
-            res_m_tvalid    : out std_logic;
-            res_m_tdata     : out one_res_t;
-            res_m_tuser     : out std_logic_vector(15 downto 0)
+            res_m_tvalid        : out std_logic;
+            res_m_tdata         : out one_res_t;
+            res_m_tuser         : out std_logic_vector(15 downto 0)
         );
     end component mexec_one;
 
     component mexec_bcd is
         port (
-            clk             : in std_logic;
-            resetn          : in std_logic;
+            clk                 : in std_logic;
+            resetn              : in std_logic;
 
-            req_s_tvalid    : in std_logic;
-            req_s_tdata     : in bcd_req_t;
-            req_s_tuser     : in std_logic_vector(15 downto 0);
+            req_s_tvalid        : in std_logic;
+            req_s_tdata         : in bcd_req_t;
+            req_s_tuser         : in std_logic_vector(15 downto 0);
 
-            res_m_tvalid    : out std_logic;
-            res_m_tdata     : out bcd_res_t;
-            res_m_tuser     : out std_logic_vector(15 downto 0)
+            res_m_tvalid        : out std_logic;
+            res_m_tdata         : out bcd_res_t;
+            res_m_tuser         : out std_logic_vector(15 downto 0)
         );
     end component mexec_bcd;
 
     component mexec_shf is
         generic (
-            DATA_WIDTH      : natural := 16
+            DATA_WIDTH          : natural := 16
         );
         port (
-            clk             : in std_logic;
-            resetn          : in std_logic;
+            clk                 : in std_logic;
+            resetn              : in std_logic;
 
-            req_s_tvalid    : in std_logic;
-            req_s_tdata     : in shf_req_t;
-            req_s_tuser     : in std_logic_vector(15 downto 0);
+            req_s_tvalid        : in std_logic;
+            req_s_tdata         : in shf_req_t;
+            req_s_tuser         : in std_logic_vector(15 downto 0);
 
-            res_m_tvalid    : out std_logic;
-            res_m_tdata     : out shf_res_t;
-            res_m_tuser     : out std_logic_vector(15 downto 0)
+            res_m_tvalid        : out std_logic;
+            res_m_tdata         : out shf_res_t;
+            res_m_tuser         : out std_logic_vector(15 downto 0)
         );
     end component mexec_shf;
 
@@ -176,11 +192,14 @@ architecture rtl of mexec is
 
     signal alu_req_tvalid       : std_logic;
     signal alu_req_tdata        : alu_req_t := (
-        code => (others=>'0'), w => '0',
-        wb => '0', dreg => AX, dmask => "00",
-        upd_fl => '0',
-        aval => (others=>'0'),
-        bval => (others=>'0')
+        code        => (others =>'0'),
+        w           => '0',
+        wb          => '0',
+        dreg        => AX,
+        dmask       => "00",
+        upd_fl      => '0',
+        aval        => (others =>'0'),
+        bval        => (others =>'0')
     );
 
     signal alu_res_tvalid       : std_logic;
@@ -189,21 +208,44 @@ architecture rtl of mexec is
 
     signal mul_req_tvalid       : std_logic;
     signal mul_req_tdata        : mul_req_t := (
-        code => (others=>'0'), w => '0',
-        wb => '0', dreg => AX, dmask => "00",
-        aval => (others=>'0'),
-        bval => (others=>'0')
+        code        => (others => '0'),
+        w           => '0',
+        wb          => '0',
+        dreg        => AX,
+        dmask       => "00",
+        aval        => (others => '0'),
+        bval        => (others => '0')
     );
     signal mul_res_tvalid       : std_logic;
     signal mul_res_tdata        : mul_res_t;
     signal mul_res_tuser        : std_logic_vector(15 downto 0);
 
+    signal div_req_tvalid       : std_logic;
+    signal div_req_tdata        : div_req_t := (
+        code        => (others => '0'),
+        w           => '0',
+        wb          => '0',
+        dreg        => AX,
+        dmask       => "00",
+        nval        => (others => '0'),
+        dval        => (others => '0'),
+        ss_val      => (others => '0'),
+        cs_val      => (others => '0'),
+        ip_val      => (others => '0'),
+        ip_next_val => (others => '0')
+    );
+    signal div_res_tvalid       : std_logic;
+    signal div_res_tdata        : div_res_t;
+
     signal one_req_tvalid       : std_logic;
     signal one_req_tdata        : one_req_t := (
-        code => (others=>'0'), w => '0',
-        wb => '0', dreg => AX, dmask => "00",
-        sval => (others=>'0'),
-        ival => (others=>'0')
+        code        => (others => '0'),
+        w           => '0',
+        wb          => '0',
+        dreg        => AX,
+        dmask       => "00",
+        sval        => (others => '0'),
+        ival        => (others => '0')
     );
     signal one_res_tvalid       : std_logic;
     signal one_res_tdata        : one_res_t;
@@ -211,8 +253,8 @@ architecture rtl of mexec is
 
     signal bcd_req_tvalid       : std_logic;
     signal bcd_req_tdata        : bcd_req_t := (
-        code => (others=>'0'),
-        sval => (others=>'0')
+        code        => (others => '0'),
+        sval        => (others => '0')
     );
     signal bcd_res_tvalid       : std_logic;
     signal bcd_res_tdata        : bcd_res_t;
@@ -232,10 +274,10 @@ architecture rtl of mexec is
 
     signal res_tvalid           : std_logic;
     signal res_tdata            : res_t := (
-        code => (others=>'0'),
-        dmask => (others=>'0'),
-        dval_lo => (others=>'0'),
-        dval_hi => (others=>'0')
+        code        => (others=>'0'),
+        dmask       => (others=>'0'),
+        dval_lo     => (others=>'0'),
+        dval_hi     => (others=>'0')
     );
     signal res_tuser            : std_logic_vector(15 downto 0);
 
@@ -256,12 +298,16 @@ architecture rtl of mexec is
     signal mexec_busy           : std_logic;
     signal mexec_wait_fifo      : std_logic;
     signal mexec_wait_mul       : std_logic;
+    signal mexec_wait_div       : std_logic;
     signal mexec_wait_bcd       : std_logic;
     signal mexec_wait_shf       : std_logic;
     signal mexec_wait_jmp       : std_logic;
 
+    signal mexec_unlk_fl        : std_logic;
+
     signal alu_wait_fifo        : std_logic;
     signal mul_wait_fifo        : std_logic;
+    signal div_wait_fifo        : std_logic;
     signal one_wait_fifo        : std_logic;
     signal shf8_wait_fifo       : std_logic;
     signal shf16_wait_fifo      : std_logic;
@@ -282,7 +328,7 @@ architecture rtl of mexec is
     signal dbg_0_tvalid         : std_logic;
     signal dbg_1_tvalid         : std_logic;
 
-    signal res_tdata_selector   : std_logic_vector(5 downto 0);
+    signal res_tdata_selector   : std_logic_vector(6 downto 0);
 
 begin
 
@@ -309,6 +355,17 @@ begin
         res_m_tvalid    => mul_res_tvalid,
         res_m_tdata     => mul_res_tdata,
         res_m_tuser     => mul_res_tuser
+    );
+
+    mexec_div_inst : mexec_div port map (
+        clk             => clk,
+        resetn          => resetn,
+
+        req_s_tvalid    => div_req_tvalid,
+        req_s_tdata     => div_req_tdata,
+
+        res_m_tvalid    => div_res_tvalid,
+        res_m_tdata     => div_res_tdata
     );
 
     mexec_one_inst : mexec_one port map (
@@ -398,6 +455,7 @@ begin
     micro_tready <= '1' when mexec_busy = '0' and
         mem_wait_alu = '0' and
         mem_wait_one = '0' and
+        mem_wait_shf = '0' and
         --mexec_wait_bcd = '0' and
         --mexec_wait_shf = '0' and
         --mexec_wait_jmp = '0' and
@@ -422,6 +480,11 @@ begin
     si_m_inc_tdata <= micro_tdata.si_inc_data;
     si_m_inc_tkeep_lock <= micro_tdata.si_keep_lock;
 
+    div_intr_m_tvalid <= '1' when div_res_tvalid = '1' and div_res_tdata.overflow = '1' else '0';
+    div_intr_m_tdata(DIV_INTR_T_SS) <= div_res_tdata.ss_val;
+    div_intr_m_tdata(DIV_INTR_T_IP) <= div_res_tdata.cs_val;
+    div_intr_m_tdata(DIV_INTR_T_CS) <= div_res_tdata.ip_val;
+    div_intr_m_tdata(DIV_INTR_T_IP_NEXT) <= div_res_tdata.ip_next_val;
 
     mexec_busy_proc : process (clk) begin
         if rising_edge(clk) then
@@ -429,12 +492,14 @@ begin
                 mexec_busy <= '0';
                 mexec_wait_fifo <= '0';
                 mexec_wait_mul <= '0';
+                mexec_wait_div <= '0';
                 mexec_wait_bcd <= '0';
                 mexec_wait_shf <= '0';
                 mexec_wait_jmp <= '0';
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1') or
+                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_DIV) = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BCD) = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1') or
@@ -443,6 +508,7 @@ begin
                     mexec_busy <= '1';
                 elsif (mexec_busy = '1') then
                     if not (mexec_wait_fifo = '1' xor (lsu_rd_s_tvalid = '1' and mexec_wait_fifo = '1')) and
+                        not (mexec_wait_div = '1' xor div_res_tvalid = '1') and
                         not (mexec_wait_mul = '1' xor mul_res_tvalid = '1') and
                         not (mexec_wait_bcd = '1' xor bcd_res_tvalid = '1') and
                         not (mexec_wait_shf = '1' xor (shf8_res_tvalid = '1' or shf16_res_tvalid = '1')) and
@@ -464,6 +530,12 @@ begin
                     mexec_wait_mul <= '1';
                 elsif (mul_res_tvalid = '1') then
                     mexec_wait_mul <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_DIV) = '1') then
+                    mexec_wait_div <= '1';
+                elsif (div_res_tvalid = '1') then
+                    mexec_wait_div <= '0';
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BCD) = '1') then
@@ -528,6 +600,50 @@ begin
         end if;
     end process;
 
+    div_proc : process (clk) begin
+        if rising_edge(clk) then
+
+            if resetn = '0' then
+                div_req_tvalid <= '0';
+                div_wait_fifo <= '0';
+            else
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_DIV) = '1' and micro_tdata.read_fifo = '0') then
+                    div_req_tvalid <= '1';
+                elsif (div_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    div_req_tvalid <= '1';
+                else
+                    div_req_tvalid <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1') then
+                    if (micro_tdata.cmd(MICRO_OP_CMD_DIV) = '1' AND micro_tdata.read_fifo = '1') then
+                        div_wait_fifo <= '1';
+                    else
+                        div_wait_fifo <= '0';
+                    end if;
+                elsif (div_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    div_wait_fifo <= '0';
+                end if;
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_DIV) = '1') then
+                div_req_tdata.code <= micro_tdata.div_code;
+                div_req_tdata.w <= micro_tdata.div_w;
+                div_req_tdata.nval <= micro_tdata.div_a_val;
+                div_req_tdata.dval <= micro_tdata.div_b_val;
+                div_req_tdata.dreg <= micro_tdata.div_dreg;
+                div_req_tdata.dmask <= micro_tdata.div_dmask;
+                div_req_tdata.ss_val <= micro_tdata.div_ss_val;
+                div_req_tdata.cs_val <= micro_tdata.div_cs_val;
+                div_req_tdata.ip_val <= micro_tdata.div_ip_val;
+                div_req_tdata.ip_next_val <= micro_tdata.div_ip_next_val;
+            elsif (div_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                div_req_tdata.dval <= lsu_rd_s_tdata;
+            end if;
+
+        end if;
+    end process;
+
     bcd_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
@@ -585,7 +701,6 @@ begin
                 one_req_tdata.ival <= micro_tdata.one_ival;
                 one_req_tdata.dreg <= micro_tdata.one_dreg;
                 one_req_tdata.dmask <= micro_tdata.one_dmask;
-
             elsif (one_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 one_req_tdata.sval <= lsu_rd_s_tdata;
             end if;
@@ -744,36 +859,37 @@ begin
     res_tdata_selector(3) <= shf8_res_tvalid;
     res_tdata_selector(4) <= shf16_res_tvalid;
     res_tdata_selector(5) <= mul_res_tvalid;
+    res_tdata_selector(6) <= div_res_tvalid;
 
     res_proc : process (clk) begin
         if rising_edge(clk) then
 
             case res_tdata_selector is
-                when "000010" =>
+                when "0000010" =>
                     res_tdata.code <= one_res_tdata.code;
                     res_tdata.dmask <= one_res_tdata.dmask;
                     res_tdata.dval_lo <= one_res_tdata.dval(15 downto 0);
                     res_tdata.dval_hi <= one_res_tdata.dval(15 downto 0);
                     res_tuser <= one_res_tuser;
-                when "000100" =>
+                when "0000100" =>
                     res_tdata.code <= bcd_res_tdata.code;
                     res_tdata.dmask <= bcd_res_tdata.dmask;
                     res_tdata.dval_lo <= bcd_res_tdata.dval(15 downto 0);
                     res_tdata.dval_hi <= bcd_res_tdata.dval(15 downto 0);
                     res_tuser <= bcd_res_tuser;
-                when "001000" =>
+                when "0001000" =>
                     res_tdata.code <= shf8_res_tdata.code;
                     res_tdata.dmask <= shf8_res_tdata.dmask;
                     res_tdata.dval_lo(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
                     res_tdata.dval_hi(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
                     res_tuser <= shf8_res_tuser;
-                when "010000" =>
+                when "0010000" =>
                     res_tdata.code <= shf16_res_tdata.code;
                     res_tdata.dmask <= shf16_res_tdata.dmask;
                     res_tdata.dval_lo <= shf16_res_tdata.dval(15 downto 0);
                     res_tdata.dval_hi <= shf16_res_tdata.dval(15 downto 0);
                     res_tuser <= shf16_res_tuser;
-                when "100000" =>
+                when "0100000" =>
                     res_tdata.code <= mul_res_tdata.code;
                     res_tdata.dmask <= mul_res_tdata.dmask;
                     res_tdata.dval_lo <= mul_res_tdata.dval(15 downto 0);
@@ -783,6 +899,11 @@ begin
                         res_tdata.dval_hi <= mul_res_tdata.dval(15 downto 0);
                     end if;
                     res_tuser <= mul_res_tuser;
+                when "1000000" =>
+                    res_tdata.code <= div_res_tdata.code;
+                    res_tdata.dmask <= div_res_tdata.dmask;
+                    res_tdata.dval_lo <= div_res_tdata.qval;
+                    res_tdata.dval_hi <= div_res_tdata.rval;
                 when others =>
                     res_tdata.code <= alu_res_tdata.code;
                     res_tdata.dmask <= alu_res_tdata.dmask;
@@ -811,8 +932,8 @@ begin
                 ss_m_wr_tvalid <= '0';
             else
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = AX) or
-                    (mul_res_tvalid = '1' and (mul_res_tdata.dreg = AX or (mul_res_tdata.code = IMUL_AXDX and
-                        mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
+                    (mul_res_tvalid = '1' and (mul_res_tdata.dreg = AX or (mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
+                    (div_res_tvalid = '1' and div_res_tdata.code = DIVU_DIV) or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = AX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = AX) or
                     (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = AX) or
@@ -844,6 +965,7 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = DX) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = DX) or
+                    (div_res_tvalid = '1' and div_res_tdata.code = DIVU_DIV and div_res_tdata.w = '1') or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = DX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = DX) or
                     (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = DX)) then
@@ -897,11 +1019,13 @@ begin
                 else
                     ds_m_wr_tvalid <= '0';
                 end if;
+
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = ES)) then
                     es_m_wr_tvalid <= '1';
                 else
                     es_m_wr_tvalid <= '0';
                 end if;
+
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = SS)) then
                     ss_m_wr_tvalid <= '1';
                 else
@@ -1259,13 +1383,45 @@ begin
         if rising_edge(clk) then
 
             if resetn = '0' then
+                mexec_unlk_fl <= '0';
                 jmp_lock_m_wr_tvalid <= '0';
             else
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.unlk_fl = '1') then
-                    jmp_lock_m_wr_tvalid <= '1';
+
+                if (micro_tvalid = '1' and micro_tready = '1') then
+                    mexec_unlk_fl <= micro_tdata.unlk_fl;
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1') then
+                    if (micro_tdata.read_fifo = '1' or micro_tdata.cmd(MICRO_OP_CMD_DIV) = '1' or
+                        micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1' or micro_tdata.cmd(MICRO_OP_CMD_BCD) = '1' or
+                        micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' or micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1')
+                    then
+                       jmp_lock_m_wr_tvalid <= '0';
+                    else
+                        if (micro_tdata.unlk_fl = '1') then
+                            jmp_lock_m_wr_tvalid <= '1';
+                        else
+                            jmp_lock_m_wr_tvalid <= '0';
+                        end if;
+                    end if;
+                elsif (mexec_busy = '1') then
+                    if not (mexec_wait_fifo = '1' xor (lsu_rd_s_tvalid = '1' and mexec_wait_fifo = '1')) and
+                        not (mexec_wait_div = '1' xor div_res_tvalid = '1') and
+                        not (mexec_wait_mul = '1' xor mul_res_tvalid = '1') and
+                        not (mexec_wait_bcd = '1' xor bcd_res_tvalid = '1') and
+                        not (mexec_wait_shf = '1' xor (shf8_res_tvalid = '1' or shf16_res_tvalid = '1')) and
+                        not (mexec_wait_jmp = '1' xor jmp_tvalid = '1')
+                    then
+                        if (mexec_unlk_fl = '1') then
+                            jmp_lock_m_wr_tvalid <= '1';
+                        else
+                            jmp_lock_m_wr_tvalid <= '0';
+                        end if;
+                    end if;
                 else
                     jmp_lock_m_wr_tvalid <= '0';
                 end if;
+
             end if;
 
         end if;
