@@ -723,7 +723,6 @@ begin
             micro_tdata.div_code <= rr_tdata.code;
             micro_tdata.div_w <= rr_tdata.w;
             micro_tdata.div_dreg <= rr_tdata.dreg;
-            micro_tdata.div_dmask <= rr_tdata.dmask;
 
             micro_tdata.div_ss_val <= rr_tdata.ss_seg_val;
             micro_tdata.div_ip_val <= rr_tuser(47 downto 32);
@@ -751,7 +750,17 @@ begin
                     mem_off;
                     micro_tdata.unlk_fl <= '1';
                     micro_tdata.cmd(MICRO_OP_CMD_DIV) <= '1';
-                    micro_tdata.div_b_val <= rr_tdata.sreg_val;
+
+                    if (rr_tdata.code = DIVU_IDIV) then
+                        if (rr_tdata.w = '1') then
+                            micro_tdata.div_b_val <= rr_tdata.sreg_val;
+                        else
+                            micro_tdata.div_b_val(15 downto 8) <= (others => rr_tdata.sreg_val(7));
+                            micro_tdata.div_b_val(7 downto 0) <= rr_tdata.sreg_val(7 downto 0);
+                        end if;
+                    else
+                        micro_tdata.div_b_val <= rr_tdata.sreg_val;
+                    end if;
 
                 when others => null;
             end case;
@@ -1058,7 +1067,10 @@ begin
 
         procedure do_div_intr_0 is begin
             fl_off; alu_off; jmp_off; dbg_off; mul_off; one_off; bcd_off; shf_off; mem_off; div_off;
-            si_inc_off; di_inc_off; sp_inc_on;
+            si_inc_off; di_inc_off;
+            sp_inc_on;
+            micro_tdata.sp_inc_data <= x"FFFE";
+
             micro_tdata.unlk_fl <= '0';
             micro_tdata.sp_keep_lock <= '1';
         end;
@@ -1714,10 +1726,13 @@ begin
             end if;
 
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
-                rr_tdata_buf.ss_seg_val <= div_intr_s_tdata(63 downto 48);
+                rr_tdata_buf.ss_seg_val <= div_intr_s_tdata(DIV_INTR_T_SS);
                 rr_tdata_buf.op <= SYS;
                 rr_tdata_buf.code <= SYS_DIV_INT_OP;
-                rr_tuser_buf <= div_intr_s_tdata(47 downto 0);
+
+                rr_tuser_buf(USER_T_IP) <= div_intr_s_tdata(DIV_INTR_T_IP);
+                rr_tuser_buf(USER_T_CS) <= div_intr_s_tdata(DIV_INTR_T_CS);
+                rr_tuser_buf(USER_T_IP_NEXT) <= div_intr_s_tdata(DIV_INTR_T_IP_NEXT);
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 rr_tdata_buf <= rr_tdata;
                 rr_tuser_buf <= rr_tuser;

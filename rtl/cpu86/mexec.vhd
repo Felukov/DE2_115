@@ -226,7 +226,6 @@ architecture rtl of mexec is
         w           => '0',
         wb          => '0',
         dreg        => AX,
-        dmask       => "00",
         nval        => (others => '0'),
         dval        => (others => '0'),
         ss_val      => (others => '0'),
@@ -482,8 +481,8 @@ begin
 
     div_intr_m_tvalid <= '1' when div_res_tvalid = '1' and div_res_tdata.overflow = '1' else '0';
     div_intr_m_tdata(DIV_INTR_T_SS) <= div_res_tdata.ss_val;
-    div_intr_m_tdata(DIV_INTR_T_IP) <= div_res_tdata.cs_val;
-    div_intr_m_tdata(DIV_INTR_T_CS) <= div_res_tdata.ip_val;
+    div_intr_m_tdata(DIV_INTR_T_IP) <= div_res_tdata.ip_val;
+    div_intr_m_tdata(DIV_INTR_T_CS) <= div_res_tdata.cs_val;
     div_intr_m_tdata(DIV_INTR_T_IP_NEXT) <= div_res_tdata.ip_next_val;
 
     mexec_busy_proc : process (clk) begin
@@ -632,7 +631,6 @@ begin
                 div_req_tdata.nval <= micro_tdata.div_a_val;
                 div_req_tdata.dval <= micro_tdata.div_b_val;
                 div_req_tdata.dreg <= micro_tdata.div_dreg;
-                div_req_tdata.dmask <= micro_tdata.div_dmask;
                 div_req_tdata.ss_val <= micro_tdata.div_ss_val;
                 div_req_tdata.cs_val <= micro_tdata.div_cs_val;
                 div_req_tdata.ip_val <= micro_tdata.div_ip_val;
@@ -901,8 +899,12 @@ begin
                     res_tuser <= mul_res_tuser;
                 when "1000000" =>
                     res_tdata.code <= div_res_tdata.code;
-                    res_tdata.dmask <= div_res_tdata.dmask;
-                    res_tdata.dval_lo <= div_res_tdata.qval;
+                    res_tdata.dmask <= "11";
+                    if (div_res_tdata.w = '0') then
+                        res_tdata.dval_lo <= div_res_tdata.rval(7 downto 0) & div_res_tdata.qval(7 downto 0);
+                    else
+                        res_tdata.dval_lo <= div_res_tdata.qval;
+                    end if;
                     res_tdata.dval_hi <= div_res_tdata.rval;
                 when others =>
                     res_tdata.code <= alu_res_tdata.code;
@@ -933,7 +935,7 @@ begin
             else
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = AX) or
                     (mul_res_tvalid = '1' and (mul_res_tdata.dreg = AX or (mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
-                    (div_res_tvalid = '1' and div_res_tdata.code = DIVU_DIV) or
+                    (div_res_tvalid = '1' and (div_res_tdata.code = DIVU_DIV or div_res_tdata.code = DIVU_IDIV) and div_res_tdata.overflow = '0') or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = AX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = AX) or
                     (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = AX) or
@@ -965,7 +967,7 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = DX) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = DX) or
-                    (div_res_tvalid = '1' and div_res_tdata.code = DIVU_DIV and div_res_tdata.w = '1') or
+                    (div_res_tvalid = '1' and (div_res_tdata.code = DIVU_DIV or div_res_tdata.code = DIVU_IDIV) and div_res_tdata.w = '1' and div_res_tdata.overflow = '0') or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = DX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = DX) or
                     (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = DX)) then
