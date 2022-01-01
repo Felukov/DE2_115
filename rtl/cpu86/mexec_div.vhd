@@ -215,14 +215,15 @@ begin
                             res_m_tdata.overflow <= '0';
                         end if;
 
-                    else
+                    elsif (res_m_tdata.code = DIVU_DIV) then
 
                         if div_m_tdata(43 downto 32) > x"0FF" or div_m_tuser_dval(7 downto 0) = x"00" then
                             res_m_tdata.overflow <= '1';
                         else
                             res_m_tdata.overflow <= '0';
                         end if;
-
+                    else
+                        res_m_tdata.overflow <= '0';
                     end if;
 
                 else
@@ -235,14 +236,15 @@ begin
                             res_m_tdata.overflow <= '0';
                         end if;
 
-                    else
+                    elsif (res_m_tdata.code = DIVU_DIV) then
 
                         if div_m_tdata(51 downto 32) > x"0FFFF" or div_m_tuser_dval(15 downto 0) = x"0000" then
                             res_m_tdata.overflow <= '1';
                         else
                             res_m_tdata.overflow <= '0';
                         end if;
-
+                    else
+                        res_m_tdata.overflow <= '0';
                     end if;
 
                 end if;
