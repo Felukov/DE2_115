@@ -758,6 +758,8 @@ begin
                             micro_tdata.div_b_val(15 downto 8) <= (others => rr_tdata.sreg_val(7));
                             micro_tdata.div_b_val(7 downto 0) <= rr_tdata.sreg_val(7 downto 0);
                         end if;
+                    elsif rr_tdata.code = DIVU_AAM then
+                        micro_tdata.div_b_val <= rr_tdata.data;
                     else
                         micro_tdata.div_b_val <= rr_tdata.sreg_val;
                     end if;
@@ -820,7 +822,7 @@ begin
 
             micro_tdata.cmd(MICRO_OP_CMD_BCD) <= '1';
             micro_tdata.bcd_code <= rr_tdata.code;
-            micro_tdata.one_sval <= rr_tdata.sreg_val;
+            micro_tdata.bcd_sval <= rr_tdata.sreg_val;
         end procedure;
 
         procedure do_alu_cmd_0 is begin

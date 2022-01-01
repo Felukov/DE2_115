@@ -1170,28 +1170,28 @@ begin
                 when x"23" => set_op(ALU, ALU_OP_AND, '1'); no_lock; no_wait; lock_fl('1');
                 when x"24" => set_op(ALU, ALU_OP_AND, '0'); lock_ax; wait_ax_only; lock_fl('1');
                 when x"25" => set_op(ALU, ALU_OP_AND, '1'); lock_ax; wait_ax_only; lock_fl('1');
-                when x"27" => set_op(BCDU, BCDU_DAA);
+                when x"27" => set_op(BCDU, BCDU_DAA); lock_ax; wait_ax_only; lock_fl('1');
                 when x"28" => set_op(ALU, ALU_OP_SUB, '0'); no_lock; no_wait; lock_fl('1');
                 when x"29" => set_op(ALU, ALU_OP_SUB, '1'); no_lock; no_wait; lock_fl('1');
                 when x"2A" => set_op(ALU, ALU_OP_SUB, '0'); no_lock; no_wait; lock_fl('1');
                 when x"2B" => set_op(ALU, ALU_OP_SUB, '1'); no_lock; no_wait; lock_fl('1');
                 when x"2C" => set_op(ALU, ALU_OP_SUB, '0'); lock_ax; wait_ax_only; lock_fl('1');
                 when x"2D" => set_op(ALU, ALU_OP_SUB, '1'); lock_ax; wait_ax_only; lock_fl('1');
-                when x"2F" => set_op(BCDU, BCDU_DAS);
+                when x"2F" => set_op(BCDU, BCDU_DAS); lock_ax; wait_ax_only; lock_fl('1');
                 when x"30" => set_op(ALU, ALU_OP_XOR, '0'); no_lock; no_wait; lock_fl('1');
                 when x"31" => set_op(ALU, ALU_OP_XOR, '1'); no_lock; no_wait; lock_fl('1');
                 when x"32" => set_op(ALU, ALU_OP_XOR, '0'); no_lock; no_wait; lock_fl('1');
                 when x"33" => set_op(ALU, ALU_OP_XOR, '1'); no_lock; no_wait; lock_fl('1');
                 when x"34" => set_op(ALU, ALU_OP_XOR, '0'); lock_ax; wait_ax_only; lock_fl('1');
                 when x"35" => set_op(ALU, ALU_OP_XOR, '1'); lock_ax; wait_ax_only; lock_fl('1');
-                when x"37" => set_op(BCDU, BCDU_AAA);
+                when x"37" => set_op(BCDU, BCDU_AAA); lock_ax; wait_ax_only; lock_fl('1');
                 when x"38" => set_op(ALU, ALU_OP_CMP, '0'); no_lock; no_wait; lock_fl('1');
                 when x"39" => set_op(ALU, ALU_OP_CMP, '1'); no_lock; no_wait; lock_fl('1');
                 when x"3A" => set_op(ALU, ALU_OP_CMP, '0'); no_lock; no_wait; lock_fl('1');
                 when x"3B" => set_op(ALU, ALU_OP_CMP, '1'); no_lock; no_wait; lock_fl('1');
                 when x"3C" => set_op(ALU, ALU_OP_CMP, '0'); lock_ax; wait_ax_only; lock_fl('1');
                 when x"3D" => set_op(ALU, ALU_OP_CMP, '1'); lock_ax; wait_ax_only; lock_fl('1');
-                when x"3F" => set_op(BCDU, BCDU_AAS);
+                when x"3F" => set_op(BCDU, BCDU_AAS); lock_ax; wait_ax_only; lock_fl('1');
                 when x"26" | x"2E" | x"36" | x"3E" => set_op(SET_SEG); no_lock; no_wait;
 
                 when x"40" => set_op(ALU, ALU_OP_INC, '1'); lock_dreg_only; wait_ax_only; lock_fl('1');
@@ -1322,8 +1322,8 @@ begin
                 when x"D2" => no_lock; no_wait; lock_fl('0');
                 when x"D3" => no_lock; no_wait; lock_fl('0');
 
-                when x"D4" => set_op(BCDU, DIVU_AAM);
-                when x"D5" => set_op(BCDU, BCDU_AAD);
+                when x"D4" => set_op(DIVU, DIVU_AAM, '0'); lock_ax; wait_ax_only; lock_fl('1');
+                when x"D5" => set_op(BCDU, BCDU_AAD); lock_ax; wait_ax_only; lock_fl('1');
                 when x"E2" => set_op(LOOPU, LOOP_OP, '1'); lock_dreg_only; wait_cx_only; lock_fl('0');
 
                 when x"F2" => set_op(REP, REPNZ_OP, '1'); lock_dreg_only; wait_cx_only; lock_fl('0');
@@ -1600,6 +1600,22 @@ begin
                 when "111" => instr_tdata.code <= ALU_OP_CMP;
                 when others => null;
             end case;
+
+            if (u8_tdata(7 downto 6) = "11") then
+                case u8_tdata_rm is
+                    when "000" => instr_tdata.wait_ax <= '1';
+                    when "001" => instr_tdata.wait_cx <= '1';
+                    when "010" => instr_tdata.wait_dx <= '1';
+                    when "011" => instr_tdata.wait_bx <= '1';
+                    when "100" => instr_tdata.wait_sp <= '1';
+                    when "101" => instr_tdata.wait_bp <= '1';
+                    when "110" => instr_tdata.wait_si <= '1';
+                    when "111" => instr_tdata.wait_di <= '1';
+                    when others => null;
+                end case;
+
+                lock_dreg_only;
+            end if;
         end;
 
         procedure decode_op_mod_aux_rm is begin

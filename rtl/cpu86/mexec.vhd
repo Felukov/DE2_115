@@ -132,7 +132,8 @@ architecture rtl of mexec is
             req_s_tdata         : in div_req_t;
 
             res_m_tvalid        : out std_logic;
-            res_m_tdata         : out div_res_t
+            res_m_tdata         : out div_res_t;
+            res_m_tuser         : out std_logic_vector(15 downto 0)
         );
     end component mexec_div;
 
@@ -235,6 +236,7 @@ architecture rtl of mexec is
     );
     signal div_res_tvalid       : std_logic;
     signal div_res_tdata        : div_res_t;
+    signal div_res_tuser        : std_logic_vector(15 downto 0);
 
     signal one_req_tvalid       : std_logic;
     signal one_req_tdata        : one_req_t := (
@@ -364,7 +366,8 @@ begin
         req_s_tdata     => div_req_tdata,
 
         res_m_tvalid    => div_res_tvalid,
-        res_m_tdata     => div_res_tdata
+        res_m_tdata     => div_res_tdata,
+        res_m_tuser     => div_res_tuser
     );
 
     mexec_one_inst : mexec_one port map (
@@ -900,12 +903,17 @@ begin
                 when "1000000" =>
                     res_tdata.code <= div_res_tdata.code;
                     res_tdata.dmask <= "11";
-                    if (div_res_tdata.w = '0') then
-                        res_tdata.dval_lo <= div_res_tdata.rval(7 downto 0) & div_res_tdata.qval(7 downto 0);
+                    if (div_res_tdata.code = DIVU_AAM) then
+                        res_tdata.dval_lo <= div_res_tdata.qval(7 downto 0) & div_res_tdata.rval(7 downto 0);
                     else
-                        res_tdata.dval_lo <= div_res_tdata.qval;
+                        if (div_res_tdata.w = '0') then
+                            res_tdata.dval_lo <= div_res_tdata.rval(7 downto 0) & div_res_tdata.qval(7 downto 0);
+                        else
+                            res_tdata.dval_lo <= div_res_tdata.qval;
+                        end if;
                     end if;
                     res_tdata.dval_hi <= div_res_tdata.rval;
+                    res_tuser <= div_res_tuser;
                 when others =>
                     res_tdata.code <= alu_res_tdata.code;
                     res_tdata.dmask <= alu_res_tdata.dmask;
@@ -935,7 +943,7 @@ begin
             else
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = AX) or
                     (mul_res_tvalid = '1' and (mul_res_tdata.dreg = AX or (mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
-                    (div_res_tvalid = '1' and (div_res_tdata.code = DIVU_DIV or div_res_tdata.code = DIVU_IDIV) and div_res_tdata.overflow = '0') or
+                    (div_res_tvalid = '1' and div_res_tdata.overflow = '0') or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = AX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = AX) or
                     (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = AX) or
@@ -1050,7 +1058,8 @@ begin
                     flags_m_wr_tvalid <= '1';
                 elsif ((alu_res_tvalid = '1' and alu_res_tdata.upd_fl = '1') or
                        mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1' or
-                       shf8_res_tvalid = '1' or shf16_res_tvalid = '1') then
+                       shf8_res_tvalid = '1' or shf16_res_tvalid = '1' or
+                       (div_res_tvalid = '1' and div_res_tdata.code = DIVU_AAM)) then
                     flags_m_wr_tvalid <= '1';
                 else
                     flags_m_wr_tvalid <= '0';
@@ -1157,6 +1166,25 @@ begin
                         when others =>
                             flags_wr_be <= (others => '0');
                     end case;
+                elsif (div_res_tvalid = '1') then
+                    if (div_res_tdata.code = DIVU_AAM) then
+                            flags_wr_be(FLAG_15) <= '0';
+                            flags_wr_be(FLAG_14) <= '0';
+                            flags_wr_be(FLAG_13) <= '0';
+                            flags_wr_be(FLAG_12) <= '0';
+                            flags_wr_be(FLAG_OF) <= '0';
+                            flags_wr_be(FLAG_DF) <= '0';
+                            flags_wr_be(FLAG_IF) <= '0';
+                            flags_wr_be(FLAG_TF) <= '0';
+                            flags_wr_be(FLAG_SF) <= '1';
+                            flags_wr_be(FLAG_ZF) <= '1';
+                            flags_wr_be(FLAG_05) <= '0';
+                            flags_wr_be(FLAG_AF) <= '0';
+                            flags_wr_be(FLAG_03) <= '0';
+                            flags_wr_be(FLAG_PF) <= '1';
+                            flags_wr_be(FLAG_01) <= '0';
+                            flags_wr_be(FLAG_CF) <= '0';
+                    end if;
                 elsif (bcd_res_tvalid = '1') then
                     case (bcd_res_tdata.code) is
                         when BCDU_AAA | BCDU_AAS =>
@@ -1205,7 +1233,7 @@ begin
                             flags_wr_be(FLAG_SF) <= '1';
                             flags_wr_be(FLAG_ZF) <= '1';
                             flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '0';
+                            flags_wr_be(FLAG_AF) <= '1';
                             flags_wr_be(FLAG_03) <= '0';
                             flags_wr_be(FLAG_PF) <= '1';
                             flags_wr_be(FLAG_01) <= '0';
@@ -1321,7 +1349,7 @@ begin
                     flags_src <= RES_USER;
                 end if;
             elsif (mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1' or
-                   shf8_res_tvalid = '1' or shf16_res_tvalid = '1') then
+                   shf8_res_tvalid = '1' or shf16_res_tvalid = '1' or div_req_tvalid = '1') then
                 flags_src <= RES_USER;
             end if;
 

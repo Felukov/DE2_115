@@ -67,7 +67,7 @@ architecture rtl of mexec_div is
 
     signal div_m_tuser_dval     : std_logic_vector(15 downto 0);
 
-    signal flags_cf_of          : std_logic;
+    signal flags_zf             : std_logic;
     signal flags_pf             : std_logic;
     signal flags_sf             : std_logic;
 
@@ -79,27 +79,26 @@ begin
     res_m_tuser(FLAG_14) <= '0';
     res_m_tuser(FLAG_13) <= '0';
     res_m_tuser(FLAG_12) <= '0';
-    res_m_tuser(FLAG_OF) <= flags_cf_of;
+    res_m_tuser(FLAG_OF) <= '0';
     res_m_tuser(FLAG_DF) <= '0';
     res_m_tuser(FLAG_IF) <= '0';
     res_m_tuser(FLAG_TF) <= '0';
     res_m_tuser(FLAG_SF) <= flags_sf;
-    res_m_tuser(FLAG_ZF) <= '0';
+    res_m_tuser(FLAG_ZF) <= flags_zf;
     res_m_tuser(FLAG_05) <= '0';
     res_m_tuser(FLAG_AF) <= '0';
     res_m_tuser(FLAG_03) <= '0';
     res_m_tuser(FLAG_PF) <= flags_pf;
     res_m_tuser(FLAG_01) <= '0';
-    res_m_tuser(FLAG_CF) <= flags_cf_of;
+    res_m_tuser(FLAG_CF) <= '0';
 
     process (all) begin
         -- only for AAM instruction
 
-        if (res_m_tdata.rval(15 downto 8) = x"FF" and res_m_tdata.rval(7) = '1') or
-            (res_m_tdata.rval(15 downto 8) = x"00" and res_m_tdata.rval(7) = '0') then
-            flags_cf_of <= '0';
+        if res_m_tdata.rval(7 downto 0) = x"00" then
+            flags_zf <= '1';
         else
-            flags_cf_of <= '1';
+            flags_zf <= '0';
         end if;
 
         flags_pf <= not (res_m_tdata.rval(7) xor res_m_tdata.rval(6) xor res_m_tdata.rval(5) xor res_m_tdata.rval(4) xor

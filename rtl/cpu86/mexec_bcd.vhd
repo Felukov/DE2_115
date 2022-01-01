@@ -23,11 +23,11 @@ architecture rtl of mexec_bcd is
 
     signal calc_0_tvalid    : std_logic;
     signal calc_0_tdata     : std_logic_vector(15 downto 0);
-    signal calc_0_tuser     : std_logic_vector(15 downto 0);
     signal calc_0_code      : std_logic_vector(3 downto 0);
     signal calc_0_fl_af     : std_logic;
     signal calc_0_fl_cf     : std_logic;
     signal calc_0_al        : std_logic_vector(7 downto 0);
+    signal calc_0_tuser     : std_logic_vector(15 downto 0);
 
     signal calc_1_tvalid    : std_logic;
     signal calc_1_tdata     : std_logic_vector(15 downto 0);
@@ -53,7 +53,6 @@ begin
                 calc_1_tvalid <= calc_0_tvalid;
             end if;
 
-            calc_0_tuser <= req_s_tuser;
             calc_0_code <= req_s_tdata.code;
             calc_0_al <= req_s_tdata.sval(7 downto 0);
             case req_s_tdata.code is
@@ -74,9 +73,9 @@ begin
                     calc_0_tdata <= std_logic_vector(unsigned("00000" & req_s_tdata.sval(15 downto 8) & "000") + unsigned("0000000" & req_s_tdata.sval(15 downto 8) & "0"));
 
                 when BCDU_AAS =>
-                    if (unsigned(req_s_tdata.sval(7 downto 0) and x"0F") > to_unsigned(9, 8)) or
-                        (req_s_tuser(FLAG_AF) = '1') then
-                        calc_0_tdata(7 downto 0) <= std_logic_vector(unsigned(req_s_tdata.sval(7 downto 0)) - to_unsigned(6, 8)) and x"0F";
+                    calc_0_tdata(7 downto 4) <= x"0";
+                    if (unsigned(req_s_tdata.sval(3 downto 0)) > to_unsigned(9, 4)) or (req_s_tuser(FLAG_AF) = '1') then
+                        calc_0_tdata(3 downto 0) <= std_logic_vector(unsigned(req_s_tdata.sval(3 downto 0)) - to_unsigned(6, 4));
                         calc_0_tdata(15 downto 8) <= std_logic_vector(unsigned(req_s_tdata.sval(15 downto 8)) - to_unsigned(1, 8));
                         calc_0_fl_af <= '1';
                         calc_0_fl_cf <= '1';
@@ -89,8 +88,7 @@ begin
                 when BCDU_DAA =>
                     calc_0_tdata(15 downto 8) <= req_s_tdata.sval(15 downto 8);
 
-                    if (unsigned(req_s_tdata.sval(7 downto 0) and x"0F") > to_unsigned(9, 8)) or
-                        (req_s_tuser(FLAG_AF) = '1') then
+                    if (unsigned(req_s_tdata.sval(3 downto 0)) > to_unsigned(9, 4)) or (req_s_tuser(FLAG_AF) = '1') then
                         calc_0_tdata(7 downto 0) <= std_logic_vector(unsigned(req_s_tdata.sval(7 downto 0)) + to_unsigned(6, 8));
                         calc_0_fl_af <= '1';
                     else
@@ -101,8 +99,7 @@ begin
                 when BCDU_DAS =>
                     calc_0_tdata(15 downto 8) <= req_s_tdata.sval(15 downto 8);
 
-                    if (unsigned(req_s_tdata.sval(7 downto 0) and x"0F") > to_unsigned(9, 8)) or
-                        (req_s_tuser(FLAG_AF) = '1') then
+                    if (unsigned(req_s_tdata.sval(3 downto 0)) > to_unsigned(9, 4)) or (req_s_tuser(FLAG_AF) = '1') then
                         calc_0_tdata(7 downto 0) <= std_logic_vector(unsigned(req_s_tdata.sval(7 downto 0)) - to_unsigned(6, 8));
                         calc_0_fl_af <= '1';
                     else
@@ -112,6 +109,7 @@ begin
                 when others =>
                     null;
             end case;
+            calc_0_tuser <= req_s_tuser;
 
             calc_1_code <= calc_0_code;
             case calc_0_code is
@@ -122,7 +120,7 @@ begin
                     calc_1_tdata(15 downto 8) <= calc_0_tdata(15 downto 8);
                     calc_1_fl_af <= calc_0_fl_af;
                     if unsigned(calc_0_tdata(7 downto 0)) > to_unsigned(159, 8) or
-                        (req_s_tuser(FLAG_AF) = '1') then
+                        (calc_0_tuser(FLAG_CF) = '1') then
                         calc_1_tdata(7 downto 0) <= std_logic_vector(unsigned(calc_0_tdata(7 downto 0)) + to_unsigned(96, 8));
                         calc_1_fl_cf <= '1';
                     else
@@ -133,7 +131,7 @@ begin
                     calc_1_tdata(15 downto 8) <= calc_0_tdata(15 downto 8);
                     calc_1_fl_af <= calc_0_fl_af;
                     if unsigned(calc_0_tdata(7 downto 0)) > to_unsigned(159, 8) or
-                        (req_s_tuser(FLAG_AF) = '1') then
+                        (calc_0_tuser(FLAG_CF) = '1') then
                         calc_1_tdata(7 downto 0) <= std_logic_vector(unsigned(calc_0_tdata(7 downto 0)) - to_unsigned(96, 8));
                         calc_1_fl_cf <= '1';
                     else
@@ -159,6 +157,7 @@ begin
 
             res_m_tdata.dval <= calc_1_tdata;
             res_m_tdata.dmask <= "11";
+            res_m_tdata.code <= calc_1_code;
 
             flags_pf <= not (calc_1_tdata(7) xor calc_1_tdata(6) xor calc_1_tdata(5) xor calc_1_tdata(4) xor
                 calc_1_tdata(3) xor calc_1_tdata(2) xor calc_1_tdata(1) xor calc_1_tdata(0));
