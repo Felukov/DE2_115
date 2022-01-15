@@ -51,6 +51,7 @@ begin
     process (all) begin
         case req_s_tdata.code is
             when ONE_OP_NOT =>
+                rval_next(16) <= '0';
                 for i in 15 downto 0 loop
                     rval_next(i) <= not req_s_tdata.sval(i);
                 end loop;

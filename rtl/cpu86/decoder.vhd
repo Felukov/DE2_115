@@ -970,6 +970,36 @@ begin
 
         end;
 
+        procedure wait_ins is begin
+            instr_tdata.wait_ax <= '0';
+            instr_tdata.wait_bx <= '0';
+            instr_tdata.wait_cx <= '0';
+            instr_tdata.wait_dx <= '1';
+            instr_tdata.wait_bp <= '0';
+            instr_tdata.wait_si <= '1';
+            instr_tdata.wait_di <= '0';
+            instr_tdata.wait_sp <= '0';
+            instr_tdata.wait_ds <= '1';
+            instr_tdata.wait_es <= '0';
+            instr_tdata.wait_ss <= '0';
+            instr_tdata.wait_fl <= '1';
+        end;
+
+        procedure wait_outs is begin
+            instr_tdata.wait_ax <= '0';
+            instr_tdata.wait_bx <= '0';
+            instr_tdata.wait_cx <= '0';
+            instr_tdata.wait_dx <= '1';
+            instr_tdata.wait_bp <= '0';
+            instr_tdata.wait_si <= '0';
+            instr_tdata.wait_di <= '1';
+            instr_tdata.wait_sp <= '0';
+            instr_tdata.wait_ds <= '0';
+            instr_tdata.wait_es <= '1';
+            instr_tdata.wait_ss <= '0';
+            instr_tdata.wait_fl <= '1';
+        end;
+
         procedure wait_movs is begin
             instr_tdata.wait_ax <= '0';
             instr_tdata.wait_bx <= '0';
@@ -1325,6 +1355,21 @@ begin
                 when x"D4" => set_op(DIVU, DIVU_AAM, '0'); lock_ax; wait_ax_only; lock_fl('1');
                 when x"D5" => set_op(BCDU, BCDU_AAD); lock_ax; wait_ax_only; lock_fl('1');
                 when x"E2" => set_op(LOOPU, LOOP_OP, '1'); lock_dreg_only; wait_cx_only; lock_fl('0');
+
+                when x"E4" => set_op(IO, IO_IN_IMM, '0'); lock_ax; no_wait; lock_fl('0');
+                when x"E5" => set_op(IO, IO_IN_IMM, '1'); lock_ax; no_wait; lock_fl('0');
+                when x"E6" => set_op(IO, IO_OUT_IMM, '0'); no_lock; wait_ax_only; lock_fl('0');
+                when x"E7" => set_op(IO, IO_OUT_IMM, '1'); no_lock; wait_ax_only; lock_fl('0');
+
+                when x"EC" => set_op(IO, IO_IN_DX, '0'); lock_ax; wait_dx_only; lock_fl('0');
+                when x"ED" => set_op(IO, IO_IN_DX, '1'); lock_ax; wait_dx_only; lock_fl('0');
+                when x"EE" => set_op(IO, IO_OUT_DX, '0'); no_lock; wait_ax_dx_only; lock_fl('0');
+                when x"EF" => set_op(IO, IO_OUT_DX, '1'); no_lock; wait_ax_dx_only; lock_fl('0');
+
+                when x"6C" => set_op(IO, IO_INS_DX, '0'); no_lock; wait_ins; lock_fl('0');
+                when x"6D" => set_op(IO, IO_INS_DX, '1'); no_lock; wait_ins; lock_fl('0');
+                when x"6E" => set_op(IO, IO_OUTS_DX, '0'); no_lock; wait_outs; lock_fl('0');
+                when x"6F" => set_op(IO, IO_OUTS_DX, '1'); no_lock; wait_outs; lock_fl('0');
 
                 when x"F2" => set_op(REP, REPNZ_OP, '1'); lock_dreg_only; wait_cx_only; lock_fl('0');
                 when x"F3" => set_op(REP, REPZ_OP, '1'); lock_dreg_only; wait_cx_only; lock_fl('0');

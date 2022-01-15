@@ -24,6 +24,14 @@ entity exec is
         mem_rd_s_tvalid             : in std_logic;
         mem_rd_s_tdata              : in std_logic_vector(31 downto 0);
 
+        io_req_m_tvalid             : out std_logic;
+        io_req_m_tready             : in std_logic;
+        io_req_m_tdata              : out std_logic_vector(39 downto 0);
+
+        io_rd_s_tvalid              : in std_logic;
+        io_rd_s_tready              : out std_logic;
+        io_rd_s_tdata               : in std_logic_vector(15 downto 0);
+
         dbg_m_tvalid                : out std_logic;
         dbg_m_tdata                 : out std_logic_vector(14*16-1 downto 0)
     );
@@ -335,6 +343,14 @@ architecture rtl of exec is
             lsu_req_m_twidth        : out std_logic;
             lsu_req_m_taddr         : out std_logic_vector(19 downto 0);
             lsu_req_m_tdata         : out std_logic_vector(15 downto 0);
+
+            io_req_m_tvalid         : out std_logic;
+            io_req_m_tready         : in std_logic;
+            io_req_m_tdata          : out std_logic_vector(39 downto 0);
+
+            io_rd_s_tvalid          : in std_logic;
+            io_rd_s_tready          : out std_logic;
+            io_rd_s_tdata           : in std_logic_vector(15 downto 0);
 
             dbg_m_tvalid            : out std_logic;
             dbg_m_tdata             : out std_logic_vector(31 downto 0);
@@ -1121,6 +1137,14 @@ begin
         lsu_req_m_twidth        => lsu_req_twidth,
         lsu_req_m_taddr         => lsu_req_taddr,
         lsu_req_m_tdata         => lsu_req_tdata,
+
+        io_req_m_tvalid         => io_req_m_tvalid,
+        io_req_m_tready         => io_req_m_tready,
+        io_req_m_tdata          => io_req_m_tdata,
+
+        io_rd_s_tvalid          => io_rd_s_tvalid,
+        io_rd_s_tready          => io_rd_s_tready,
+        io_rd_s_tdata           => io_rd_s_tdata,
 
         dbg_m_tvalid            => mexec_dbg_tvalid,
         dbg_m_tdata             => mexec_dbg_tdata,

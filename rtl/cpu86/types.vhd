@@ -21,11 +21,15 @@ package cpu86_types is
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU, IO
     );
 
     type mem_data_src_t is (
-        MEM_DATA_SRC_IMM, MEM_DATA_SRC_ALU, MEM_DATA_SRC_ONE, MEM_DATA_SRC_SHF, MEM_DATA_SRC_FIFO
+        MEM_DATA_SRC_IMM, MEM_DATA_SRC_ALU, MEM_DATA_SRC_ONE, MEM_DATA_SRC_SHF, MEM_DATA_SRC_FIFO, MEM_DATA_SRC_IO
+    );
+
+    type io_data_src_t is (
+        IO_DATA_SRC_IMM, IO_DATA_SRC_FIFO
     );
 
     type fl_action_t is (
@@ -108,6 +112,16 @@ package cpu86_types is
     constant DIVU_AAM       : std_logic_vector (3 downto 0) := "0000";
     constant DIVU_DIV       : std_logic_vector (3 downto 0) := "0001";
     constant DIVU_IDIV      : std_logic_vector (3 downto 0) := "0010";
+
+    constant IO_IN_IMM      : std_logic_vector (3 downto 0) := "0000";
+    constant IO_IN_DX       : std_logic_vector (3 downto 0) := "0001";
+    constant IO_OUT_IMM     : std_logic_vector (3 downto 0) := "1000";
+    constant IO_OUT_DX      : std_logic_vector (3 downto 0) := "1001";
+
+    constant IO_INS_IMM     : std_logic_vector (3 downto 0) := "0100";
+    constant IO_INS_DX      : std_logic_vector (3 downto 0) := "0101";
+    constant IO_OUTS_IMM    : std_logic_vector (3 downto 0) := "1100";
+    constant IO_OUTS_DX     : std_logic_vector (3 downto 0) := "1101";
 
     constant FLAG_15        : natural := 15;
     constant FLAG_14        : natural := 14;
@@ -233,7 +247,7 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 10;
+    constant MICRO_OP_CMD_WIDTH : natural := 11;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
@@ -244,6 +258,7 @@ package cpu86_types is
     constant MICRO_OP_CMD_BCD : natural := 7;
     constant MICRO_OP_CMD_SHF : natural := 8;
     constant MICRO_OP_CMD_DIV : natural := 9;
+    constant MICRO_OP_CMD_IO  : natural := 10;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -314,6 +329,14 @@ package cpu86_types is
         mem_addr        : std_logic_vector(15 downto 0);
         mem_data_src    : mem_data_src_t;
         mem_data        : std_logic_vector(15 downto 0);
+
+        io_cmd          : std_logic;
+        io_w            : std_logic;
+        io_port         : std_logic_vector(15 downto 0);
+        io_data         : std_logic_vector(15 downto 0);
+        io_data_src     : io_data_src_t;
+        io_wb           : std_logic;
+
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
         sp_inc          : std_logic;
