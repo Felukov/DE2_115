@@ -29,6 +29,8 @@ architecture rtl of axis_div_u is
     constant STEPS          : natural := MAX_WIDTH;
 
     signal n                : unsigned(MAX_WIDTH-1 downto 0);
+    signal n_next           : unsigned(MAX_WIDTH-1 downto 0);
+    signal n_idx            : unsigned(0 downto 0);
     signal d                : unsigned(MAX_WIDTH-1 downto 0);
     signal q                : unsigned(MAX_WIDTH-1 downto 0);
     signal r                : unsigned(MAX_WIDTH-1 downto 0);
@@ -36,6 +38,7 @@ architecture rtl of axis_div_u is
 
     signal i                : natural range 0 to STEPS;
     signal idx              : natural range 0 to STEPS-1;
+    signal idx_next         : natural range 0 to STEPS-1;
 
 begin
 
@@ -43,14 +46,29 @@ begin
     div_m_tdata(2*MAX_WIDTH-1 downto MAX_WIDTH) <= std_logic_vector(q);
     div_m_tdata(MAX_WIDTH-1 downto 0) <= std_logic_vector(r);
 
-    r2 <= r(MAX_WIDTH - 2 downto 0) & n(idx); -- Left-shift R by 1 bit and R(0) := N(i)
+    r2 <= r(MAX_WIDTH - 2 downto 0) & n_idx(0); -- Left-shift R by 1 bit and R(0) := N(i)
+    n_next <= unsigned(div_s_tdata(2*MAX_WIDTH-1 downto MAX_WIDTH));
+
+    process (all) begin
+        idx_next <= idx;
+
+        if div_s_tvalid = '1' and div_s_tready = '1' then
+            idx_next <= to_integer(unsigned(div_s_tsize)) - 1;
+        elsif (div_s_tready = '0' and i /= 0) then
+            if (idx > 0) then
+                idx_next <= idx - 1;
+            end if;
+        end if;
+    end process;
 
     process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
                 div_s_tready <= '1';
                 i <= 0;
+                idx <= 0;
             else
+
                 if div_s_tvalid = '1' and div_s_tready = '1' then
                     div_s_tready <= '0';
                 elsif (div_m_tvalid = '1' and div_m_tready = '1') then
@@ -63,18 +81,20 @@ begin
                     i <= i - 1;
                 end if;
 
+                idx <= idx_next;
+
             end if;
 
             if div_s_tvalid = '1' and div_s_tready = '1' then
-                n <= unsigned(div_s_tdata(2*MAX_WIDTH-1 downto MAX_WIDTH));
+                n <= n_next;
                 d <= unsigned(div_s_tdata(MAX_WIDTH-1 downto 0));
+            end if;
+
+            if div_s_tvalid = '1' and div_s_tready = '1' then
                 r <= (others => '0') ;
                 q <= (others => '0');
-                idx <= to_integer(unsigned(div_s_tsize)) - 1;
+                n_idx(0) <= n_next(to_integer(unsigned(div_s_tsize)) - 1);
             elsif (div_s_tready = '0' and i /= 0) then
-                if (idx > 0) then
-                    idx <= idx - 1;
-                end if;
 
                 if (r2 >= d) then
                     r <= r2 - d;
@@ -83,6 +103,8 @@ begin
                     r <= r2;
                     q(idx) <= '0';
                 end if;
+
+                n_idx(0) <= n(idx_next);
             end if;
 
             if div_s_tvalid = '1' and div_s_tready = '1' then
