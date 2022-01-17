@@ -93,14 +93,11 @@ architecture rtl of lsu is
     signal req_buf_tdata        : std_logic_vector(7 downto 0);
     signal req_buf_tupd_addr    : std_logic_vector(3 downto 0);
 
-    signal mem_req_tvalid       : std_logic;
-    signal mem_req_tready       : std_logic;
     signal mem_req_tlast        : std_logic;
     signal mem_req_tcmd         : std_logic;
     signal mem_req_taddr        : std_logic_vector(17 downto 0);
     signal mem_req_tmask        : std_logic_vector(3 downto 0);
     signal mem_req_tdata        : std_logic_vector(31 downto 0) := (others => '0');
-    signal mem_req_tmiss        : std_logic;
 
     signal add_s_tvalid         : std_logic;
     signal add_s_tready         : std_logic;
@@ -172,9 +169,6 @@ begin
     lsu_req_tvalid <= lsu_req_s_tvalid;
     lsu_req_s_tready <= lsu_req_tready;
 
-    mem_req_m_tvalid <= '1' when mem_req_tvalid = '1' and (mem_req_tmiss = '1' or mem_req_tcmd = '1') else '0';
-    mem_req_tready <= mem_req_m_tready;
-
     mem_req_m_tdata(31 downto 0) <= mem_req_tdata;
     mem_req_m_tdata(56 downto 32) <= "0000000" & mem_req_taddr;
     mem_req_m_tdata(57) <= mem_req_tcmd;
@@ -183,8 +177,8 @@ begin
 
     add_s_tvalid <= '1' when lsu_req_s_tvalid = '1' and lsu_req_s_tready = '1' and lsu_req_s_tcmd = '0' else '0';
 
-    lsu_req_tready <= '1' when req_buf_tvalid = '0' and (mem_req_tvalid = '0' or (mem_req_tvalid = '1' and mem_req_tready = '1')) and add_s_tready = '1' else '0';
-    req_buf_tready <= '1' when (mem_req_tvalid = '0' or (mem_req_tvalid = '1' and mem_req_tready = '1')) else '0';
+    lsu_req_tready <= '1' when req_buf_tvalid = '0' and (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) and add_s_tready = '1' else '0';
+    req_buf_tready <= '1' when (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) else '0';
     fifo_0_m_tready <= mem_rd_s_tvalid;
 
     buffering_req_proc: process (clk) begin
@@ -219,15 +213,20 @@ begin
     forming_mem_req_proc: process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
-                mem_req_tvalid <= '0';
+                mem_req_m_tvalid <= '0';
                 mem_req_tlast <= '0';
             else
 
-                if (req_buf_tvalid = '1' and req_buf_tready = '1') or
-                    (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
-                    mem_req_tvalid <= '1';
-                elsif (mem_req_tready = '1') then
-                    mem_req_tvalid <= '0';
+                if (req_buf_tvalid = '1' and req_buf_tready = '1') then
+                    mem_req_m_tvalid <= '1';
+                elsif (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
+                    if (dcache_s_tvalid = '0' or lsu_req_s_tcmd = '1') then
+                        mem_req_m_tvalid <= '1';
+                    else
+                        mem_req_m_tvalid <= '0';
+                    end if;
+                elsif (mem_req_m_tready = '1') then
+                    mem_req_m_tvalid <= '0';
                 end if;
 
                 if (req_buf_tvalid = '1' and req_buf_tready = '1') then
@@ -240,14 +239,6 @@ begin
                     end if;
                 end if;
 
-            end if;
-
-            if (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
-                if (dcache_s_tvalid = '0') then
-                    mem_req_tmiss <= '1';
-                else
-                    mem_req_tmiss <= '0';
-                end if;
             end if;
 
             if (req_buf_tvalid = '1' and req_buf_tready = '1') then
