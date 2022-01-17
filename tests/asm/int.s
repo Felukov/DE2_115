@@ -14,8 +14,8 @@ start:
     MOV AX, 207
     MOV word [int_handler], AX
     MOV AX, 0
-    MOV word [0x0014], int_handler
-    MOV word [0x0016], AX
+    MOV word [0x0014], AX
+    MOV word [0x0016], int_handler
 
     MOV AL, [0x015]
     db 0x0F

@@ -85,8 +85,8 @@ start:
 
     MOV AX, 0
     MOV DS, AX
-    MOV word [0x0000], div_zero_handler
-    MOV word [0x0002], AX
+    MOV word [0x0000], AX
+    MOV word [0x0002], div_zero_handler
 
     MOV AX, 0xFF
     MOV DX, 0x00
