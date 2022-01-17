@@ -222,6 +222,10 @@ architecture rtl of exec is
             div_intr_s_tready       : out std_logic;
             div_intr_s_tdata        : in div_intr_t;
 
+            bnd_intr_s_tvalid       : in std_logic;
+            bnd_intr_s_tready       : out std_logic;
+            bnd_intr_s_tdata        : in div_intr_t;
+
             micro_m_tvalid          : out std_logic;
             micro_m_tready          : in std_logic;
             micro_m_tdata           : out micro_op_t;
@@ -356,7 +360,10 @@ architecture rtl of exec is
             dbg_m_tdata             : out std_logic_vector(31 downto 0);
 
             div_intr_m_tvalid       : out std_logic;
-            div_intr_m_tdata        : out div_intr_t
+            div_intr_m_tdata        : out div_intr_t;
+
+            bnd_intr_m_tvalid       : out std_logic;
+            bnd_intr_m_tdata        : out div_intr_t
         );
     end component mexec;
 
@@ -619,6 +626,14 @@ architecture rtl of exec is
     signal div_intr_m_tvalid        : std_logic;
     signal div_intr_m_tready        : std_logic;
     signal div_intr_m_tdata         : div_intr_t;
+
+    signal bnd_intr_s_tvalid        : std_logic;
+    signal bnd_intr_s_tready        : std_logic;
+    signal bnd_intr_s_tdata         : div_intr_t;
+
+    signal bnd_intr_m_tvalid        : std_logic;
+    signal bnd_intr_m_tready        : std_logic;
+    signal bnd_intr_m_tdata         : div_intr_t;
 
 begin
 
@@ -896,7 +911,21 @@ begin
         out_m_tvalid            => div_intr_m_tvalid,
         out_m_tready            => div_intr_m_tready,
         out_m_tdata             => div_intr_m_tdata
+    );
 
+    bnd_interrupt_reg_inst : axis_reg generic map (
+        DATA_WIDTH              => bnd_intr_s_tdata'length
+    ) port map (
+        clk                     => clk,
+        resetn                  => resetn,
+
+        in_s_tvalid             => bnd_intr_s_tvalid,
+        in_s_tready             => bnd_intr_s_tready,
+        in_s_tdata              => bnd_intr_s_tdata,
+
+        out_m_tvalid            => bnd_intr_m_tvalid,
+        out_m_tready            => bnd_intr_m_tready,
+        out_m_tdata             => bnd_intr_m_tdata
     );
 
     fifo_instr_s_tdata <= decoded_instr_t_to_slv(instr_s_tdata);
@@ -1015,6 +1044,10 @@ begin
         div_intr_s_tvalid       => div_intr_m_tvalid,
         div_intr_s_tready       => div_intr_m_tready,
         div_intr_s_tdata        => div_intr_m_tdata,
+
+        bnd_intr_s_tvalid       => bnd_intr_m_tvalid,
+        bnd_intr_s_tready       => bnd_intr_m_tready,
+        bnd_intr_s_tdata        => bnd_intr_m_tdata,
 
         micro_m_tvalid          => micro_tvalid,
         micro_m_tready          => micro_tready,
@@ -1150,7 +1183,10 @@ begin
         dbg_m_tdata             => mexec_dbg_tdata,
 
         div_intr_m_tvalid       => div_intr_s_tvalid,
-        div_intr_m_tdata        => div_intr_s_tdata
+        div_intr_m_tdata        => div_intr_s_tdata,
+
+        bnd_intr_m_tvalid       => bnd_intr_s_tvalid,
+        bnd_intr_m_tdata        => bnd_intr_s_tdata
 
     );
 

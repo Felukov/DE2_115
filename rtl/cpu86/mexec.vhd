@@ -87,7 +87,10 @@ entity mexec is
         dbg_m_tdata             : out std_logic_vector(31 downto 0);
 
         div_intr_m_tvalid       : out std_logic;
-        div_intr_m_tdata        : out div_intr_t
+        div_intr_m_tdata        : out div_intr_t;
+
+        bnd_intr_m_tvalid       : out std_logic;
+        bnd_intr_m_tdata        : out div_intr_t
     );
 end entity mexec;
 
@@ -322,6 +325,9 @@ architecture rtl of mexec is
     signal io_wait_fifo         : std_logic;
     signal shf8_wait_fifo       : std_logic;
     signal shf16_wait_fifo      : std_logic;
+    signal bnd_wait_fifo        : std_logic;
+    signal bnd_val              : std_logic_vector(15 downto 0);
+
     signal mem_wait_one         : std_logic;
     signal mem_wait_alu         : std_logic;
     signal mem_wait_shf         : std_logic;
@@ -1437,7 +1443,7 @@ begin
 
     mem_buf_proc : process (clk) begin
         if rising_edge(clk) then
-            if (lsu_rd_s_tvalid = '1') then
+            if (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1') then
                 mem_buf_tdata <= lsu_rd_s_tdata;
             end if;
         end if;
@@ -1784,6 +1790,49 @@ begin
                     io_rd_s_tready <= '0';
                 end if;
             end if;
+        end if;
+    end process;
+
+    bound_check_process : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                bnd_intr_m_tvalid <= '0';
+                bnd_wait_fifo <= '0';
+            else
+
+                if (micro_tvalid = '1' and micro_tready = '1') then
+                    if (micro_tdata.cmd(MICRO_OP_CMD_BND) = '1' AND micro_tdata.read_fifo = '1') then
+                        bnd_wait_fifo <= '1';
+                    else
+                        bnd_wait_fifo <= '0';
+                    end if;
+                elsif (bnd_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    bnd_wait_fifo <= '0';
+                end if;
+
+                if (bnd_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+                    if (bnd_val < mem_buf_tdata or bnd_val > lsu_rd_s_tdata) then
+                        bnd_intr_m_tvalid <= '1';
+                    else
+                        bnd_intr_m_tvalid <= '0';
+                    end if;
+                else
+                    bnd_intr_m_tvalid <= '0';
+                end if;
+
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BND) = '1') then
+                bnd_val <= micro_tdata.bnd_val;
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BND) = '1') then
+                bnd_intr_m_tdata(DIV_INTR_T_SS) <= micro_tdata.bnd_ss_val;
+                bnd_intr_m_tdata(DIV_INTR_T_CS) <= micro_tdata.bnd_cs_val;
+                bnd_intr_m_tdata(DIV_INTR_T_IP) <= micro_tdata.bnd_ip_val;
+                bnd_intr_m_tdata(DIV_INTR_T_IP_NEXT) <= micro_tdata.bnd_ip_val;
+            end if;
+
         end if;
     end process;
 

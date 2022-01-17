@@ -20,6 +20,10 @@ entity ifeu is
         div_intr_s_tready       : out std_logic;
         div_intr_s_tdata        : in div_intr_t;
 
+        bnd_intr_s_tvalid       : in std_logic;
+        bnd_intr_s_tready       : out std_logic;
+        bnd_intr_s_tdata        : in div_intr_t;
+
         micro_m_tvalid          : out std_logic;
         micro_m_tready          : in std_logic;
         micro_m_tdata           : out micro_op_t;
@@ -107,6 +111,7 @@ architecture rtl of ifeu is
     signal rep_code             : std_logic_vector(1 downto 0);
     signal rep_cx_cnt           : natural range 0 to 2**16-1;
     signal rep_nz               : std_logic;
+    signal rep_cancellable      : std_logic;
     signal rep_cancel           : std_logic;
 
     signal halt_mode            : std_logic;
@@ -133,10 +138,14 @@ begin
     micro_tready <= micro_m_tready;
     micro_m_tdata <= micro_tdata;
 
-    rr_tready <= '1' when div_intr_s_tvalid = '0' and jmp_lock_s_tvalid = '1' and rep_lock = '0' and halt_mode = '0' and (micro_tvalid = '0' or
-        (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
+    rr_tready <= '1' when div_intr_s_tvalid = '0' and bnd_intr_s_tvalid = '0' and
+        jmp_lock_s_tvalid = '1' and rep_lock = '0' and halt_mode = '0' and
+        (micro_tvalid = '0' or (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
     div_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and rep_lock = '0' and halt_mode = '0' and (micro_tvalid = '0' or
+        (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
+
+    bnd_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and rep_lock = '0' and halt_mode = '0' and (micro_tvalid = '0' or
         (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
     fast_instruction_fl <= '1' when
@@ -150,16 +159,16 @@ begin
          (rr_tdata.op = DIVU) or
          (rr_tdata.op = DBG) or
          (rr_tdata.op = IO) or
+         (rr_tdata.op = LFP and rr_tdata.code = MISC_BOUND) or
          (rr_tdata.op = STACKU and rr_tdata.code = STACKU_PUSHA) or
          (rr_tdata.op = SYS and (rr_tdata.code = SYS_INT_OP))) else '0';
 
     ea_val_plus_disp_next <= std_logic_vector(unsigned(rr_tdata.ea_val) + unsigned(rr_tdata.disp));
     ea_val_plus_disp_p_2 <= std_logic_vector(unsigned(ea_val_plus_disp) + to_unsigned(2, 16));
 
-    sp_value_next <= std_logic_vector(unsigned(sp_s_tdata) - unsigned(to_unsigned(2, 16)));
+    sp_value_next <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
 
-    rep_cancel <= '1' when rr_tdata_buf.op = STR and rr_tdata_buf.code(3) = '1' and
-        ((rep_nz = '0' and flags_s_tdata(FLAG_ZF) = '0') or (rep_nz = '1' and flags_s_tdata(FLAG_ZF) = '1')) else '0';
+    rep_cancel <= '1' when rep_cancellable = '1' and ((rep_nz = '0' and flags_s_tdata(FLAG_ZF) = '0') or (rep_nz = '1' and flags_s_tdata(FLAG_ZF) = '1')) else '0';
 
     update_regs_proc : process (all) begin
 
@@ -347,6 +356,7 @@ begin
                 rep_cx_cnt <= 0;
                 rep_lock <= '0';
                 rep_nz <= '0';
+                rep_cancellable <= '0';
             else
 
                 if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = REP) then
@@ -385,10 +395,10 @@ begin
 
                 if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = REP) then
                     rep_cx_cnt <= to_integer(unsigned(rr_tdata.sreg_val));
-                elsif rep_mode = '1' and rep_cx_cnt /= 0 and (rr_tvalid = '1' and rr_tready = '1') then
-                    rep_cx_cnt <= rep_cx_cnt - 1;
-                elsif rep_mode = '1' and rep_cx_cnt /= 0 and rep_cancel = '0' and (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0) then
-                    rep_cx_cnt <= rep_cx_cnt - 1;
+                elsif rep_mode = '1' then
+                    if (rr_tvalid = '1' and rr_tready = '1') or (rep_cancel = '0' and (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0)) then
+                        rep_cx_cnt <= rep_cx_cnt - 1;
+                    end if;
                 end if;
 
                 if (rr_tvalid = '1' and rr_tready = '1' and rep_mode = '1' and rep_lock = '0') then
@@ -402,6 +412,14 @@ begin
                 elsif rep_mode = '1' and (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0) then
                     if (rep_cx_cnt = 1 or rep_cx_cnt = 0 or rep_cancel = '1') then
                         rep_lock <= '0';
+                    end if;
+                end if;
+
+                if (rr_tvalid = '1' and rr_tready = '1') then
+                    if rr_tdata.op = STR and rr_tdata.code(3) = '1' then
+                        rep_cancellable <= '1';
+                    else
+                        rep_cancellable <= '0';
                     end if;
                 end if;
 
@@ -448,7 +466,7 @@ begin
                 end case;
 
             when SHFU =>
-                case rr_tdata.DIR is
+                case rr_tdata.dir is
                     when I2M => micro_cnt_next <= 1;
                     when R2M => micro_cnt_next <= 1;
                     when others => micro_cnt_next <= 0;
@@ -553,6 +571,14 @@ begin
             micro_tdata.cmd(MICRO_OP_CMD_IO) <= '0';
         end procedure;
 
+        procedure bnd_off is begin
+            micro_tdata.cmd(MICRO_OP_CMD_BND) <= '0';
+        end procedure;
+
+        procedure bnd_on is begin
+            micro_tdata.cmd(MICRO_OP_CMD_BND) <= '1';
+        end procedure;
+
         procedure sp_inc_off is begin
             micro_tdata.sp_inc <= '0';
             micro_tdata.sp_keep_lock <= '0';
@@ -584,6 +610,10 @@ begin
             micro_tdata.cmd(MICRO_OP_CMD_FLG) <= '1';
             micro_tdata.flg_no <= flag;
             micro_tdata.fl <= val;
+        end procedure;
+
+        procedure flag_update (flag : natural; val : fl_action_t) is begin
+            flag_update(std_logic_vector(to_unsigned(flag, 4)), val);
         end procedure;
 
         procedure alu_command_imm(cmd, aval, bval: std_logic_vector; dreg : reg_t; dmask : std_logic_vector) is begin
@@ -1095,6 +1125,39 @@ begin
             end case;
         end procedure;
 
+        procedure do_misc_bound_0 is begin
+            fl_off; io_off; dbg_off; jmp_off; mul_off; one_off; bcd_off; shf_off; alu_off; div_off;
+            sp_inc_off; di_inc_off; si_inc_off;
+            micro_tdata.unlk_fl <= '0';
+
+            mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
+            micro_tdata.bnd_val <= rr_tdata.dreg_val;
+            micro_tdata.bnd_ss_val <= rr_tdata.ss_seg_val;
+            micro_tdata.bnd_ip_val <= rr_tuser(47 downto 32);
+            micro_tdata.bnd_cs_val <= rr_tuser(31 downto 16);
+            micro_tdata.bnd_ip_next_val <= rr_tuser(15 downto 0);
+
+            --release dest register
+            alu_command_imm(cmd => ALU_SF_ADD,
+                aval => rr_tdata.dreg_val,
+                bval => x"0000",
+                dreg => rr_tdata.dreg,
+                dmask => rr_tdata.dmask);
+        end procedure;
+
+        procedure do_misc_bound_1 is begin
+            case micro_cnt is
+                when 2 =>
+                    micro_tdata.read_fifo <= '1';
+                    micro_tdata.mem_addr <= ea_val_plus_disp_p_2;
+                when 1 =>
+                    mem_off; bnd_on;
+                    micro_tdata.unlk_fl <= '1';
+
+                when others => null;
+            end case;
+        end procedure;
+
         procedure do_shf_cmd_0 is begin
             fl_off; io_off; dbg_off; jmp_off; mul_off; one_off; bcd_off; alu_off; div_off;
             sp_inc_off; di_inc_off; si_inc_off;
@@ -1150,11 +1213,11 @@ begin
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_s_tdata_next, val => flags_s_tdata, w => rr_tdata_buf.w);
                 when 5 =>
                     -- TF = 0
-                    flag_update(std_logic_vector(to_unsigned(FLAG_TF, 4)), CLR);
+                    flag_update(FLAG_TF, CLR);
                     -- push CS
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_s_tdata_next, val => rr_tuser_buf(31 downto 16), w => rr_tdata_buf.w);
                 when 4 =>
-                    flag_update(std_logic_vector(to_unsigned(FLAG_IF, 4)), CLR);
+                    flag_update(FLAG_IF, CLR);
                     -- push IP
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_s_tdata_next, val => rr_tuser_buf(15 downto 0), w => rr_tdata_buf.w);
                     sp_inc_off;
@@ -1165,8 +1228,8 @@ begin
                     -- update jump_cs
                     micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '1';
                     micro_tdata.read_fifo <= '1';
-                    micro_tdata.jump_cs_mem <= '0';
-                    micro_tdata.jump_ip_mem <= '1';
+                    micro_tdata.jump_cs_mem <= '1';
+                    micro_tdata.jump_ip_mem <= '0';
                     -- read IP interrupt handler
                     mem_read_word(seg => x"0000", addr => rr_tdata_buf.data(13 downto 0) & "10");
                 when 1 =>
@@ -1174,8 +1237,8 @@ begin
                     micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '1';
                     -- upd jump_ip
                     micro_tdata.read_fifo <= '1';
-                    micro_tdata.jump_cs_mem <= '1';
-                    micro_tdata.jump_ip_mem <= '0';
+                    micro_tdata.jump_cs_mem <= '0';
+                    micro_tdata.jump_ip_mem <= '1';
                     micro_tdata.unlk_fl <= '1';
                     -- jump
                     micro_tdata.jump_cond <= j_always;
@@ -1201,11 +1264,11 @@ begin
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_s_tdata_next, val => flags_s_tdata, w => '1');
                 when 5 =>
                     -- TF = 0
-                    flag_update(std_logic_vector(to_unsigned(FLAG_TF, 4)), CLR);
+                    flag_update(FLAG_TF, CLR);
                     -- push CS
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_s_tdata_next, val => rr_tuser_buf(31 downto 16), w => '1');
                 when 4 =>
-                    flag_update(std_logic_vector(to_unsigned(FLAG_IF, 4)), CLR);
+                    flag_update(FLAG_IF, CLR);
                     -- push IP
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_s_tdata_next, val => rr_tuser_buf(15 downto 0), w => '1');
                     sp_inc_off;
@@ -1216,8 +1279,8 @@ begin
                     -- update jump_cs
                     micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '1';
                     micro_tdata.read_fifo <= '1';
-                    micro_tdata.jump_cs_mem <= '0';
-                    micro_tdata.jump_ip_mem <= '1';
+                    micro_tdata.jump_cs_mem <= '1';
+                    micro_tdata.jump_ip_mem <= '0';
                     -- read IP interrupt handler
                     mem_read_word(seg => x"0000", addr => x"0002");
                 when 1 =>
@@ -1225,8 +1288,59 @@ begin
                     micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '1';
                     -- upd jump_ip
                     micro_tdata.read_fifo <= '1';
+                    micro_tdata.jump_cs_mem <= '0';
+                    micro_tdata.jump_ip_mem <= '1';
+                    micro_tdata.unlk_fl <= '1';
+                    -- jump
+                    micro_tdata.jump_cond <= j_always;
+
+                when others => null;
+            end case;
+        end;
+
+        procedure do_bnd_intr_0 is begin
+            fl_off; io_off; alu_off; jmp_off; dbg_off; mul_off; one_off; bcd_off; shf_off; mem_off; div_off;
+            si_inc_off; di_inc_off;
+            sp_inc_on;
+            micro_tdata.sp_inc_data <= x"FFFE";
+
+            micro_tdata.unlk_fl <= '0';
+            micro_tdata.sp_keep_lock <= '1';
+        end;
+
+        procedure do_bnd_intr_1 is begin
+            case micro_cnt is
+                when 6 =>
+                    -- push FLAGS
+                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_s_tdata_next, val => flags_s_tdata, w => '1');
+                when 5 =>
+                    -- TF = 0
+                    flag_update(FLAG_TF, CLR);
+                    -- push CS
+                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_s_tdata_next, val => rr_tuser_buf(31 downto 16), w => '1');
+                when 4 =>
+                    flag_update(FLAG_IF, CLR);
+                    -- push IP
+                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_s_tdata_next, val => rr_tuser_buf(15 downto 0), w => '1');
+                    sp_inc_off;
+                when 3 =>
+                    -- read CS interrupt handler
+                    mem_read_word(seg => x"0000", addr => x"0014");
+                when 2 =>
+                    -- update jump_cs
+                    micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '1';
+                    micro_tdata.read_fifo <= '1';
                     micro_tdata.jump_cs_mem <= '1';
                     micro_tdata.jump_ip_mem <= '0';
+                    -- read IP interrupt handler
+                    mem_read_word(seg => x"0000", addr => x"0016");
+                when 1 =>
+                    mem_off;
+                    micro_tdata.cmd(MICRO_OP_CMD_JMP) <= '1';
+                    -- upd jump_ip
+                    micro_tdata.read_fifo <= '1';
+                    micro_tdata.jump_cs_mem <= '0';
+                    micro_tdata.jump_ip_mem <= '1';
                     micro_tdata.unlk_fl <= '1';
                     -- jump
                     micro_tdata.jump_cond <= j_always;
@@ -1797,10 +1911,12 @@ begin
             if (resetn = '0') then
                 micro_tvalid <= '0';
                 micro_cnt <= 0;
+                micro_cnt_max <= 0;
                 micro_busy <= '0';
             else
 
-                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
+                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
+                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
                     micro_tvalid <= '1';
                 elsif (rr_tvalid = '1' and rr_tready = '1') then
                     if (fast_instruction_fl = '0' and (rep_mode = '0' or (rep_mode = '1' and rep_cx_cnt /= 0))) then
@@ -1812,12 +1928,18 @@ begin
                     micro_tvalid <= '0';
                 end if;
 
-                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
-                    micro_cnt <= 6;
+                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
+                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
                     micro_cnt_max <= 6;
                 elsif (rr_tvalid = '1' and rr_tready = '1') then
-                    micro_cnt <= micro_cnt_next;
                     micro_cnt_max <= micro_cnt_next;
+                end if;
+
+                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
+                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
+                    micro_cnt <= 6;
+                elsif (rr_tvalid = '1' and rr_tready = '1') then
+                    micro_cnt <= micro_cnt_next;
                 elsif (micro_tvalid = '1' and micro_tready = '1') then
                     if (micro_cnt = 0 and rep_mode = '1' and rep_cx_cnt >= 1 and rep_cancel = '0') then
                         micro_cnt <= micro_cnt_max;
@@ -1826,7 +1948,8 @@ begin
                     end if;
                 end if;
 
-                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
+                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
+                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
                     micro_busy <= '1';
                 elsif (rr_tvalid = '1' and rr_tready = '1') then
                     if (micro_cnt_next = 0) then
@@ -1852,6 +1975,14 @@ begin
                 rr_tuser_buf(USER_T_IP) <= div_intr_s_tdata(DIV_INTR_T_IP);
                 rr_tuser_buf(USER_T_CS) <= div_intr_s_tdata(DIV_INTR_T_CS);
                 rr_tuser_buf(USER_T_IP_NEXT) <= div_intr_s_tdata(DIV_INTR_T_IP_NEXT);
+            elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
+                rr_tdata_buf.ss_seg_val <= bnd_intr_s_tdata(DIV_INTR_T_SS);
+                rr_tdata_buf.op <= SYS;
+                rr_tdata_buf.code <= SYS_BND_INT_OP;
+
+                rr_tuser_buf(USER_T_IP) <= bnd_intr_s_tdata(DIV_INTR_T_IP);
+                rr_tuser_buf(USER_T_CS) <= bnd_intr_s_tdata(DIV_INTR_T_CS);
+                rr_tuser_buf(USER_T_IP_NEXT) <= bnd_intr_s_tdata(DIV_INTR_T_IP_NEXT);
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 rr_tdata_buf <= rr_tdata;
                 rr_tuser_buf <= rr_tuser;
@@ -1865,12 +1996,17 @@ begin
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
                 initialize_signals;
                 do_div_intr_0;
+                bnd_off;
+            elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
+                initialize_signals;
+                do_bnd_intr_0;
+                bnd_off;
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 initialize_signals;
                 si_inc_direction;
                 di_inc_direction;
                 sp_inc_direction;
-
+                bnd_off;
                 micro_tdata.dbg_cs <= rr_tuser(31 downto 16);
                 micro_tdata.dbg_ip <= rr_tuser(15 downto 0);
 
@@ -1883,7 +2019,11 @@ begin
                     when SHFU => do_shf_cmd_0;
                     when XCHG => do_xchg_cmd_0;
                     when MOVU => do_movu_cmd_0;
-                    when LFP => do_lfp_cmd_0;
+                    when LFP =>
+                        case rr_tdata.code is
+                            when MISC_BOUND => do_misc_bound_0;
+                            when others => do_lfp_cmd_0;
+                        end case;
                     when DBG => do_dbg_cmd_0;
                     when STR => do_str_cmd_0;
                     when STACKU => do_stack_cmd_0;
@@ -1907,7 +2047,11 @@ begin
                     when DIVU => do_div_cmd_1;
                     when SHFU => do_shf_cmd_1;
                     when XCHG => do_xchg_cmd_1;
-                    when LFP => do_lfp_cmd_1;
+                    when LFP =>
+                        case rr_tdata_buf.code is
+                            when MISC_BOUND => do_misc_bound_1;
+                            when others => do_lfp_cmd_1;
+                        end case;
                     when STACKU => do_stack_cmd_1;
                     when LOOPU => do_loop_cmd_1;
                     when IO => do_io_cmd_1;
@@ -1915,6 +2059,7 @@ begin
                         case rr_tdata_buf.code is
                             when SYS_INT_OP => do_sys_cmd_int_1;
                             when SYS_IRET_OP => do_sys_cmd_iret_1;
+                            when SYS_BND_INT_OP => do_bnd_intr_1;
                             when SYS_DIV_INT_OP => do_div_intr_1;
                             when others => null;
                         end case;

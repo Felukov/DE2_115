@@ -648,6 +648,21 @@ begin
             instr_tdata.wait_fl <= '0';
         end;
 
+        procedure wait_mem_imm is begin
+            instr_tdata.wait_ax <= '1';
+            instr_tdata.wait_bx <= '0';
+            instr_tdata.wait_cx <= '0';
+            instr_tdata.wait_dx <= '0';
+            instr_tdata.wait_bp <= '0';
+            instr_tdata.wait_si <= '0';
+            instr_tdata.wait_di <= '0';
+            instr_tdata.wait_sp <= '0';
+            instr_tdata.wait_ds <= '1';
+            instr_tdata.wait_es <= '0';
+            instr_tdata.wait_ss <= '0';
+            instr_tdata.wait_fl <= '0';
+        end;
+
         procedure wait_ax_only is begin
             instr_tdata.wait_ax <= '1';
             instr_tdata.wait_bx <= '0';
@@ -1142,7 +1157,8 @@ begin
                     when "101" => instr_tdata.wait_di <= '1'; instr_tdata.wait_ds <= '1';
                     when "110" =>
                         if (u8_tdata(7 downto 6) /= "00") then
-                            instr_tdata.wait_bp <= '1'; instr_tdata.wait_ss <= '1';
+                            instr_tdata.wait_bp <= '1';
+                            instr_tdata.wait_ss <= '1';
                         else
                             instr_tdata.wait_ds <= '1';
                         end if;
@@ -1262,6 +1278,7 @@ begin
 
                 when x"60" => set_stack_op(STACKU_PUSHA); lock_stack_pusha; wait_stack_reg(AX); lock_fl('0');
                 when x"61" => set_stack_op(STACKU_POPA); lock_stack_popa; wait_stack_reg(AX); lock_fl('0');
+                when x"62" => set_op(LFP, MISC_BOUND, '1'); no_lock; no_wait; lock_fl('0');
                 when x"68" => set_stack_op(STACKU_PUSHI); lock_dreg_only; wait_stack_only; lock_fl('0');
                 when x"69" => set_op(MULU, IMUL_RR, '1'); no_lock; no_wait; lock_fl('1');
                 when x"6A" => set_stack_op(STACKU_PUSHI); lock_stack_default; wait_stack_only; lock_fl('0');
@@ -1302,10 +1319,10 @@ begin
                 when x"9E" => set_op(MOVU, "0000", '0'); lock_dreg_only; wait_ax_fl_only; lock_fl('0');
                 when x"9F" => set_op(MOVU, "0000", '0'); lock_dreg_only; wait_ax_fl_only; lock_fl('0');
 
-                when x"A0" => set_op(MOVU, "0000", '0'); lock_dreg_only; wait_ax_only; lock_fl('0');
-                when x"A1" => set_op(MOVU, "0000", '1'); lock_dreg_only; wait_ax_only; lock_fl('0');
-                when x"A2" => set_op(MOVU, "0000", '0'); no_lock; wait_ax_only; lock_fl('0');
-                when x"A3" => set_op(MOVU, "0000", '1'); no_lock; wait_ax_only; lock_fl('0');
+                when x"A0" => set_op(MOVU, "0000", '0'); lock_dreg_only; wait_mem_imm; lock_fl('0');
+                when x"A1" => set_op(MOVU, "0000", '1'); lock_dreg_only; wait_mem_imm; lock_fl('0');
+                when x"A2" => set_op(MOVU, "0000", '0'); no_lock; wait_mem_imm; lock_fl('0');
+                when x"A3" => set_op(MOVU, "0000", '1'); no_lock; wait_mem_imm; lock_fl('0');
 
                 when x"A4" => set_op(STR, MOVS_OP, '0'); lock_movs; wait_movs; lock_fl('0');
                 when x"A5" => set_op(STR, MOVS_OP, '1'); lock_movs; wait_movs; lock_fl('0');

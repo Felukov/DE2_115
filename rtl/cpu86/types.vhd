@@ -78,6 +78,7 @@ package cpu86_types is
 
     constant LFP_LDS        : std_logic_vector (3 downto 0) := "0000";
     constant LFP_LES        : std_logic_vector (3 downto 0) := "0001";
+    constant MISC_BOUND     : std_logic_vector (3 downto 0) := "0010";
 
     constant MOVS_OP        : std_logic_vector (3 downto 0) := "0000";
     constant STOS_OP        : std_logic_vector (3 downto 0) := "0001";
@@ -97,6 +98,7 @@ package cpu86_types is
     constant SYS_INT_OP     : std_logic_vector (3 downto 0) := "1000";
     constant SYS_INTO_OP    : std_logic_vector (3 downto 0) := "1001";
     constant SYS_INT3_OP    : std_logic_vector (3 downto 0) := "1010";
+    constant SYS_BND_INT_OP : std_logic_vector (3 downto 0) := "1110";
     constant SYS_DIV_INT_OP : std_logic_vector (3 downto 0) := "1111";
 
     constant FEU_CBW        : std_logic_vector (3 downto 0) := "0000";
@@ -140,9 +142,10 @@ package cpu86_types is
     constant FLAG_01        : natural := 1;
     constant FLAG_CF        : natural := 0;
 
-    constant DECODED_INSTR_T_WIDTH : integer := 86;
+    constant DECODED_INSTR_T_WIDTH : integer := 94;
 
     type packed_decoded_instr_t is record
+        imm8        : std_logic_vector(93 downto 86);
         wait_ax     : std_logic_vector(85 downto 85);
         wait_bx     : std_logic_vector(84 downto 84);
         wait_cx     : std_logic_vector(83 downto 83);
@@ -180,6 +183,7 @@ package cpu86_types is
     end record;
 
     type decoded_instr_t is record
+        imm8        : std_logic_vector(7 downto 0);
         wait_ax     : std_logic;
         wait_bx     : std_logic;
         wait_cx     : std_logic;
@@ -247,7 +251,7 @@ package cpu86_types is
         disp        : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 11;
+    constant MICRO_OP_CMD_WIDTH : natural := 12;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
@@ -259,6 +263,7 @@ package cpu86_types is
     constant MICRO_OP_CMD_SHF : natural := 8;
     constant MICRO_OP_CMD_DIV : natural := 9;
     constant MICRO_OP_CMD_IO  : natural := 10;
+    constant MICRO_OP_CMD_BND : natural := 11;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -296,6 +301,12 @@ package cpu86_types is
         div_cs_val      : std_logic_vector(15 downto 0);
         div_ip_val      : std_logic_vector(15 downto 0);
         div_ip_next_val : std_logic_vector(15 downto 0);
+
+        bnd_val         : std_logic_vector(15 downto 0);
+        bnd_ss_val      : std_logic_vector(15 downto 0);
+        bnd_cs_val      : std_logic_vector(15 downto 0);
+        bnd_ip_val      : std_logic_vector(15 downto 0);
+        bnd_ip_next_val : std_logic_vector(15 downto 0);
 
         one_code        : std_logic_vector(3 downto 0);
         one_w           : std_logic;
@@ -489,6 +500,8 @@ package body cpu86_types is
         variable v : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
     begin
 
+        p.imm8      := decoded_instr.imm8;
+
         p.wait_ax   := (85 => decoded_instr.wait_ax);
         p.wait_bx   := (84 => decoded_instr.wait_bx);
         p.wait_cx   := (83 => decoded_instr.wait_cx);
@@ -525,7 +538,7 @@ package body cpu86_types is
         p.data      := decoded_instr.data;
         p.disp      := decoded_instr.disp;
 
-        v := p.wait_ax & p.wait_bx & p.wait_cx & p.wait_dx & p.wait_bp & p.wait_si & p.wait_di & p.wait_sp & p.wait_ds & p.wait_es & p.wait_ss & p.wait_fl &
+        v := p.imm8 & p.wait_ax & p.wait_bx & p.wait_cx & p.wait_dx & p.wait_bp & p.wait_si & p.wait_di & p.wait_sp & p.wait_ds & p.wait_es & p.wait_ss & p.wait_fl &
             p.lock_fl & p.lock_sp & p.lock_sreg & p.lock_dreg & p.lock_ax & p.lock_si & p.lock_di & p.lock_ds & p.lock_es & p.lock_all &
             p.fl & p.op & p.code & p.w & p.dir & p.ea & p.dreg & p.dmask & p.sreg & p.smask & p.data & p.disp;
 
@@ -540,6 +553,7 @@ package body cpu86_types is
     begin
         t := v;
         --(p.op,  p.code, p.w, p.dir, p.ea, p.dreg, p.dmask, p.sreg, p.smask, p.data, p.disp) := v;
+        p.imm8      := t(p.imm8'range);
 
         p.wait_ax   := t(p.wait_ax'range);
         p.wait_bx   := t(p.wait_bx'range);
@@ -576,6 +590,8 @@ package body cpu86_types is
         p.smask     := t(p.smask'range);
         p.data      := t(p.data'range);
         p.disp      := t(p.disp'range);
+
+        d.imm8      := p.imm8;
 
         d.wait_ax   := p.wait_ax(85);
         d.wait_bx   := p.wait_bx(84);
