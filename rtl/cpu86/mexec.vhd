@@ -60,6 +60,8 @@ entity mexec is
         si_m_inc_tdata          : out std_logic_vector(15 downto 0);
         si_m_inc_tkeep_lock     : out std_logic;
 
+        bp_m_inc_tvalid         : out std_logic;
+
         flags_m_wr_tvalid       : out std_logic;
         flags_m_wr_tdata        : out std_logic_vector(15 downto 0);
 
@@ -504,6 +506,9 @@ begin
     si_m_inc_tdata <= micro_tdata.si_inc_data;
     si_m_inc_tkeep_lock <= micro_tdata.si_keep_lock;
 
+    -- bp increment
+    bp_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.bp_inc = '1' else '0';
+
     div_intr_m_tvalid <= '1' when div_res_tvalid = '1' and div_res_tdata.overflow = '1' else '0';
     div_intr_m_tdata(DIV_INTR_T_SS) <= div_res_tdata.ss_val;
     div_intr_m_tdata(DIV_INTR_T_IP) <= div_res_tdata.ip_val;
@@ -862,7 +867,7 @@ begin
                 alu_req_tdata.dreg <= micro_tdata.alu_dreg;
                 alu_req_tdata.dmask <= micro_tdata.alu_dmask;
 
-                if (micro_tdata.alu_code = ALU_SF_ADD and micro_tdata.alu_dreg = FL) or (micro_tdata.alu_code /= ALU_SF_ADD) then
+                if (micro_tdata.alu_code = ALU_SF_ADD and micro_tdata.alu_dreg = FL) or (micro_tdata.alu_code /= ALU_SF_ADD and micro_tdata.alu_code /= ALU_SF_DEC) then
                     alu_req_tdata.upd_fl <= '1';
                 else
                     alu_req_tdata.upd_fl <= '0';

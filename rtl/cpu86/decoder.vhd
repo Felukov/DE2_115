@@ -39,7 +39,8 @@ architecture rtl of decoder is
         data_high,      --0111
         disp8,          --1001
         disp_low,       --1010
-        disp_high       --1011
+        disp_high,      --1011
+        imm8            --1100
     );
 
     attribute enum_encoding : string;
@@ -217,7 +218,7 @@ begin
                                     instr_tvalid <= '0';
 
                                 when x"C8" =>
-                                    decode_chain(data_low, data_high, data8, first_byte);
+                                    decode_chain(data_low, data_high, imm8, first_byte);
                                     instr_tvalid <= '0';
 
                                 when x"EA" =>
@@ -353,6 +354,7 @@ begin
                         when disp8      => shift_chain; next_is_new_instruction;
                         when disp_low   => shift_chain; next_is_new_instruction;
                         when disp_high  => shift_chain; next_is_new_instruction;
+                        when imm8       => shift_chain; next_is_new_instruction;
                         when others     => null;
 
                     end case;
@@ -1361,6 +1363,8 @@ begin
                 when x"C6" => set_op(MOVU, "0000", '0'); no_lock; no_wait; lock_fl('0');
                 when x"C7" => set_op(MOVU, "0000", '1'); no_lock; no_wait; lock_fl('0');
 
+                when x"C8" => set_stack_op(STACKU_ENTER); lock_stack_pop; wait_stack_reg(BP); lock_fl('0');
+
                 when x"CD" => set_op(SYS, SYS_INT_OP, '1'); no_lock; no_wait; lock_fl('0');
                 when x"CF" => set_op(SYS, SYS_IRET_OP, '1'); no_lock; no_wait; lock_fl('0');
 
@@ -2064,7 +2068,7 @@ begin
                     when x"A9" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
                     when x"AC" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "01";
                     when x"AD" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
-
+                    when x"C8" => instr_tdata.dreg <= BP; instr_tdata.dmask <= "11";
                     when x"F2" | x"F3" =>
                         instr_tdata.dreg <= CX;
                         instr_tdata.dmask <= "11";
@@ -2709,6 +2713,10 @@ begin
                 instr_tdata.disp(7 downto 0) <= u8_tdata;
             elsif (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = disp_high) then
                 instr_tdata.disp(15 downto 8) <= u8_tdata;
+            end if;
+
+            if (u8_tvalid = '1' and u8_tready = '1') then
+                instr_tdata.imm8 <= u8_tdata;
             end if;
 
         end if;

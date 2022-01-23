@@ -47,6 +47,7 @@ package cpu86_types is
     constant ALU_OP_INC     : std_logic_vector (3 downto 0) := "1000";
     constant ALU_OP_DEC     : std_logic_vector (3 downto 0) := "1001";
     constant ALU_OP_TST     : std_logic_vector (3 downto 0) := "1010";
+    constant ALU_SF_DEC     : std_logic_vector (3 downto 0) := "1110";
     constant ALU_SF_ADD     : std_logic_vector (3 downto 0) := "1111";
 
     constant ONE_OP_NOT     : std_logic_vector (3 downto 0) := "0000";
@@ -68,6 +69,7 @@ package cpu86_types is
     constant STACKU_PUSHI   : std_logic_vector (3 downto 0) := "1010";
     constant STACKU_PUSHM   : std_logic_vector (3 downto 0) := "1011";
     constant STACKU_PUSHA   : std_logic_vector (3 downto 0) := "1100";
+    constant STACKU_ENTER   : std_logic_vector (3 downto 0) := "1101";
 
     constant LOOP_OP        : std_logic_vector (3 downto 0) := "0000";
     constant LOOP_OP_E      : std_logic_vector (3 downto 0) := "0001";
@@ -249,6 +251,7 @@ package cpu86_types is
         sreg        : reg_t;
         data        : std_logic_vector(15 downto 0);
         disp        : std_logic_vector(15 downto 0);
+        level       : natural range 0 to 31;
     end record;
 
     constant MICRO_OP_CMD_WIDTH : natural := 12;
@@ -284,6 +287,7 @@ package cpu86_types is
         alu_b_mem       : std_logic;
         alu_b_val       : std_logic_vector(15 downto 0);
         alu_wb          : std_logic;
+        alu_upd_fl      : std_logic;
 
         mul_code        : std_logic_vector(3 downto 0);
         mul_w           : std_logic;
@@ -350,15 +354,21 @@ package cpu86_types is
 
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
+
         sp_inc          : std_logic;
         sp_inc_data     : std_logic_vector(15 downto 0);
         sp_keep_lock    : std_logic;
+
         si_inc          : std_logic;
         si_inc_data     : std_logic_vector(15 downto 0);
         si_keep_lock    : std_logic;
+
         di_inc          : std_logic;
         di_inc_data     : std_logic_vector(15 downto 0);
         di_keep_lock    : std_logic;
+
+        bp_inc          : std_logic;
+
         dbg_cs          : std_logic_vector(15 downto 0);
         dbg_ip          : std_logic_vector(15 downto 0);
     end record;

@@ -401,6 +401,7 @@ begin
                 rr_tdata.seg_val <= seg_tdata;
                 rr_tdata.ss_seg_val <= ss_s_tdata;
                 rr_tdata.es_seg_val <= es_s_tdata;
+                rr_tdata.level <= to_integer(unsigned(instr_tdata.imm8(4 downto 0)));
                 rr_tuser <= instr_tuser;
 
             end if;

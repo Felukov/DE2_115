@@ -235,6 +235,7 @@ architecture rtl of exec is
             cx_s_tdata              : in std_logic_vector(15 downto 0);
             dx_s_tdata              : in std_logic_vector(15 downto 0);
             bp_s_tdata              : in std_logic_vector(15 downto 0);
+            bp_s_tdata_next         : in std_logic_vector(15 downto 0);
             sp_s_tdata              : in std_logic_vector(15 downto 0);
             sp_s_tdata_next         : in std_logic_vector(15 downto 0);
             di_s_tdata              : in std_logic_vector(15 downto 0);
@@ -307,6 +308,7 @@ architecture rtl of exec is
 
             bp_m_wr_tvalid          : out std_logic;
             bp_m_wr_tdata           : out std_logic_vector(15 downto 0);
+
             sp_m_wr_tvalid          : out std_logic;
             sp_m_wr_tdata           : out std_logic_vector(15 downto 0);
             di_m_wr_tvalid          : out std_logic;
@@ -335,6 +337,8 @@ architecture rtl of exec is
             si_m_inc_tvalid         : out std_logic;
             si_m_inc_tdata          : out std_logic_vector(15 downto 0);
             si_m_inc_tkeep_lock     : out std_logic;
+
+            bp_m_inc_tvalid         : out std_logic;
 
             jump_m_tvalid           : out std_logic;
             jump_m_tdata            : out std_logic_vector(31 downto 0);
@@ -479,9 +483,12 @@ architecture rtl of exec is
 
     signal bp_tvalid                : std_logic;
     signal bp_tdata                 : std_logic_vector(15 downto 0);
+    signal bp_tdata_next            : std_logic_vector(15 downto 0);
     signal bp_lock_tvalid           : std_logic;
     signal bp_wr_tvalid             : std_logic;
     signal bp_wr_tdata              : std_logic_vector(15 downto 0);
+
+    signal bp_m_inc_tvalid          : std_logic;
 
     signal si_tvalid                : std_logic;
     signal si_tdata                 : std_logic_vector(15 downto 0);
@@ -792,7 +799,7 @@ begin
     );
 
 
-    cpu_reg_bp : cpu_reg generic map (
+    cpu_reg_bp : cpu_reg_acc generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -801,13 +808,17 @@ begin
         wr_s_tvalid             => bp_wr_tvalid,
         wr_s_tdata              => bp_wr_tdata,
         wr_s_tmask              => "11",
-        wr_s_tkeep_lock         => '0',
+
+        inc_s_tvalid            => bp_m_inc_tvalid,
+        inc_s_tdata             => x"FFFE",
+        inc_s_tkeep_lock        => '1',
 
         lock_s_tvalid           => bp_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
 
         reg_m_tvalid            => bp_tvalid,
-        reg_m_tdata             => bp_tdata
+        reg_m_tdata             => bp_tdata,
+        reg_m_tdata_next        => bp_tdata_next
     );
 
 
@@ -1058,6 +1069,7 @@ begin
         cx_s_tdata              => cx_tdata,
         dx_s_tdata              => dx_tdata,
         bp_s_tdata              => bp_tdata,
+        bp_s_tdata_next         => bp_tdata_next,
         sp_s_tdata              => sp_tdata,
         sp_s_tdata_next         => sp_tdata_next,
         di_s_tdata              => di_tdata,
@@ -1155,6 +1167,8 @@ begin
         si_m_inc_tvalid         => mexec_si_inc_tvalid,
         si_m_inc_tdata          => mexec_si_inc_tdata,
         si_m_inc_tkeep_lock     => mexec_si_inc_tkeep_lock,
+
+        bp_m_inc_tvalid         => bp_m_inc_tvalid,
 
         jump_m_tvalid           => jump_tvalid,
         jump_m_tdata            => jump_tdata,
