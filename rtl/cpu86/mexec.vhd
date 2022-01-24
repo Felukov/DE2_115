@@ -867,7 +867,7 @@ begin
                 alu_req_tdata.dreg <= micro_tdata.alu_dreg;
                 alu_req_tdata.dmask <= micro_tdata.alu_dmask;
 
-                if (micro_tdata.alu_code = ALU_SF_ADD and micro_tdata.alu_dreg = FL) or (micro_tdata.alu_code /= ALU_SF_ADD and micro_tdata.alu_code /= ALU_SF_DEC) then
+                if (micro_tdata.alu_dreg = FL or micro_tdata.alu_upd_fl = '1') then
                     alu_req_tdata.upd_fl <= '1';
                 else
                     alu_req_tdata.upd_fl <= '0';

@@ -77,7 +77,7 @@ begin
                 res_tdata_next.dval <= xor_next;
                 res_tdata_next.rval(15 downto 0) <= xor_next;
                 res_tdata_next.rval(16) <= '0';
-            when ALU_OP_SUB | ALU_OP_DEC | ALU_SF_DEC =>
+            when ALU_OP_SUB | ALU_OP_DEC =>
                 res_tdata_next.dval <= sub_next(15 downto 0);
                 res_tdata_next.rval <= sub_next;
             when ALU_OP_SBB =>

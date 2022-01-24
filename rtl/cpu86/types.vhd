@@ -47,8 +47,8 @@ package cpu86_types is
     constant ALU_OP_INC     : std_logic_vector (3 downto 0) := "1000";
     constant ALU_OP_DEC     : std_logic_vector (3 downto 0) := "1001";
     constant ALU_OP_TST     : std_logic_vector (3 downto 0) := "1010";
-    constant ALU_SF_DEC     : std_logic_vector (3 downto 0) := "1110";
-    constant ALU_SF_ADD     : std_logic_vector (3 downto 0) := "1111";
+    -- constant ALU_SF_DEC     : std_logic_vector (3 downto 0) := "1110";
+    -- constant ALU_SF_ADD     : std_logic_vector (3 downto 0) := "1111";
 
     constant ONE_OP_NOT     : std_logic_vector (3 downto 0) := "0000";
     constant ONE_OP_NEG     : std_logic_vector (3 downto 0) := "0001";
