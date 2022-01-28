@@ -402,6 +402,16 @@ begin
                 rr_tdata.ss_seg_val <= ss_s_tdata;
                 rr_tdata.es_seg_val <= es_s_tdata;
                 rr_tdata.level <= to_integer(unsigned(instr_tdata.imm8(4 downto 0)));
+
+                if (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
+                    ((instr_tdata.op = MOVU or instr_tdata.op = XCHG) and (instr_tdata.dir = R2R or instr_tdata.dir = I2R)) or
+                    (instr_tdata.op = REP) or
+                    (instr_tdata.op = FEU) then
+                    rr_tdata.fast_instr <= '1';
+                else
+                    rr_tdata.fast_instr <= '0';
+                end if;
+
                 rr_tuser <= instr_tuser;
 
             end if;

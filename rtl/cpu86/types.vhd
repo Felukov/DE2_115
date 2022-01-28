@@ -70,6 +70,7 @@ package cpu86_types is
     constant STACKU_PUSHM   : std_logic_vector (3 downto 0) := "1011";
     constant STACKU_PUSHA   : std_logic_vector (3 downto 0) := "1100";
     constant STACKU_ENTER   : std_logic_vector (3 downto 0) := "1101";
+    constant STACKU_LEAVE   : std_logic_vector (3 downto 0) := "1110";
 
     constant LOOP_OP        : std_logic_vector (3 downto 0) := "0000";
     constant LOOP_OP_E      : std_logic_vector (3 downto 0) := "0001";
@@ -252,6 +253,7 @@ package cpu86_types is
         data        : std_logic_vector(15 downto 0);
         disp        : std_logic_vector(15 downto 0);
         level       : natural range 0 to 31;
+        fast_instr  : std_logic;
     end record;
 
     constant MICRO_OP_CMD_WIDTH : natural := 12;

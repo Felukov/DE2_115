@@ -349,6 +349,7 @@ architecture rtl of mexec is
     signal dbg_1_tvalid         : std_logic;
 
     signal res_tdata_selector   : std_logic_vector(7 downto 0);
+    signal flags_wr_selector    : std_logic_vector(7 downto 0);
 
     signal io_cmd_w             : std_logic;
     signal io_cmd_wb            : std_logic;
@@ -1092,6 +1093,15 @@ begin
         end if;
     end process;
 
+    flags_wr_selector(0) <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_FLG) = '1' else '0';
+    flags_wr_selector(1) <= '1' when alu_res_tvalid = '1' and alu_res_tdata.upd_fl = '1' else '0';
+    flags_wr_selector(2) <= one_res_tvalid;
+    flags_wr_selector(3) <= div_res_tvalid;
+    flags_wr_selector(4) <= bcd_res_tvalid;
+    flags_wr_selector(5) <= shf8_res_tvalid;
+    flags_wr_selector(6) <= shf16_res_tvalid;
+    flags_wr_selector(7) <= mul_res_tvalid;
+
     flags_upd_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
@@ -1110,32 +1120,89 @@ begin
                     flags_m_wr_tvalid <= '0';
                 end if;
 
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_FLG) = '1') then
-                    for i in 0 to 15 loop
-                        if (micro_tdata.flg_no = std_logic_vector(to_unsigned(i, 4))) then
-                            flags_wr_be(i) <= '1';
-                        else
-                            flags_wr_be(i) <= '0';
-                        end if;
-                    end loop;
-                elsif (alu_res_tvalid = '1' and alu_res_tdata.upd_fl = '1') then
-                    if (alu_res_tdata.dreg = FL) then
-
-                        for i in 15 downto 8 loop
-                            flags_wr_be(i) <= alu_res_tdata.dmask(1);
+                case flags_wr_selector is
+                    when "00000001" =>
+                        for i in 0 to 15 loop
+                            if (micro_tdata.flg_no = std_logic_vector(to_unsigned(i, 4))) then
+                                flags_wr_be(i) <= '1';
+                            else
+                                flags_wr_be(i) <= '0';
+                            end if;
                         end loop;
+                    when "00000010" =>
+                        if (alu_res_tdata.dreg = FL) then
 
-                        flags_wr_be(FLAG_ZF) <= alu_res_tdata.dmask(0);
-                        flags_wr_be(FLAG_05) <= '0';
-                        flags_wr_be(FLAG_AF) <= '0';
-                        flags_wr_be(FLAG_03) <= '0';
-                        flags_wr_be(FLAG_PF) <= alu_res_tdata.dmask(0);
-                        flags_wr_be(FLAG_01) <= '0';
-                        flags_wr_be(FLAG_CF) <= alu_res_tdata.dmask(0);
+                            for i in 15 downto 8 loop
+                                flags_wr_be(i) <= alu_res_tdata.dmask(1);
+                            end loop;
 
-                    else
-                        case (alu_res_tdata.code) is
-                            when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
+                            flags_wr_be(FLAG_ZF) <= alu_res_tdata.dmask(0);
+                            flags_wr_be(FLAG_05) <= '0';
+                            flags_wr_be(FLAG_AF) <= '0';
+                            flags_wr_be(FLAG_03) <= '0';
+                            flags_wr_be(FLAG_PF) <= alu_res_tdata.dmask(0);
+                            flags_wr_be(FLAG_01) <= '0';
+                            flags_wr_be(FLAG_CF) <= alu_res_tdata.dmask(0);
+
+                        else
+                            case (alu_res_tdata.code) is
+                                when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
+                                    flags_wr_be(FLAG_15) <= '0';
+                                    flags_wr_be(FLAG_14) <= '0';
+                                    flags_wr_be(FLAG_13) <= '0';
+                                    flags_wr_be(FLAG_12) <= '0';
+                                    flags_wr_be(FLAG_OF) <= '1';
+                                    flags_wr_be(FLAG_DF) <= '0';
+                                    flags_wr_be(FLAG_IF) <= '0';
+                                    flags_wr_be(FLAG_TF) <= '0';
+                                    flags_wr_be(FLAG_SF) <= '1';
+                                    flags_wr_be(FLAG_ZF) <= '1';
+                                    flags_wr_be(FLAG_05) <= '0';
+                                    flags_wr_be(FLAG_AF) <= '1';
+                                    flags_wr_be(FLAG_03) <= '0';
+                                    flags_wr_be(FLAG_PF) <= '1';
+                                    flags_wr_be(FLAG_01) <= '0';
+                                    flags_wr_be(FLAG_CF) <= '1';
+                                when ALU_OP_INC | ALU_OP_DEC =>
+                                    flags_wr_be(FLAG_15) <= '0';
+                                    flags_wr_be(FLAG_14) <= '0';
+                                    flags_wr_be(FLAG_13) <= '0';
+                                    flags_wr_be(FLAG_12) <= '0';
+                                    flags_wr_be(FLAG_OF) <= '1';
+                                    flags_wr_be(FLAG_DF) <= '0';
+                                    flags_wr_be(FLAG_IF) <= '0';
+                                    flags_wr_be(FLAG_TF) <= '0';
+                                    flags_wr_be(FLAG_SF) <= '1';
+                                    flags_wr_be(FLAG_ZF) <= '1';
+                                    flags_wr_be(FLAG_05) <= '0';
+                                    flags_wr_be(FLAG_AF) <= '1';
+                                    flags_wr_be(FLAG_03) <= '0';
+                                    flags_wr_be(FLAG_PF) <= '1';
+                                    flags_wr_be(FLAG_01) <= '0';
+                                    flags_wr_be(FLAG_CF) <= '0';
+                                when others =>
+                                    -- ALU_OP_ADD | ALU_OP_SUB
+                                    flags_wr_be(FLAG_15) <= '0';
+                                    flags_wr_be(FLAG_14) <= '0';
+                                    flags_wr_be(FLAG_13) <= '0';
+                                    flags_wr_be(FLAG_12) <= '0';
+                                    flags_wr_be(FLAG_OF) <= '1';
+                                    flags_wr_be(FLAG_DF) <= '0';
+                                    flags_wr_be(FLAG_IF) <= '0';
+                                    flags_wr_be(FLAG_TF) <= '0';
+                                    flags_wr_be(FLAG_SF) <= '1';
+                                    flags_wr_be(FLAG_ZF) <= '1';
+                                    flags_wr_be(FLAG_05) <= '0';
+                                    flags_wr_be(FLAG_AF) <= '1';
+                                    flags_wr_be(FLAG_03) <= '0';
+                                    flags_wr_be(FLAG_PF) <= '1';
+                                    flags_wr_be(FLAG_01) <= '0';
+                                    flags_wr_be(FLAG_CF) <= '1';
+                            end case;
+                        end if;
+                    when "00000100" =>
+                        case (one_res_tdata.code) is
+                            when ONE_OP_NEG =>
                                 flags_wr_be(FLAG_15) <= '0';
                                 flags_wr_be(FLAG_14) <= '0';
                                 flags_wr_be(FLAG_13) <= '0';
@@ -1152,30 +1219,70 @@ begin
                                 flags_wr_be(FLAG_PF) <= '1';
                                 flags_wr_be(FLAG_01) <= '0';
                                 flags_wr_be(FLAG_CF) <= '1';
-                            when ALU_OP_INC | ALU_OP_DEC =>
+                            when others =>
+                                flags_wr_be <= (others => '0');
+                        end case;
+                    when "00001000" =>
+                        if (div_res_tdata.code = DIVU_AAM) then
                                 flags_wr_be(FLAG_15) <= '0';
                                 flags_wr_be(FLAG_14) <= '0';
                                 flags_wr_be(FLAG_13) <= '0';
                                 flags_wr_be(FLAG_12) <= '0';
-                                flags_wr_be(FLAG_OF) <= '1';
+                                flags_wr_be(FLAG_OF) <= '0';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
                                 flags_wr_be(FLAG_TF) <= '0';
                                 flags_wr_be(FLAG_SF) <= '1';
                                 flags_wr_be(FLAG_ZF) <= '1';
                                 flags_wr_be(FLAG_05) <= '0';
-                                flags_wr_be(FLAG_AF) <= '1';
+                                flags_wr_be(FLAG_AF) <= '0';
                                 flags_wr_be(FLAG_03) <= '0';
                                 flags_wr_be(FLAG_PF) <= '1';
                                 flags_wr_be(FLAG_01) <= '0';
                                 flags_wr_be(FLAG_CF) <= '0';
-                            when others =>
-                                -- ALU_OP_ADD | ALU_OP_SUB
+                        end if;
+                    when "00010000" =>
+                        case (bcd_res_tdata.code) is
+                            when BCDU_AAA | BCDU_AAS =>
                                 flags_wr_be(FLAG_15) <= '0';
                                 flags_wr_be(FLAG_14) <= '0';
                                 flags_wr_be(FLAG_13) <= '0';
                                 flags_wr_be(FLAG_12) <= '0';
-                                flags_wr_be(FLAG_OF) <= '1';
+                                flags_wr_be(FLAG_OF) <= '0';
+                                flags_wr_be(FLAG_DF) <= '0';
+                                flags_wr_be(FLAG_IF) <= '0';
+                                flags_wr_be(FLAG_TF) <= '0';
+                                flags_wr_be(FLAG_SF) <= '0';
+                                flags_wr_be(FLAG_ZF) <= '0';
+                                flags_wr_be(FLAG_05) <= '0';
+                                flags_wr_be(FLAG_AF) <= '1';
+                                flags_wr_be(FLAG_03) <= '0';
+                                flags_wr_be(FLAG_PF) <= '0';
+                                flags_wr_be(FLAG_01) <= '0';
+                                flags_wr_be(FLAG_CF) <= '1';
+                            when BCDU_AAD =>
+                                flags_wr_be(FLAG_15) <= '0';
+                                flags_wr_be(FLAG_14) <= '0';
+                                flags_wr_be(FLAG_13) <= '0';
+                                flags_wr_be(FLAG_12) <= '0';
+                                flags_wr_be(FLAG_OF) <= '0';
+                                flags_wr_be(FLAG_DF) <= '0';
+                                flags_wr_be(FLAG_IF) <= '0';
+                                flags_wr_be(FLAG_TF) <= '0';
+                                flags_wr_be(FLAG_SF) <= '1';
+                                flags_wr_be(FLAG_ZF) <= '1';
+                                flags_wr_be(FLAG_05) <= '0';
+                                flags_wr_be(FLAG_AF) <= '0';
+                                flags_wr_be(FLAG_03) <= '0';
+                                flags_wr_be(FLAG_PF) <= '1';
+                                flags_wr_be(FLAG_01) <= '0';
+                                flags_wr_be(FLAG_CF) <= '0';
+                            when BCDU_DAA | BCDU_DAS =>
+                                flags_wr_be(FLAG_15) <= '0';
+                                flags_wr_be(FLAG_14) <= '0';
+                                flags_wr_be(FLAG_13) <= '0';
+                                flags_wr_be(FLAG_12) <= '0';
+                                flags_wr_be(FLAG_OF) <= '0';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
                                 flags_wr_be(FLAG_TF) <= '0';
@@ -1187,201 +1294,107 @@ begin
                                 flags_wr_be(FLAG_PF) <= '1';
                                 flags_wr_be(FLAG_01) <= '0';
                                 flags_wr_be(FLAG_CF) <= '1';
+                            when others =>
+                                flags_wr_be <= (others => '0');
                         end case;
-                    end if;
-                elsif (one_res_tvalid = '1') then
-                    case (one_res_tdata.code) is
-                        when ONE_OP_NEG =>
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '1';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '1';
-                            flags_wr_be(FLAG_ZF) <= '1';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '1';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '1';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '1';
-                        when others =>
-                            flags_wr_be <= (others => '0');
-                    end case;
-                elsif (div_res_tvalid = '1') then
-                    if (div_res_tdata.code = DIVU_AAM) then
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '0';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '1';
-                            flags_wr_be(FLAG_ZF) <= '1';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '0';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '1';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '0';
-                    end if;
-                elsif (bcd_res_tvalid = '1') then
-                    case (bcd_res_tdata.code) is
-                        when BCDU_AAA | BCDU_AAS =>
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '0';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '0';
-                            flags_wr_be(FLAG_ZF) <= '0';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '1';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '0';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '1';
-                        when BCDU_AAD =>
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '0';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '1';
-                            flags_wr_be(FLAG_ZF) <= '1';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '0';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '1';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '0';
-                        when BCDU_DAA | BCDU_DAS =>
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '0';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '1';
-                            flags_wr_be(FLAG_ZF) <= '1';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '1';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '1';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '1';
-                        when others =>
-                            flags_wr_be <= (others => '0');
-                    end case;
-                elsif (shf8_res_tvalid = '1') then
-                    case (shf8_res_tdata.code) is
-                        when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '1';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '0';
-                            flags_wr_be(FLAG_ZF) <= '0';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '0';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '0';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '1';
-                        when SHF_OP_SHL | SHF_OP_SAR | SHF_OP_SHR =>
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '1';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '1';
-                            flags_wr_be(FLAG_ZF) <= '1';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '0';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '1';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '1';
-                        when others =>
-                            flags_wr_be <= (others => '0');
-                    end case;
-                elsif (shf16_res_tvalid = '1') then
-                    case (shf16_res_tdata.code) is
-                        when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '1';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '0';
-                            flags_wr_be(FLAG_ZF) <= '0';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '0';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '0';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '1';
-                        when SHF_OP_SHL | SHF_OP_SAR | SHF_OP_SHR =>
-                            flags_wr_be(FLAG_15) <= '0';
-                            flags_wr_be(FLAG_14) <= '0';
-                            flags_wr_be(FLAG_13) <= '0';
-                            flags_wr_be(FLAG_12) <= '0';
-                            flags_wr_be(FLAG_OF) <= '1';
-                            flags_wr_be(FLAG_DF) <= '0';
-                            flags_wr_be(FLAG_IF) <= '0';
-                            flags_wr_be(FLAG_TF) <= '0';
-                            flags_wr_be(FLAG_SF) <= '1';
-                            flags_wr_be(FLAG_ZF) <= '1';
-                            flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '0';
-                            flags_wr_be(FLAG_03) <= '0';
-                            flags_wr_be(FLAG_PF) <= '1';
-                            flags_wr_be(FLAG_01) <= '0';
-                            flags_wr_be(FLAG_CF) <= '1';
-                        when others =>
-                            flags_wr_be <= (others => '0');
-                    end case;
-                elsif (mul_res_tvalid = '1') then
-                    flags_wr_be(FLAG_15) <= '0';
-                    flags_wr_be(FLAG_14) <= '0';
-                    flags_wr_be(FLAG_13) <= '0';
-                    flags_wr_be(FLAG_12) <= '0';
-                    flags_wr_be(FLAG_OF) <= '1';
-                    flags_wr_be(FLAG_DF) <= '0';
-                    flags_wr_be(FLAG_IF) <= '0';
-                    flags_wr_be(FLAG_TF) <= '0';
-                    flags_wr_be(FLAG_SF) <= '1';
-                    flags_wr_be(FLAG_ZF) <= '0';
-                    flags_wr_be(FLAG_05) <= '0';
-                    flags_wr_be(FLAG_AF) <= '0';
-                    flags_wr_be(FLAG_03) <= '0';
-                    flags_wr_be(FLAG_PF) <= '1';
-                    flags_wr_be(FLAG_01) <= '0';
-                    flags_wr_be(FLAG_CF) <= '1';
-                end if;
+                    when "00100000" =>
+                        case (shf8_res_tdata.code) is
+                            when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
+                                flags_wr_be(FLAG_15) <= '0';
+                                flags_wr_be(FLAG_14) <= '0';
+                                flags_wr_be(FLAG_13) <= '0';
+                                flags_wr_be(FLAG_12) <= '0';
+                                flags_wr_be(FLAG_OF) <= '1';
+                                flags_wr_be(FLAG_DF) <= '0';
+                                flags_wr_be(FLAG_IF) <= '0';
+                                flags_wr_be(FLAG_TF) <= '0';
+                                flags_wr_be(FLAG_SF) <= '0';
+                                flags_wr_be(FLAG_ZF) <= '0';
+                                flags_wr_be(FLAG_05) <= '0';
+                                flags_wr_be(FLAG_AF) <= '0';
+                                flags_wr_be(FLAG_03) <= '0';
+                                flags_wr_be(FLAG_PF) <= '0';
+                                flags_wr_be(FLAG_01) <= '0';
+                                flags_wr_be(FLAG_CF) <= '1';
+                            when SHF_OP_SHL | SHF_OP_SAR | SHF_OP_SHR =>
+                                flags_wr_be(FLAG_15) <= '0';
+                                flags_wr_be(FLAG_14) <= '0';
+                                flags_wr_be(FLAG_13) <= '0';
+                                flags_wr_be(FLAG_12) <= '0';
+                                flags_wr_be(FLAG_OF) <= '1';
+                                flags_wr_be(FLAG_DF) <= '0';
+                                flags_wr_be(FLAG_IF) <= '0';
+                                flags_wr_be(FLAG_TF) <= '0';
+                                flags_wr_be(FLAG_SF) <= '1';
+                                flags_wr_be(FLAG_ZF) <= '1';
+                                flags_wr_be(FLAG_05) <= '0';
+                                flags_wr_be(FLAG_AF) <= '0';
+                                flags_wr_be(FLAG_03) <= '0';
+                                flags_wr_be(FLAG_PF) <= '1';
+                                flags_wr_be(FLAG_01) <= '0';
+                                flags_wr_be(FLAG_CF) <= '1';
+                            when others =>
+                                flags_wr_be <= (others => '0');
+                        end case;
+                    when "01000000" =>
+                        case (shf16_res_tdata.code) is
+                            when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
+                                flags_wr_be(FLAG_15) <= '0';
+                                flags_wr_be(FLAG_14) <= '0';
+                                flags_wr_be(FLAG_13) <= '0';
+                                flags_wr_be(FLAG_12) <= '0';
+                                flags_wr_be(FLAG_OF) <= '1';
+                                flags_wr_be(FLAG_DF) <= '0';
+                                flags_wr_be(FLAG_IF) <= '0';
+                                flags_wr_be(FLAG_TF) <= '0';
+                                flags_wr_be(FLAG_SF) <= '0';
+                                flags_wr_be(FLAG_ZF) <= '0';
+                                flags_wr_be(FLAG_05) <= '0';
+                                flags_wr_be(FLAG_AF) <= '0';
+                                flags_wr_be(FLAG_03) <= '0';
+                                flags_wr_be(FLAG_PF) <= '0';
+                                flags_wr_be(FLAG_01) <= '0';
+                                flags_wr_be(FLAG_CF) <= '1';
+                            when SHF_OP_SHL | SHF_OP_SAR | SHF_OP_SHR =>
+                                flags_wr_be(FLAG_15) <= '0';
+                                flags_wr_be(FLAG_14) <= '0';
+                                flags_wr_be(FLAG_13) <= '0';
+                                flags_wr_be(FLAG_12) <= '0';
+                                flags_wr_be(FLAG_OF) <= '1';
+                                flags_wr_be(FLAG_DF) <= '0';
+                                flags_wr_be(FLAG_IF) <= '0';
+                                flags_wr_be(FLAG_TF) <= '0';
+                                flags_wr_be(FLAG_SF) <= '1';
+                                flags_wr_be(FLAG_ZF) <= '1';
+                                flags_wr_be(FLAG_05) <= '0';
+                                flags_wr_be(FLAG_AF) <= '0';
+                                flags_wr_be(FLAG_03) <= '0';
+                                flags_wr_be(FLAG_PF) <= '1';
+                                flags_wr_be(FLAG_01) <= '0';
+                                flags_wr_be(FLAG_CF) <= '1';
+                            when others =>
+                                flags_wr_be <= (others => '0');
+                        end case;
+                    when "10000000" =>
+                        flags_wr_be(FLAG_15) <= '0';
+                        flags_wr_be(FLAG_14) <= '0';
+                        flags_wr_be(FLAG_13) <= '0';
+                        flags_wr_be(FLAG_12) <= '0';
+                        flags_wr_be(FLAG_OF) <= '1';
+                        flags_wr_be(FLAG_DF) <= '0';
+                        flags_wr_be(FLAG_IF) <= '0';
+                        flags_wr_be(FLAG_TF) <= '0';
+                        flags_wr_be(FLAG_SF) <= '1';
+                        flags_wr_be(FLAG_ZF) <= '0';
+                        flags_wr_be(FLAG_05) <= '0';
+                        flags_wr_be(FLAG_AF) <= '0';
+                        flags_wr_be(FLAG_03) <= '0';
+                        flags_wr_be(FLAG_PF) <= '1';
+                        flags_wr_be(FLAG_01) <= '0';
+                        flags_wr_be(FLAG_CF) <= '1';
+                    when others =>
+                        null;
+                end case;
 
             end if;
 

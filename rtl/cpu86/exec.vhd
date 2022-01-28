@@ -416,6 +416,27 @@ architecture rtl of exec is
         );
     end component dcache;
 
+    component dcache2 is
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+
+            dcache_s_tvalid         : in std_logic;
+            dcache_s_tready         : out std_logic;
+            dcache_s_tcmd           : in std_logic;
+            dcache_s_taddr          : in std_logic_vector(19 downto 0);
+            dcache_s_twidth         : in std_logic;
+            dcache_s_tdata          : in std_logic_vector(15 downto 0);
+            dcache_m_tvalid         : out std_logic;
+            dcache_m_tready         : in std_logic;
+            dcache_m_tcmd           : out std_logic;
+            dcache_m_taddr          : out std_logic_vector(19 downto 0);
+            dcache_m_twidth         : out std_logic;
+            dcache_m_tdata          : out std_logic_vector(15 downto 0);
+            dcache_m_thit           : out std_logic;
+            dcache_m_tcache         : out std_logic_vector(15 downto 0)
+        );
+    end component dcache2;
 
     signal exec_resetn              : std_logic;
 
@@ -612,8 +633,17 @@ architecture rtl of exec is
     signal lsu_rd_tready            : std_logic;
     signal lsu_rd_tdata             : std_logic_vector(15 downto 0);
 
+    -- signal dcache_tvalid            : std_logic;
+    -- signal dcache_tdata             : std_logic_vector(15 downto 0);
+
     signal dcache_tvalid            : std_logic;
+    signal dcache_tready            : std_logic;
+    signal dcache_tcmd              : std_logic;
+    signal dcache_taddr             : std_logic_vector(19 downto 0);
+    signal dcache_twidth            : std_logic;
     signal dcache_tdata             : std_logic_vector(15 downto 0);
+    signal dcache_thit              : std_logic;
+    signal dcache_tcache            : std_logic_vector(15 downto 0);
 
     signal fifo_instr_s_tdata       : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
     signal fifo_instr_m_tdata       : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
@@ -909,6 +939,7 @@ begin
         reg_m_tdata             => flags_tdata
     );
 
+
     div_interrupt_reg_inst : axis_reg generic map (
         DATA_WIDTH              => div_intr_s_tdata'length
     ) port map (
@@ -923,6 +954,7 @@ begin
         out_m_tready            => div_intr_m_tready,
         out_m_tdata             => div_intr_m_tdata
     );
+
 
     bnd_interrupt_reg_inst : axis_reg generic map (
         DATA_WIDTH              => bnd_intr_s_tdata'length
@@ -957,6 +989,7 @@ begin
         fifo_m_tready           => instr_m_tready,
         fifo_m_tdata            => fifo_instr_m_tdata
     );
+
 
     axis_fifo_inst_1 : axis_fifo generic map (
         FIFO_DEPTH              => 16,
@@ -1204,19 +1237,41 @@ begin
 
     );
 
+    dcache_inst : dcache2 port map (
+        clk                     => clk,
+        resetn                  => resetn,
+
+        dcache_s_tvalid         => lsu_req_tvalid,
+        dcache_s_tready         => lsu_req_tready,
+        dcache_s_tcmd           => lsu_req_tcmd,
+        dcache_s_taddr          => lsu_req_taddr,
+        dcache_s_twidth         => lsu_req_twidth,
+        dcache_s_tdata          => lsu_req_tdata,
+
+        dcache_m_tvalid         => dcache_tvalid,
+        dcache_m_tready         => dcache_tready,
+        dcache_m_tcmd           => dcache_tcmd,
+        dcache_m_taddr          => dcache_taddr,
+        dcache_m_twidth         => dcache_twidth,
+        dcache_m_tdata          => dcache_tdata,
+        dcache_m_thit           => dcache_thit,
+        dcache_m_tcache         => dcache_tcache
+
+    );
+
     lsu_inst : lsu port map (
         clk                     => clk,
         resetn                  => resetn,
 
-        lsu_req_s_tvalid        => lsu_req_tvalid,
-        lsu_req_s_tready        => lsu_req_tready,
-        lsu_req_s_tcmd          => lsu_req_tcmd,
-        lsu_req_s_taddr         => lsu_req_taddr,
-        lsu_req_s_twidth        => lsu_req_twidth,
-        lsu_req_s_tdata         => lsu_req_tdata,
+        lsu_req_s_tvalid        => dcache_tvalid,
+        lsu_req_s_tready        => dcache_tready,
+        lsu_req_s_tcmd          => dcache_tcmd,
+        lsu_req_s_taddr         => dcache_taddr,
+        lsu_req_s_twidth        => dcache_twidth,
+        lsu_req_s_tdata         => dcache_tdata,
 
-        dcache_s_tvalid         => dcache_tvalid,
-        dcache_s_tdata          => dcache_tdata,
+        dcache_s_tvalid         => dcache_thit,
+        dcache_s_tdata          => dcache_tcache,
 
         mem_req_m_tvalid        => mem_req_m_tvalid,
         mem_req_m_tready        => mem_req_m_tready,
@@ -1230,20 +1285,20 @@ begin
         lsu_rd_m_tdata          => lsu_rd_tdata
     );
 
-    dcache_inst : dcache port map (
-        clk                     => clk,
-        resetn                  => resetn,
+    -- dcache_inst : dcache port map (
+    --     clk                     => clk,
+    --     resetn                  => resetn,
 
-        lsu_req_s_tvalid        => lsu_req_tvalid,
-        lsu_req_s_tready        => lsu_req_tready,
-        lsu_req_s_tcmd          => lsu_req_tcmd,
-        lsu_req_s_taddr         => lsu_req_taddr,
-        lsu_req_s_twidth        => lsu_req_twidth,
-        lsu_req_s_tdata         => lsu_req_tdata,
+    --     lsu_req_s_tvalid        => lsu_req_tvalid,
+    --     lsu_req_s_tready        => lsu_req_tready,
+    --     lsu_req_s_tcmd          => lsu_req_tcmd,
+    --     lsu_req_s_taddr         => lsu_req_taddr,
+    --     lsu_req_s_twidth        => lsu_req_twidth,
+    --     lsu_req_s_tdata         => lsu_req_tdata,
 
-        dcache_m_tvalid         => dcache_tvalid,
-        dcache_m_tdata          => dcache_tdata
-    );
+    --     dcache_m_tvalid         => dcache_tvalid,
+    --     dcache_m_tdata          => dcache_tdata
+    -- );
 
     ax_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_ax_wr_tvalid = '1' or mexec_ax_wr_tvalid = '1') else '0';
     bx_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_bx_wr_tvalid = '1' or mexec_bx_wr_tvalid = '1') else '0';

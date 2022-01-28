@@ -1364,6 +1364,7 @@ begin
                 when x"C7" => set_op(MOVU, "0000", '1'); no_lock; no_wait; lock_fl('0');
 
                 when x"C8" => set_stack_op(STACKU_ENTER); lock_stack_pop; wait_stack_reg(BP); lock_fl('0');
+                when x"C9" => set_stack_op(STACKU_LEAVE); lock_stack_pop; wait_stack_reg(BP); lock_fl('0');
 
                 when x"CD" => set_op(SYS, SYS_INT_OP, '1'); no_lock; no_wait; lock_fl('0');
                 when x"CF" => set_op(SYS, SYS_IRET_OP, '1'); no_lock; no_wait; lock_fl('0');
@@ -2069,6 +2070,7 @@ begin
                     when x"AC" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "01";
                     when x"AD" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
                     when x"C8" => instr_tdata.dreg <= BP; instr_tdata.dmask <= "11";
+                    when x"C9" => instr_tdata.dreg <= BP; instr_tdata.dmask <= "11";
                     when x"F2" | x"F3" =>
                         instr_tdata.dreg <= CX;
                         instr_tdata.dmask <= "11";

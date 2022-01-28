@@ -142,7 +142,7 @@ begin
         FIFO_DEPTH              => 16,
         FIFO_WIDTH              => 16,
         ADDR_WIDTH              => 4,
-        REGISTER_OUTPUT         => '1'
+        REGISTER_OUTPUT         => '0'
     ) port map (
         clk                     => clk,
         resetn                  => resetn,

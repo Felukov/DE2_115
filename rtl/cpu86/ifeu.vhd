@@ -102,7 +102,7 @@ architecture rtl of ifeu is
     signal rr_tdata_buf         : rr_instr_t;
     signal rr_tuser_buf         : user_t;
     signal rr_tuser_buf_ip_next : std_logic_vector(15 downto 0);
-    signal fast_instruction_fl  : std_logic;
+    --signal fast_instruction_fl  : std_logic;
 
     signal ea_val_plus_disp_next: std_logic_vector(15 downto 0);
     signal ea_val_plus_disp     : std_logic_vector(15 downto 0);
@@ -155,11 +155,11 @@ begin
     bnd_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and rep_lock = '0' and halt_mode = '0' and (micro_tvalid = '0' or
         (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
-    fast_instruction_fl <= '1' when
-        (rr_tdata.op = SYS and rr_tdata.code = SYS_HLT_OP) or
-        ((rr_tdata.op = MOVU or rr_tdata.op = XCHG) and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or
-        (rr_tdata.op = REP) or
-        (rr_tdata.op = FEU) else '0';
+    -- fast_instruction_fl <= '1' when
+    --     (rr_tdata.op = SYS and rr_tdata.code = SYS_HLT_OP) or
+    --     ((rr_tdata.op = MOVU or rr_tdata.op = XCHG) and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or
+    --     (rr_tdata.op = REP) or
+    --     (rr_tdata.op = FEU) else '0';
 
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
         ((rr_tdata.op = LOOPU) or
@@ -511,6 +511,7 @@ begin
                         else
                             micro_cnt_next <= rr_tdata.level + 3;
                         end if;
+                    when STACKU_LEAVE => micro_cnt_next <= 1;
                     when STACKU_PUSHA => micro_cnt_next <= 8;
                     when STACKU_PUSHM => micro_cnt_next <= 1;
                     when STACKU_POPA => micro_cnt_next <= 15;
@@ -1858,6 +1859,40 @@ begin
 
         end procedure;
 
+        procedure do_stack_leave_0 is begin
+            fl_off; io_off; alu_off; jmp_off; dbg_off; mul_off; one_off; bcd_off; shf_off; div_off;
+            di_inc_off; si_inc_off; bp_inc_off; sp_inc_off;
+            micro_tdata.unlk_fl <= '0';
+
+            mem_read_word(seg => rr_tdata.ss_seg_val, addr => bp_s_tdata);
+            micro_tdata.sp_keep_lock <= '0';
+            -- SP = BP;
+            micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+            micro_tdata.alu_code <= ALU_OP_ADD;
+            micro_tdata.alu_wb <= '1';
+            micro_tdata.alu_a_val <= x"0002";
+            micro_tdata.alu_b_val <= bp_s_tdata;
+            micro_tdata.alu_upd_fl <= '0';
+            micro_tdata.alu_dreg <= SP;
+            micro_tdata.alu_dmask <= "11";
+        end procedure;
+
+        procedure do_stack_leave_1 is begin
+            micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
+            mem_off;
+            sp_inc_off;
+
+            micro_tdata.read_fifo <= '1';
+
+            micro_tdata.alu_code <= ALU_OP_ADD;
+            micro_tdata.alu_wb <= '1';
+            micro_tdata.alu_upd_fl <= '0';
+            micro_tdata.alu_a_val <= x"0000";
+            micro_tdata.alu_b_mem <= '1';
+            micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
+            micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
+        end procedure;
+
         procedure do_movu_cmd_0 is begin
             fl_off; io_off; jmp_off; dbg_off; mul_off; one_off; bcd_off; shf_off; div_off;
             sp_inc_off; bp_inc_off; di_inc_off; si_inc_off;
@@ -2021,7 +2056,7 @@ begin
                    (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
                     micro_tvalid <= '1';
                 elsif (rr_tvalid = '1' and rr_tready = '1') then
-                    if (fast_instruction_fl = '0' and (rep_mode = '0' or (rep_mode = '1' and rep_cx_cnt /= 0))) then
+                    if (rr_tdata.fast_instr = '0' and (rep_mode = '0' or (rep_mode = '1' and rep_cx_cnt /= 0))) then
                         micro_tvalid <= '1';
                     else
                         micro_tvalid <= '0';
@@ -2040,7 +2075,7 @@ begin
                 if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
                    (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
                     micro_cnt <= 6;
-                elsif (rr_tvalid = '1' and rr_tready = '1' and fast_instruction_fl = '0') then
+                elsif (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.fast_instr = '0') then
                     micro_cnt <= micro_cnt_next;
                 elsif (micro_tvalid = '1' and micro_tready = '1') then
                     if (micro_cnt = 0 and rep_mode = '1' and rep_cx_cnt >= 1 and rep_cancel = '0') then
@@ -2134,7 +2169,8 @@ begin
                     when STR => do_str_cmd_0;
                     when STACKU =>
                         case rr_tdata.code is
-                            when STACKU_ENTER =>do_stack_enter_0;
+                            when STACKU_ENTER => do_stack_enter_0;
+                            when STACKU_LEAVE => do_stack_leave_0;
                             when others => do_stack_cmd_0;
                         end case;
                     when SET_FLAG => do_set_flg_cmd_0;
@@ -2164,7 +2200,8 @@ begin
                         end case;
                     when STACKU =>
                         case rr_tdata_buf.code is
-                            when STACKU_ENTER =>do_stack_enter_1;
+                            when STACKU_ENTER => do_stack_enter_1;
+                            when STACKU_LEAVE => do_stack_leave_1;
                             when others => do_stack_cmd_1;
                         end case;
                     when LOOPU => do_loop_cmd_1;
