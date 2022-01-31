@@ -197,6 +197,32 @@ architecture rtl of mexec is
         );
     end component mexec_shf;
 
+    component mexec_str is
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+
+            req_s_tvalid            : in std_logic;
+            req_s_tdata             : in str_req_t;
+
+            res_m_tvalid            : out std_logic;
+            res_m_tdata             : out str_res_t;
+
+            lsu_req_m_tvalid        : out std_logic;
+            lsu_req_m_tready        : in std_logic;
+            lsu_req_m_tcmd          : out std_logic;
+            lsu_req_m_twidth        : out std_logic;
+            lsu_req_m_taddr         : out std_logic_vector(19 downto 0);
+            lsu_req_m_tdata         : out std_logic_vector(15 downto 0);
+
+            lsu_rd_s_tvalid         : in std_logic;
+            lsu_rd_s_tready         : out std_logic;
+            lsu_rd_s_tdata          : in std_logic_vector(15 downto 0);
+
+            event_interrupt         : in std_logic
+        );
+    end component;
+
     signal micro_tvalid         : std_logic;
     signal micro_tready         : std_logic;
     signal micro_tdata          : micro_op_t;
@@ -286,6 +312,23 @@ architecture rtl of mexec is
     signal shf16_res_tdata      : shf_res_t;
     signal shf16_res_tuser      : std_logic_vector(15 downto 0);
 
+    signal str_req_tvalid       : std_logic;
+    signal str_req_tdata        : str_req_t;
+
+    signal str_res_tvalid       : std_logic;
+    signal str_res_tdata        : str_res_t;
+
+    signal str_lsu_req_tvalid   : std_logic;
+    signal str_lsu_req_tready   : std_logic;
+    signal str_lsu_req_tcmd     : std_logic;
+    signal str_lsu_req_twidth   : std_logic;
+    signal str_lsu_req_taddr    : std_logic_vector(19 downto 0);
+    signal str_lsu_req_tdata    : std_logic_vector(15 downto 0);
+
+    signal str_lsu_rd_tvalid    : std_logic;
+    signal str_lsu_rd_tready    : std_logic;
+    signal str_lsu_rd_tdata     : std_logic_vector(15 downto 0);
+
     signal res_tvalid           : std_logic;
     signal res_tdata            : res_t := (
         code        => (others=>'0'),
@@ -317,6 +360,7 @@ architecture rtl of mexec is
     signal mexec_wait_shf       : std_logic;
     signal mexec_wait_jmp       : std_logic;
     signal mexec_wait_io        : std_logic;
+    signal mexec_wait_str       : std_logic;
 
     signal mexec_unlk_fl        : std_logic;
 
@@ -357,95 +401,118 @@ architecture rtl of mexec is
 begin
 
     mexec_alu_inst : mexec_alu port map (
-        clk             => clk,
-        resetn          => resetn,
+        clk                     => clk,
+        resetn                  => resetn,
 
-        req_s_tvalid    => alu_req_tvalid,
-        req_s_tdata     => alu_req_tdata,
-        req_s_tuser     => flags_s_tdata(FLAG_CF),
+        req_s_tvalid            => alu_req_tvalid,
+        req_s_tdata             => alu_req_tdata,
+        req_s_tuser             => flags_s_tdata(FLAG_CF),
 
-        res_m_tvalid    => alu_res_tvalid,
-        res_m_tdata     => alu_res_tdata,
-        res_m_tuser     => alu_res_tuser
+        res_m_tvalid            => alu_res_tvalid,
+        res_m_tdata             => alu_res_tdata,
+        res_m_tuser             => alu_res_tuser
     );
 
     mexec_mul_inst : mexec_mul port map (
-        clk             => clk,
-        resetn          => resetn,
+        clk                     => clk,
+        resetn                  => resetn,
 
-        req_s_tvalid    => mul_req_tvalid,
-        req_s_tdata     => mul_req_tdata,
+        req_s_tvalid            => mul_req_tvalid,
+        req_s_tdata             => mul_req_tdata,
 
-        res_m_tvalid    => mul_res_tvalid,
-        res_m_tdata     => mul_res_tdata,
-        res_m_tuser     => mul_res_tuser
+        res_m_tvalid            => mul_res_tvalid,
+        res_m_tdata             => mul_res_tdata,
+        res_m_tuser             => mul_res_tuser
     );
 
     mexec_div_inst : mexec_div port map (
-        clk             => clk,
-        resetn          => resetn,
+        clk                     => clk,
+        resetn                  => resetn,
 
-        req_s_tvalid    => div_req_tvalid,
-        req_s_tdata     => div_req_tdata,
+        req_s_tvalid            => div_req_tvalid,
+        req_s_tdata             => div_req_tdata,
 
-        res_m_tvalid    => div_res_tvalid,
-        res_m_tdata     => div_res_tdata,
-        res_m_tuser     => div_res_tuser
+        res_m_tvalid            => div_res_tvalid,
+        res_m_tdata             => div_res_tdata,
+        res_m_tuser             => div_res_tuser
     );
 
     mexec_one_inst : mexec_one port map (
-        clk             => clk,
-        resetn          => resetn,
+        clk                     => clk,
+        resetn                  => resetn,
 
-        req_s_tvalid    => one_req_tvalid,
-        req_s_tdata     => one_req_tdata,
+        req_s_tvalid            => one_req_tvalid,
+        req_s_tdata             => one_req_tdata,
 
-        res_m_tvalid    => one_res_tvalid,
-        res_m_tdata     => one_res_tdata,
-        res_m_tuser     => one_res_tuser
+        res_m_tvalid            => one_res_tvalid,
+        res_m_tdata             => one_res_tdata,
+        res_m_tuser             => one_res_tuser
     );
 
     mexec_bcd_inst : mexec_bcd port map (
-        clk             => clk,
-        resetn          => resetn,
+        clk                     => clk,
+        resetn                  => resetn,
 
-        req_s_tvalid    => bcd_req_tvalid,
-        req_s_tdata     => bcd_req_tdata,
-        req_s_tuser     => flags_s_tdata,
+        req_s_tvalid            => bcd_req_tvalid,
+        req_s_tdata             => bcd_req_tdata,
+        req_s_tuser             => flags_s_tdata,
 
-        res_m_tvalid    => bcd_res_tvalid,
-        res_m_tdata     => bcd_res_tdata,
-        res_m_tuser     => bcd_res_tuser
+        res_m_tvalid            => bcd_res_tvalid,
+        res_m_tdata             => bcd_res_tdata,
+        res_m_tuser             => bcd_res_tuser
     );
 
     mexec_shf8_inst : mexec_shf generic map (
-        DATA_WIDTH      => 8
+        DATA_WIDTH              => 8
     ) port map (
-        clk             => clk,
-        resetn          => resetn,
+        clk                     => clk,
+        resetn                  => resetn,
 
-        req_s_tvalid    => shf8_req_tvalid,
-        req_s_tdata     => shf8_req_tdata,
-        req_s_tuser     => flags_s_tdata,
+        req_s_tvalid            => shf8_req_tvalid,
+        req_s_tdata             => shf8_req_tdata,
+        req_s_tuser             => flags_s_tdata,
 
-        res_m_tvalid    => shf8_res_tvalid,
-        res_m_tdata     => shf8_res_tdata,
-        res_m_tuser     => shf8_res_tuser
+        res_m_tvalid            => shf8_res_tvalid,
+        res_m_tdata             => shf8_res_tdata,
+        res_m_tuser             => shf8_res_tuser
     );
 
     mexec_shf16_inst : mexec_shf generic map (
-        DATA_WIDTH      => 16
+        DATA_WIDTH              => 16
     ) port map (
-        clk             => clk,
-        resetn          => resetn,
+        clk                     => clk,
+        resetn                  => resetn,
 
-        req_s_tvalid    => shf16_req_tvalid,
-        req_s_tdata     => shf16_req_tdata,
-        req_s_tuser     => flags_s_tdata,
+        req_s_tvalid            => shf16_req_tvalid,
+        req_s_tdata             => shf16_req_tdata,
+        req_s_tuser             => flags_s_tdata,
 
-        res_m_tvalid    => shf16_res_tvalid,
-        res_m_tdata     => shf16_res_tdata,
-        res_m_tuser     => shf16_res_tuser
+        res_m_tvalid            => shf16_res_tvalid,
+        res_m_tdata             => shf16_res_tdata,
+        res_m_tuser             => shf16_res_tuser
+    );
+
+    mexec_str_inst : mexec_str port map (
+        clk                     => CLK,
+        resetn                  => RESETN,
+
+        req_s_tvalid            => str_req_tvalid,
+        req_s_tdata             => str_req_tdata,
+        res_m_tvalid            => str_res_tvalid,
+        res_m_tdata             => str_res_tdata,
+
+        lsu_req_m_tvalid        => str_lsu_req_tvalid,
+        lsu_req_m_tready        => str_lsu_req_tready,
+        lsu_req_m_tcmd          => str_lsu_req_tcmd,
+        lsu_req_m_twidth        => str_lsu_req_twidth,
+        lsu_req_m_taddr         => str_lsu_req_taddr,
+        lsu_req_m_tdata         => str_lsu_req_tdata,
+
+        lsu_rd_s_tvalid         => str_lsu_rd_tvalid,
+        lsu_rd_s_tready         => str_lsu_rd_tready,
+        lsu_rd_s_tdata          => str_lsu_rd_tdata,
+
+        event_interrupt         => '0'
     );
 
     micro_tvalid <= micro_s_tvalid;
@@ -459,20 +526,20 @@ begin
     lsu_req_m_twidth <= lsu_req_twidth;
     lsu_req_m_tdata <= lsu_req_tdata;
 
-    ax_m_wr_tdata <= res_tdata.dval_lo;
+    --ax_m_wr_tdata <= res_tdata.dval_lo;
     bx_m_wr_tdata <= res_tdata.dval_lo;
-    cx_m_wr_tdata <= res_tdata.dval_lo;
+    -- cx_m_wr_tdata <= res_tdata.dval_lo;
     dx_m_wr_tdata <= res_tdata.dval_hi;
 
-    ax_m_wr_tmask <= res_tdata.dmask;
+    --ax_m_wr_tmask <= res_tdata.dmask;
     bx_m_wr_tmask <= res_tdata.dmask;
-    cx_m_wr_tmask <= res_tdata.dmask;
+    -- cx_m_wr_tmask <= res_tdata.dmask;
     dx_m_wr_tmask <= res_tdata.dmask;
 
     bp_m_wr_tdata <= res_tdata.dval_lo;
     sp_m_wr_tdata <= res_tdata.dval_lo;
-    di_m_wr_tdata <= res_tdata.dval_lo;
-    si_m_wr_tdata <= res_tdata.dval_lo;
+    -- di_m_wr_tdata <= res_tdata.dval_lo;
+    -- si_m_wr_tdata <= res_tdata.dval_lo;
     ds_m_wr_tdata <= res_tdata.dval_lo;
     es_m_wr_tdata <= res_tdata.dval_lo;
     ss_m_wr_tdata <= res_tdata.dval_lo;
@@ -488,7 +555,11 @@ begin
         (lsu_req_tvalid = '0' or (lsu_req_tvalid = '1' and lsu_req_tready = '1')) and
         (io_req_m_tvalid = '0' or (io_req_m_tvalid = '1' and io_req_m_tready = '1')) else '0';
 
-    lsu_rd_s_tready <= mexec_wait_fifo;
+    str_lsu_req_tready <= '1' when (lsu_req_tvalid = '0' or (lsu_req_tvalid = '1' and lsu_req_tready = '1')) else '0';
+
+    lsu_rd_s_tready <= '1' when (mexec_wait_fifo = '1' or str_lsu_rd_tready = '1') else '0';
+    str_lsu_rd_tvalid <= lsu_rd_s_tvalid;
+    str_lsu_rd_tdata <= lsu_rd_s_tdata;
 
     flags_m_wr_tdata <= ((not flags_wr_be) and flags_s_tdata) or (flags_wr_be and flags_wr_vector);
 
@@ -527,6 +598,7 @@ begin
                 mexec_wait_shf <= '0';
                 mexec_wait_jmp <= '0';
                 mexec_wait_io <= '0';
+                mexec_wait_str <= '0';
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.read_fifo = '1') or
@@ -535,6 +607,7 @@ begin
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BCD) = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') or
+                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_STR) = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' and micro_tdata.io_cmd = '0')
                 then
                     mexec_busy <= '1';
@@ -545,6 +618,7 @@ begin
                         not (mexec_wait_bcd = '1' xor bcd_res_tvalid = '1') and
                         not (mexec_wait_shf = '1' xor (shf8_res_tvalid = '1' or shf16_res_tvalid = '1')) and
                         not (mexec_wait_jmp = '1' xor jmp_tvalid = '1') and
+                        not (mexec_wait_str = '1' xor str_res_tvalid = '1') and
                         not (mexec_wait_io = '1' xor (io_rd_s_tvalid = '1' and io_rd_s_tready = '1'))
                     then
                         mexec_busy <= '0';
@@ -587,6 +661,12 @@ begin
                     mexec_wait_jmp <= '1';
                 elsif (jmp_tvalid = '1') then
                     mexec_wait_jmp <= '0';
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_STR) = '1') then
+                    mexec_wait_str <= '1';
+                elsif (str_res_tvalid = '1') then
+                    mexec_wait_str <= '0';
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' and micro_tdata.io_cmd = '0')  then
@@ -891,6 +971,34 @@ begin
         end if;
     end process;
 
+    str_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                str_req_tvalid <= '0';
+            else
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_STR) = '1') then
+                    str_req_tvalid <= '1';
+                else
+                    str_req_tvalid <= '0';
+                end if;
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_STR) = '1') then
+                str_req_tdata.code <= micro_tdata.str_code;
+                str_req_tdata.rep <= micro_tdata.str_rep;
+                str_req_tdata.direction <= micro_tdata.str_direction;
+                str_req_tdata.w <= micro_tdata.str_w;
+                str_req_tdata.ax_val <= micro_tdata.str_ax_val;
+                str_req_tdata.cx_val <= micro_tdata.str_cx_val;
+                str_req_tdata.es_val <= micro_tdata.str_es_val;
+                str_req_tdata.di_val <= micro_tdata.str_di_val;
+                str_req_tdata.ds_val <= micro_tdata.str_ds_val;
+                str_req_tdata.si_val <= micro_tdata.str_si_val;
+            end if;
+
+        end if;
+    end process;
+
     res_tdata_selector(0) <= alu_res_tvalid;
     res_tdata_selector(1) <= one_res_tvalid;
     res_tdata_selector(2) <= bcd_res_tvalid;
@@ -987,12 +1095,14 @@ begin
                 ss_m_wr_tvalid <= '0';
             else
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = AX) or
-                    (mul_res_tvalid = '1' and (mul_res_tdata.dreg = AX or (mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
+                    (mul_res_tvalid = '1' and (mul_res_tdata.dreg = AX or
+                        (mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
                     (div_res_tvalid = '1' and div_res_tdata.overflow = '0') or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = AX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = AX) or
                     (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = AX) or
                     (io_rd_s_tvalid = '1' and io_rd_s_tready = '1' and io_cmd_wb = '1') or
+                    (str_res_tvalid = '1' and str_res_tdata.ax_upd_fl = '1') or
                     (bcd_res_tvalid = '1')) then
                     ax_m_wr_tvalid <= '1';
                 else
@@ -1013,7 +1123,8 @@ begin
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = CX) or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = CX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = CX) or
-                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = CX)) then
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = CX) or
+                    (str_res_tvalid = '1' and str_res_tdata.rep = '1')) then
                     cx_m_wr_tvalid <= '1';
                 else
                     cx_m_wr_tvalid <= '0';
@@ -1021,7 +1132,8 @@ begin
 
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = DX) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = DX) or
-                    (div_res_tvalid = '1' and (div_res_tdata.code = DIVU_DIV or div_res_tdata.code = DIVU_IDIV) and div_res_tdata.w = '1' and div_res_tdata.overflow = '0') or
+                    (div_res_tvalid = '1' and (div_res_tdata.code = DIVU_DIV or div_res_tdata.code = DIVU_IDIV) and
+                        div_res_tdata.w = '1' and div_res_tdata.overflow = '0') or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = DX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = DX) or
                     (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = DX)) then
@@ -1054,7 +1166,8 @@ begin
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = DI) or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = DI) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = DI) or
-                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = DI)) then
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = DI) or
+                    (str_res_tvalid = '1' and str_res_tdata.di_upd_fl = '1')) then
                     di_m_wr_tvalid <= '1';
                 else
                     di_m_wr_tvalid <= '0';
@@ -1064,7 +1177,8 @@ begin
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = SI) or
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = SI) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = SI) or
-                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = SI)) then
+                    (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = SI) or
+                    (str_res_tvalid = '1' and str_res_tdata.si_upd_fl = '1')) then
                     si_m_wr_tvalid <= '1';
                 else
                     si_m_wr_tvalid <= '0';
@@ -1088,6 +1202,100 @@ begin
                     ss_m_wr_tvalid <= '0';
                 end if;
 
+            end if;
+
+            if (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = AX) then
+                ax_m_wr_tdata <= alu_res_tdata.dval(15 downto 0);
+                ax_m_wr_tmask <= alu_res_tdata.dmask;
+            elsif (mul_res_tvalid = '1' and mul_res_tdata.dreg = AX) or
+                  (mul_res_tvalid = '1' and mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX) then
+                ax_m_wr_tdata <= mul_res_tdata.dval(15 downto 0);
+                ax_m_wr_tmask <= mul_res_tdata.dmask;
+            elsif (div_res_tvalid = '1' and div_res_tdata.overflow = '0') then
+                ax_m_wr_tmask <= "11";
+                if (div_res_tdata.code = DIVU_AAM) then
+                    ax_m_wr_tdata <= div_res_tdata.qval(7 downto 0) & div_res_tdata.rval(7 downto 0);
+                else
+                    if (div_res_tdata.w = '0') then
+                        ax_m_wr_tdata <= div_res_tdata.rval(7 downto 0) & div_res_tdata.qval(7 downto 0);
+                    else
+                        ax_m_wr_tdata <= div_res_tdata.qval;
+                    end if;
+                end if;
+            elsif (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = AX) then
+                ax_m_wr_tdata <= one_res_tdata.dval(15 downto 0);
+                ax_m_wr_tmask <= one_res_tdata.dmask;
+            elsif (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = AX) then
+                ax_m_wr_tdata(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
+                ax_m_wr_tmask <= shf8_res_tdata.dmask;
+            elsif (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = AX) then
+                ax_m_wr_tdata <= shf16_res_tdata.dval;
+                ax_m_wr_tmask <= shf16_res_tdata.dmask;
+            elsif (io_rd_s_tvalid = '1' and io_rd_s_tready = '1' and io_cmd_wb = '1') then
+                if (io_cmd_w = '1') then
+                    ax_m_wr_tmask <= "11";
+                else
+                    ax_m_wr_tmask <= "01";
+                end if;
+                ax_m_wr_tdata <= io_rd_s_tdata(15 downto 0);
+            elsif (bcd_res_tvalid = '1') then
+                ax_m_wr_tmask <= bcd_res_tdata.dmask;
+                ax_m_wr_tdata <= bcd_res_tdata.dval(15 downto 0);
+            elsif (str_res_tvalid = '1' and str_res_tdata.ax_upd_fl = '1') then
+                ax_m_wr_tdata <= str_res_tdata.ax_val;
+                if (str_res_tdata.w = '1') then
+                    ax_m_wr_tmask <= "11";
+                else
+                    ax_m_wr_tmask <= "01";
+                end if;
+            end if;
+
+            if (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = CX) then
+                cx_m_wr_tdata <= alu_res_tdata.dval(15 downto 0);
+                cx_m_wr_tmask <= alu_res_tdata.dmask;
+            elsif (mul_res_tvalid = '1' and mul_res_tdata.dreg = CX) then
+                cx_m_wr_tdata <= mul_res_tdata.dval(15 downto 0);
+                cx_m_wr_tmask <= mul_res_tdata.dmask;
+            elsif (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = CX) then
+                cx_m_wr_tdata <= one_res_tdata.dval(15 downto 0);
+                cx_m_wr_tmask <= one_res_tdata.dmask;
+            elsif (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = CX) then
+                cx_m_wr_tdata(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
+                cx_m_wr_tmask <= shf8_res_tdata.dmask;
+            elsif (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = CX) then
+                cx_m_wr_tdata <= shf16_res_tdata.dval;
+                cx_m_wr_tmask <= shf16_res_tdata.dmask;
+            elsif (str_res_tvalid = '1' and str_res_tdata.rep = '1') then
+                cx_m_wr_tdata <= str_res_tdata.cx_val;
+                cx_m_wr_tmask <= "11";
+            end if;
+
+            if (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = DI) then
+                di_m_wr_tdata <= alu_res_tdata.dval(15 downto 0);
+            elsif (mul_res_tvalid = '1' and mul_res_tdata.dreg = DI) then
+                di_m_wr_tdata <= mul_res_tdata.dval(15 downto 0);
+            elsif (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = DI) then
+                di_m_wr_tdata <= one_res_tdata.dval(15 downto 0);
+            elsif (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = DI) then
+                di_m_wr_tdata(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
+            elsif (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = DI) then
+                di_m_wr_tdata <= shf16_res_tdata.dval;
+            elsif (str_res_tvalid = '1') then
+                di_m_wr_tdata <= str_res_tdata.di_val;
+            end if;
+
+            if (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = SI) then
+                si_m_wr_tdata <= alu_res_tdata.dval(15 downto 0);
+            elsif (mul_res_tvalid = '1' and mul_res_tdata.dreg = SI) then
+                si_m_wr_tdata <= mul_res_tdata.dval(15 downto 0);
+            elsif (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = SI) then
+                si_m_wr_tdata <= one_res_tdata.dval(15 downto 0);
+            elsif (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = SI) then
+                si_m_wr_tdata(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
+            elsif (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = SI) then
+                si_m_wr_tdata <= shf16_res_tdata.dval;
+            elsif (str_res_tvalid = '1') then
+                si_m_wr_tdata <= str_res_tdata.si_val;
             end if;
 
         end if;
@@ -1461,7 +1669,7 @@ begin
 
     mem_buf_proc : process (clk) begin
         if rising_edge(clk) then
-            if (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1') then
+            if (lsu_rd_s_tvalid = '1' and mexec_wait_fifo = '1') then
                 mem_buf_tdata <= lsu_rd_s_tdata;
             end if;
         end if;
@@ -1706,6 +1914,8 @@ begin
                     else
                         lsu_req_tvalid <= '1';
                     end if;
+                elsif (str_lsu_req_tvalid = '1' and str_lsu_req_tready = '1') then
+                    lsu_req_tvalid <= '1';
                 elsif (mem_wait_alu = '1' or mem_wait_fifo = '1' or mem_wait_one = '1' or mem_wait_shf = '1' or mem_wait_io = '1') and
                     not (alu_res_tvalid = '1' xor mem_wait_alu = '1') and
                     not (one_res_tvalid = '1' xor mem_wait_one = '1') and
@@ -1723,10 +1933,16 @@ begin
                 lsu_req_tcmd <= micro_tdata.mem_cmd;
                 lsu_req_twidth <= micro_tdata.mem_width;
                 lsu_req_taddr <= std_logic_vector(unsigned(micro_tdata.mem_seg & x"0") + unsigned(x"0" & micro_tdata.mem_addr));
+            elsif (str_lsu_req_tvalid = '1' and str_lsu_req_tready = '1') then
+                lsu_req_tcmd <= str_lsu_req_tcmd;
+                lsu_req_twidth <= str_lsu_req_twidth;
+                lsu_req_taddr <= str_lsu_req_taddr;
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1') then
                 lsu_req_tdata <= micro_tdata.mem_data;
+            elsif (str_lsu_req_tvalid = '1' and str_lsu_req_tready = '1') then
+                lsu_req_tdata <= str_lsu_req_tdata;
             elsif (mem_wait_alu = '1' and alu_res_tvalid = '1') then
                 lsu_req_tdata <= alu_res_tdata.dval(15 downto 0);
             elsif (mem_wait_one = '1' and one_res_tvalid = '1') then

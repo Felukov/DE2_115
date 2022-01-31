@@ -256,7 +256,7 @@ package cpu86_types is
         fast_instr  : std_logic;
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 12;
+    constant MICRO_OP_CMD_WIDTH : natural := 13;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
@@ -269,6 +269,7 @@ package cpu86_types is
     constant MICRO_OP_CMD_DIV : natural := 9;
     constant MICRO_OP_CMD_IO  : natural := 10;
     constant MICRO_OP_CMD_BND : natural := 11;
+    constant MICRO_OP_CMD_STR : natural := 12;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -333,6 +334,17 @@ package cpu86_types is
         bcd_code        : std_logic_vector(3 downto 0);
         bcd_sval        : std_logic_vector(15 downto 0);
 
+        str_code        : std_logic_vector(3 downto 0);
+        str_rep         : std_logic;
+        str_direction   : std_logic;
+        str_w           : std_logic;
+        str_ax_val      : std_logic_vector(15 downto 0);
+        str_cx_val      : std_logic_vector(15 downto 0);
+        str_es_val      : std_logic_vector(15 downto 0);
+        str_di_val      : std_logic_vector(15 downto 0);
+        str_ds_val      : std_logic_vector(15 downto 0);
+        str_si_val      : std_logic_vector(15 downto 0);
+
         jump_cond       : micro_op_jmp_cond_t;
         jump_imm        : std_logic;
         jump_cs_mem     : std_logic;
@@ -373,6 +385,32 @@ package cpu86_types is
 
         dbg_cs          : std_logic_vector(15 downto 0);
         dbg_ip          : std_logic_vector(15 downto 0);
+    end record;
+
+    type str_req_t is record
+        code            : std_logic_vector(3 downto 0);
+        rep             : std_logic;
+        direction       : std_logic;
+        w               : std_logic;
+        ax_val          : std_logic_vector(15 downto 0);
+        cx_val          : std_logic_vector(15 downto 0);
+        es_val          : std_logic_vector(15 downto 0);
+        di_val          : std_logic_vector(15 downto 0);
+        ds_val          : std_logic_vector(15 downto 0);
+        si_val          : std_logic_vector(15 downto 0);
+    end record;
+
+    type str_res_t is record
+        code            : std_logic_vector(3 downto 0);
+        rep             : std_logic;
+        w               : std_logic;
+        ax_upd_fl       : std_logic;
+        ax_val          : std_logic_vector(15 downto 0);
+        cx_val          : std_logic_vector(15 downto 0);
+        di_upd_fl       : std_logic;
+        di_val          : std_logic_vector(15 downto 0);
+        si_upd_fl       : std_logic;
+        si_val          : std_logic_vector(15 downto 0);
     end record;
 
     type alu_req_t is record
