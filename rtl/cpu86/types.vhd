@@ -336,6 +336,7 @@ package cpu86_types is
 
         str_code        : std_logic_vector(3 downto 0);
         str_rep         : std_logic;
+        str_rep_nz       : std_logic;
         str_direction   : std_logic;
         str_w           : std_logic;
         str_ax_val      : std_logic_vector(15 downto 0);
@@ -390,6 +391,7 @@ package cpu86_types is
     type str_req_t is record
         code            : std_logic_vector(3 downto 0);
         rep             : std_logic;
+        rep_nz          : std_logic;
         direction       : std_logic;
         w               : std_logic;
         ax_val          : std_logic_vector(15 downto 0);

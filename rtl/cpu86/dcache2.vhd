@@ -46,6 +46,7 @@ architecture rtl of dcache2 is
 
     signal dcache_tag           : std_logic_vector(19 downto CACHE_LINE_WIDTH-1);
     signal dcache_valid         : std_logic;
+    signal d_data_q             : std_logic_vector(15 downto 0);
 begin
 
     dcache_s_tready <= '1' when dcache_m_tvalid = '0' or (dcache_m_tvalid = '1' and dcache_m_tready = '1') else '0';
@@ -57,6 +58,8 @@ begin
 
     m_index <= to_integer(unsigned(dcache_m_taddr(CACHE_LINE_WIDTH downto 1)));
     m_tag <= dcache_m_taddr(19 downto CACHE_LINE_WIDTH-1);
+
+    d_data_q <= d_data(s_index);
 
     write_cache_proc: process (clk) begin
         if rising_edge(clk) then
@@ -109,7 +112,7 @@ begin
                 dcache_m_taddr <= dcache_s_taddr;
                 dcache_m_twidth <= dcache_s_twidth;
                 dcache_m_tdata <= dcache_s_tdata;
-                dcache_m_tcache <= d_data(s_index);
+                dcache_m_tcache <= d_data_q;
             end if;
 
         end if;

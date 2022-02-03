@@ -207,6 +207,7 @@ architecture rtl of mexec is
 
             res_m_tvalid            : out std_logic;
             res_m_tdata             : out str_res_t;
+            res_m_tuser             : out std_logic_vector(15 downto 0);
 
             lsu_req_m_tvalid        : out std_logic;
             lsu_req_m_tready        : in std_logic;
@@ -317,6 +318,7 @@ architecture rtl of mexec is
 
     signal str_res_tvalid       : std_logic;
     signal str_res_tdata        : str_res_t;
+    signal str_res_tuser        : std_logic_vector(15 downto 0);
 
     signal str_lsu_req_tvalid   : std_logic;
     signal str_lsu_req_tready   : std_logic;
@@ -392,8 +394,8 @@ architecture rtl of mexec is
     signal dbg_0_tvalid         : std_logic;
     signal dbg_1_tvalid         : std_logic;
 
-    signal res_tdata_selector   : std_logic_vector(7 downto 0);
-    signal flags_wr_selector    : std_logic_vector(7 downto 0);
+    signal res_tdata_selector   : std_logic_vector(8 downto 0);
+    signal flags_wr_selector    : std_logic_vector(8 downto 0);
 
     signal io_cmd_w             : std_logic;
     signal io_cmd_wb            : std_logic;
@@ -498,8 +500,10 @@ begin
 
         req_s_tvalid            => str_req_tvalid,
         req_s_tdata             => str_req_tdata,
+
         res_m_tvalid            => str_res_tvalid,
         res_m_tdata             => str_res_tdata,
+        res_m_tuser             => str_res_tuser,
 
         lsu_req_m_tvalid        => str_lsu_req_tvalid,
         lsu_req_m_tready        => str_lsu_req_tready,
@@ -986,6 +990,7 @@ begin
             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_STR) = '1') then
                 str_req_tdata.code <= micro_tdata.str_code;
                 str_req_tdata.rep <= micro_tdata.str_rep;
+                str_req_tdata.rep_nz <= micro_tdata.str_rep_nz;
                 str_req_tdata.direction <= micro_tdata.str_direction;
                 str_req_tdata.w <= micro_tdata.str_w;
                 str_req_tdata.ax_val <= micro_tdata.str_ax_val;
@@ -1007,36 +1012,37 @@ begin
     res_tdata_selector(5) <= mul_res_tvalid;
     res_tdata_selector(6) <= div_res_tvalid;
     res_tdata_selector(7) <= '1' when io_rd_s_tvalid = '1' and io_rd_s_tready = '1' else '0';
+    res_tdata_selector(8) <= str_res_tvalid;
 
     res_proc : process (clk) begin
         if rising_edge(clk) then
 
             case res_tdata_selector is
-                when "00000010" =>
+                when "000000010" =>
                     res_tdata.code <= one_res_tdata.code;
                     res_tdata.dmask <= one_res_tdata.dmask;
                     res_tdata.dval_lo <= one_res_tdata.dval(15 downto 0);
                     res_tdata.dval_hi <= one_res_tdata.dval(15 downto 0);
                     res_tuser <= one_res_tuser;
-                when "00000100" =>
+                when "000000100" =>
                     res_tdata.code <= bcd_res_tdata.code;
                     res_tdata.dmask <= bcd_res_tdata.dmask;
                     res_tdata.dval_lo <= bcd_res_tdata.dval(15 downto 0);
                     res_tdata.dval_hi <= bcd_res_tdata.dval(15 downto 0);
                     res_tuser <= bcd_res_tuser;
-                when "00001000" =>
+                when "000001000" =>
                     res_tdata.code <= shf8_res_tdata.code;
                     res_tdata.dmask <= shf8_res_tdata.dmask;
                     res_tdata.dval_lo(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
                     res_tdata.dval_hi(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
                     res_tuser <= shf8_res_tuser;
-                when "00010000" =>
+                when "000010000" =>
                     res_tdata.code <= shf16_res_tdata.code;
                     res_tdata.dmask <= shf16_res_tdata.dmask;
                     res_tdata.dval_lo <= shf16_res_tdata.dval(15 downto 0);
                     res_tdata.dval_hi <= shf16_res_tdata.dval(15 downto 0);
                     res_tuser <= shf16_res_tuser;
-                when "00100000" =>
+                when "000100000" =>
                     res_tdata.code <= mul_res_tdata.code;
                     res_tdata.dmask <= mul_res_tdata.dmask;
                     res_tdata.dval_lo <= mul_res_tdata.dval(15 downto 0);
@@ -1046,7 +1052,7 @@ begin
                         res_tdata.dval_hi <= mul_res_tdata.dval(15 downto 0);
                     end if;
                     res_tuser <= mul_res_tuser;
-                when "01000000" =>
+                when "001000000" =>
                     res_tdata.code <= div_res_tdata.code;
                     res_tdata.dmask <= "11";
                     if (div_res_tdata.code = DIVU_AAM) then
@@ -1060,13 +1066,15 @@ begin
                     end if;
                     res_tdata.dval_hi <= div_res_tdata.rval;
                     res_tuser <= div_res_tuser;
-                when "10000000" =>
+                when "010000000" =>
                     if (io_cmd_w = '1') then
                         res_tdata.dmask <= "11";
                     else
                         res_tdata.dmask <= "01";
                     end if;
                     res_tdata.dval_lo <= io_rd_s_tdata(15 downto 0);
+                when "100000000" =>
+                    res_tuser <= str_res_tuser;
                 when others =>
                     res_tdata.code <= alu_res_tdata.code;
                     res_tdata.dmask <= alu_res_tdata.dmask;
@@ -1309,6 +1317,7 @@ begin
     flags_wr_selector(5) <= shf8_res_tvalid;
     flags_wr_selector(6) <= shf16_res_tvalid;
     flags_wr_selector(7) <= mul_res_tvalid;
+    flags_wr_selector(8) <= str_res_tvalid;
 
     flags_upd_proc : process (clk) begin
         if rising_edge(clk) then
@@ -1322,14 +1331,15 @@ begin
                 elsif ((alu_res_tvalid = '1' and alu_res_tdata.upd_fl = '1') or
                        mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1' or
                        shf8_res_tvalid = '1' or shf16_res_tvalid = '1' or
-                       (div_res_tvalid = '1' and div_res_tdata.code = DIVU_AAM)) then
+                       (div_res_tvalid = '1' and div_res_tdata.code = DIVU_AAM) or
+                       (str_res_tvalid = '1')) then
                     flags_m_wr_tvalid <= '1';
                 else
                     flags_m_wr_tvalid <= '0';
                 end if;
 
                 case flags_wr_selector is
-                    when "00000001" =>
+                    when "000000001" =>
                         for i in 0 to 15 loop
                             if (micro_tdata.flg_no = std_logic_vector(to_unsigned(i, 4))) then
                                 flags_wr_be(i) <= '1';
@@ -1337,7 +1347,7 @@ begin
                                 flags_wr_be(i) <= '0';
                             end if;
                         end loop;
-                    when "00000010" =>
+                    when "000000010" =>
                         if (alu_res_tdata.dreg = FL) then
 
                             for i in 15 downto 8 loop
@@ -1408,7 +1418,7 @@ begin
                                     flags_wr_be(FLAG_CF) <= '1';
                             end case;
                         end if;
-                    when "00000100" =>
+                    when "000000100" =>
                         case (one_res_tdata.code) is
                             when ONE_OP_NEG =>
                                 flags_wr_be(FLAG_15) <= '0';
@@ -1430,7 +1440,7 @@ begin
                             when others =>
                                 flags_wr_be <= (others => '0');
                         end case;
-                    when "00001000" =>
+                    when "000001000" =>
                         if (div_res_tdata.code = DIVU_AAM) then
                                 flags_wr_be(FLAG_15) <= '0';
                                 flags_wr_be(FLAG_14) <= '0';
@@ -1449,7 +1459,7 @@ begin
                                 flags_wr_be(FLAG_01) <= '0';
                                 flags_wr_be(FLAG_CF) <= '0';
                         end if;
-                    when "00010000" =>
+                    when "000010000" =>
                         case (bcd_res_tdata.code) is
                             when BCDU_AAA | BCDU_AAS =>
                                 flags_wr_be(FLAG_15) <= '0';
@@ -1505,7 +1515,7 @@ begin
                             when others =>
                                 flags_wr_be <= (others => '0');
                         end case;
-                    when "00100000" =>
+                    when "000100000" =>
                         case (shf8_res_tdata.code) is
                             when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
                                 flags_wr_be(FLAG_15) <= '0';
@@ -1544,7 +1554,7 @@ begin
                             when others =>
                                 flags_wr_be <= (others => '0');
                         end case;
-                    when "01000000" =>
+                    when "001000000" =>
                         case (shf16_res_tdata.code) is
                             when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
                                 flags_wr_be(FLAG_15) <= '0';
@@ -1583,7 +1593,7 @@ begin
                             when others =>
                                 flags_wr_be <= (others => '0');
                         end case;
-                    when "10000000" =>
+                    when "010000000" =>
                         flags_wr_be(FLAG_15) <= '0';
                         flags_wr_be(FLAG_14) <= '0';
                         flags_wr_be(FLAG_13) <= '0';
@@ -1600,6 +1610,28 @@ begin
                         flags_wr_be(FLAG_PF) <= '1';
                         flags_wr_be(FLAG_01) <= '0';
                         flags_wr_be(FLAG_CF) <= '1';
+                    when "100000000" =>
+                        case (str_res_tdata.code) is
+                            when SCAS_OP =>
+                                flags_wr_be(FLAG_15) <= '0';
+                                flags_wr_be(FLAG_14) <= '0';
+                                flags_wr_be(FLAG_13) <= '0';
+                                flags_wr_be(FLAG_12) <= '0';
+                                flags_wr_be(FLAG_OF) <= '1';
+                                flags_wr_be(FLAG_DF) <= '0';
+                                flags_wr_be(FLAG_IF) <= '0';
+                                flags_wr_be(FLAG_TF) <= '0';
+                                flags_wr_be(FLAG_SF) <= '1';
+                                flags_wr_be(FLAG_ZF) <= '1';
+                                flags_wr_be(FLAG_05) <= '0';
+                                flags_wr_be(FLAG_AF) <= '1';
+                                flags_wr_be(FLAG_03) <= '0';
+                                flags_wr_be(FLAG_PF) <= '1';
+                                flags_wr_be(FLAG_01) <= '0';
+                                flags_wr_be(FLAG_CF) <= '1';
+                            when others =>
+                                flags_wr_be <= (others => '0');
+                        end case;
                     when others =>
                         null;
                 end case;
@@ -1614,8 +1646,11 @@ begin
                 else
                     flags_src <= RES_USER;
                 end if;
-            elsif (mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1' or
-                   shf8_res_tvalid = '1' or shf16_res_tvalid = '1' or div_req_tvalid = '1') then
+            elsif (mul_res_tvalid = '1' or one_res_tvalid = '1' or
+                   bcd_res_tvalid = '1' or shf8_res_tvalid = '1' or
+                   div_req_tvalid = '1' or shf16_res_tvalid = '1' or
+                   str_res_tvalid = '1')
+            then
                 flags_src <= RES_USER;
             end if;
 
