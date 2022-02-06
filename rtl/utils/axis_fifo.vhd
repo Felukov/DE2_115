@@ -51,17 +51,11 @@ begin
     fifo_s_tready   <= wr_data_tready;
     wr_data_tdata   <= fifo_s_tdata;
 
-    --wr_data_tready  <= '1' when wr_addr_next /= rd_addr else '0';
-
     fifo_m_tvalid   <= out_tvalid;
     out_tready      <= fifo_m_tready;
     fifo_m_tdata    <= out_tdata;
 
-    --data_tvalid     <= '1' when wr_addr /= rd_addr else '0';
     data_tready     <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
-
-    --wr_addr_next    <= (wr_addr + 1) mod FIFO_DEPTH;
-    --rd_addr_next    <= (rd_addr + 1) mod FIFO_DEPTH;
 
     q_tdata         <= fifo_ram(rd_addr);
 
@@ -108,8 +102,6 @@ begin
                 wr_addr <= 0;
             else
                 wr_addr <= wr_addr_next;
-                --if wr_data_tvalid = '1' and wr_data_tready = '1' then
-                --end if;
             end if;
 
             if wr_data_tvalid = '1' and wr_data_tready = '1' then
@@ -133,9 +125,6 @@ begin
                 rd_addr <= 0;
             else
                 rd_addr <= rd_addr_next;
-                -- if data_tvalid = '1' and data_tready = '1' then
-                --     rd_addr <= rd_addr_next;
-                -- end if;
             end if;
         end if;
     end process;
@@ -166,7 +155,6 @@ begin
     async_output_gen: if (REGISTER_OUTPUT = '0') generate
 
         out_tvalid <= data_tvalid;
-        --data_tready <= out_tready;
         out_tdata <= q_tdata;
 
     end generate;

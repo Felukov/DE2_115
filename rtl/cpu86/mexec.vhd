@@ -1612,7 +1612,7 @@ begin
                         flags_wr_be(FLAG_CF) <= '1';
                     when "100000000" =>
                         case (str_res_tdata.code) is
-                            when SCAS_OP =>
+                            when SCAS_OP | CMPS_OP =>
                                 flags_wr_be(FLAG_15) <= '0';
                                 flags_wr_be(FLAG_14) <= '0';
                                 flags_wr_be(FLAG_13) <= '0';

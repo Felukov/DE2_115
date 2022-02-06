@@ -155,12 +155,6 @@ begin
     bnd_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and rep_lock = '0' and halt_mode = '0' and (micro_tvalid = '0' or
         (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
-    -- fast_instruction_fl <= '1' when
-    --     (rr_tdata.op = SYS and rr_tdata.code = SYS_HLT_OP) or
-    --     ((rr_tdata.op = MOVU or rr_tdata.op = XCHG) and (rr_tdata.dir = R2R or rr_tdata.dir = I2R)) or
-    --     (rr_tdata.op = REP) or
-    --     (rr_tdata.op = FEU) else '0';
-
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
         ((rr_tdata.op = LOOPU) or
          (rr_tdata.op = DIVU) or
@@ -369,7 +363,7 @@ begin
                 if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = REP) then
                     rep_mode <= '1';
                 elsif rep_mode = '1' and (rr_tvalid = '1' and rr_tready = '1') then
-                    if (rep_cx_cnt = 1 or rep_cx_cnt = 0 or (rr_tdata.op = STR and (rr_tdata.code = MOVS_OP or rr_tdata.code = STOS_OP or rr_tdata.code = LODS_OP or rr_tdata.code = SCAS_OP))) then
+                    if (rep_cx_cnt = 1 or rep_cx_cnt = 0 or (rr_tdata.op = STR)) then
                         rep_mode <= '0';
                     end if;
                 elsif rep_mode = '1' and (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0) then
@@ -410,12 +404,12 @@ begin
 
                 if (rr_tvalid = '1' and rr_tready = '1' and rep_mode = '1' and rep_lock = '0') then
                     if (rep_cx_cnt /= 1 and rep_cx_cnt /= 0) then
-                        if not (rr_tdata.op = STR and (rr_tdata.code = MOVS_OP or rr_tdata.code = STOS_OP or rr_tdata.code = LODS_OP or rr_tdata.code = SCAS_OP)) then
+                        if not (rr_tdata.op = STR) then
                             rep_lock <= '1';
                         end if;
                     end if;
                 elsif rep_mode = '1' and rr_tvalid = '1' and rr_tready = '1' then
-                    if (rep_cx_cnt = 1 or rep_cx_cnt = 0 or (rr_tdata.op = STR and (rr_tdata.code = MOVS_OP or rr_tdata.code = STOS_OP or rr_tdata.code = LODS_OP or rr_tdata.code = SCAS_OP))) then
+                    if (rep_cx_cnt = 1 or rep_cx_cnt = 0 or (rr_tdata.op = STR)) then
                         rep_lock <= '0';
                     end if;
                 elsif rep_mode = '1' and (micro_tvalid = '1' and micro_tready = '1' and micro_cnt = 0) then
@@ -490,15 +484,6 @@ begin
             when DIVU =>
                 case rr_tdata.dir is
                     when M2R => micro_cnt_next <= 1;
-                    when others => micro_cnt_next <= 0;
-                end case;
-
-            when STR =>
-                case rr_tdata.code is
-                    when CMPS_OP => micro_cnt_next <= 6;
-                    -- when SCAS_OP => micro_cnt_next <= 5;
-                    -- when LODS_OP => micro_cnt_next <= 1;
-                    -- when MOVS_OP => micro_cnt_next <= 1;
                     when others => micro_cnt_next <= 0;
                 end case;
 
@@ -1479,242 +1464,24 @@ begin
 
             micro_tdata.unlk_fl <= '0';
 
-            case rr_tdata.code is
-                when LODS_OP =>
-                    -- str_off; di_inc_off; si_inc_on;
-                    -- update_si_keep_lock;
-                    -- micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                    -- mem_read(seg => rr_tdata.seg_val, addr => si_s_tdata, w => rr_tdata.w);
-                    str_on; di_inc_off; si_inc_off; mem_off;
+            str_on; di_inc_off; si_inc_off; mem_off;
 
-                    micro_tdata.str_code <= rr_tdata.code;
-                    micro_tdata.str_rep <= rep_mode;
-                    micro_tdata.str_rep_nz <= rep_nz;
-                    micro_tdata.str_direction <= flags_s_tdata(FLAG_DF);
-                    micro_tdata.str_w <= rr_tdata.w;
-                    micro_tdata.str_ax_val <= rr_tdata.sreg_val;
-                    if rep_mode = '1' then
-                        micro_tdata.str_cx_val <= cx_s_tdata;
-                    else
-                        micro_tdata.str_cx_val <= x"0001";
-                    end if;
-                    micro_tdata.str_es_val <= rr_tdata.es_seg_val;
-                    micro_tdata.str_di_val <= di_s_tdata;
-                    micro_tdata.str_ds_val <= rr_tdata.seg_val;
-                    micro_tdata.str_si_val <= si_s_tdata;
+            micro_tdata.str_code <= rr_tdata.code;
+            micro_tdata.str_rep <= rep_mode;
+            micro_tdata.str_rep_nz <= rep_nz;
+            micro_tdata.str_direction <= flags_s_tdata(FLAG_DF);
+            micro_tdata.str_w <= rr_tdata.w;
+            micro_tdata.str_ax_val <= rr_tdata.sreg_val;
+            if rep_mode = '1' then
+                micro_tdata.str_cx_val <= cx_s_tdata;
+            else
+                micro_tdata.str_cx_val <= x"0001";
+            end if;
+            micro_tdata.str_es_val <= rr_tdata.es_seg_val;
+            micro_tdata.str_di_val <= di_s_tdata;
+            micro_tdata.str_ds_val <= rr_tdata.seg_val;
+            micro_tdata.str_si_val <= si_s_tdata;
 
-                when CMPS_OP =>
-                --     str_off; di_inc_off; si_inc_on;
-                    update_si_keep_lock;
-                    micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                    mem_read(seg => rr_tdata.seg_val, addr => si_s_tdata, w => rr_tdata.w);
-
-                when MOVS_OP =>
-                    str_on; di_inc_off; si_inc_off; mem_off;
-                    --update_si_keep_lock;
-                    --mem_read(seg => rr_tdata.seg_val, addr => si_s_tdata, w => rr_tdata.w);
-                    micro_tdata.str_code <= rr_tdata.code;
-                    micro_tdata.str_rep <= rep_mode;
-                    micro_tdata.str_rep_nz <= rep_nz;
-                    micro_tdata.str_direction <= flags_s_tdata(FLAG_DF);
-                    micro_tdata.str_w <= rr_tdata.w;
-                    if rep_mode = '1' then
-                        micro_tdata.str_cx_val <= cx_s_tdata;
-                    else
-                        micro_tdata.str_cx_val <= x"0001";
-                    end if;
-                    micro_tdata.str_es_val <= rr_tdata.es_seg_val;
-                    micro_tdata.str_di_val <= di_s_tdata;
-                    micro_tdata.str_ds_val <= rr_tdata.seg_val;
-                    micro_tdata.str_si_val <= si_s_tdata;
-
-                when SCAS_OP =>
-                    -- str_off; si_inc_off; di_inc_on;
-                    -- micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                    -- update_di_keep_lock;
-                    -- mem_read(seg => rr_tdata.es_seg_val, addr => di_s_tdata, w => rr_tdata.w);
-                    str_on; di_inc_off; si_inc_off; mem_off;
-
-                    micro_tdata.str_code <= rr_tdata.code;
-                    micro_tdata.str_rep <= rep_mode;
-                    micro_tdata.str_rep_nz <= rep_nz;
-                    micro_tdata.str_direction <= flags_s_tdata(FLAG_DF);
-                    micro_tdata.str_w <= rr_tdata.w;
-                    micro_tdata.str_ax_val <= rr_tdata.sreg_val;
-                    if rep_mode = '1' then
-                        micro_tdata.str_cx_val <= cx_s_tdata;
-                    else
-                        micro_tdata.str_cx_val <= x"0001";
-                    end if;
-                    micro_tdata.str_es_val <= rr_tdata.es_seg_val;
-                    micro_tdata.str_di_val <= di_s_tdata;
-                    micro_tdata.str_ds_val <= rr_tdata.seg_val;
-                    micro_tdata.str_si_val <= si_s_tdata;
-
-
-                when STOS_OP =>
-                    -- str_off; si_inc_off; di_inc_on;
-                    -- micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                    -- update_di_keep_lock;
-                    -- mem_write_imm(seg => rr_tdata.es_seg_val, addr => di_s_tdata, val => rr_tdata.sreg_val, w => rr_tdata.w);
-
-                    str_on; di_inc_off; si_inc_off; mem_off;
-
-                    micro_tdata.str_code <= rr_tdata.code;
-                    micro_tdata.str_rep <= rep_mode;
-                    micro_tdata.str_rep_nz <= rep_nz;
-                    micro_tdata.str_direction <= flags_s_tdata(FLAG_DF);
-                    micro_tdata.str_w <= rr_tdata.w;
-                    micro_tdata.str_ax_val <= rr_tdata.sreg_val;
-                    if rep_mode = '1' then
-                        micro_tdata.str_cx_val <= cx_s_tdata;
-                    else
-                        micro_tdata.str_cx_val <= x"0001";
-                    end if;
-                    micro_tdata.str_es_val <= rr_tdata.es_seg_val;
-                    micro_tdata.str_di_val <= di_s_tdata;
-                    micro_tdata.str_ds_val <= rr_tdata.seg_val;
-                    micro_tdata.str_si_val <= si_s_tdata;
-
-                when others =>
-                    null;
-            end case;
-        end procedure;
-
-        procedure do_str_cmd_1_lods is begin
-            case micro_cnt is
-                when 1 =>
-                    mem_off; si_inc_off;
-                    micro_tdata.read_fifo <= '1';
-                    if rep_mode = '0' then
-                        alu_load_reg_from_mem(rr_tdata_buf.dreg, rr_tdata_buf.dmask);
-                    end if;
-
-                when 0 =>
-                    micro_tdata.cmd(MICRO_OP_CMD_MEM) <= '1';
-                    si_inc_on;
-                    micro_tdata.read_fifo <= '0';
-                    micro_tdata.mem_addr <= si_s_tdata;
-                    update_si_keep_lock;
-
-                when others => null;
-            end case;
-        end procedure;
-
-        procedure do_str_cmd_1_stos is begin
-            micro_tdata.mem_addr <= di_s_tdata_next;
-            update_di_keep_lock;
-        end procedure;
-
-        procedure do_str_cmd_1_cmps is begin
-            case micro_cnt is
-                when 6 =>
-                    di_inc_on; si_inc_off;
-                    micro_tdata.read_fifo <= '1';
-                    if rep_mode = '1' then
-                        micro_tdata.di_keep_lock <= '1';
-                    else
-                        micro_tdata.di_keep_lock <= '0';
-                    end if;
-
-                    micro_tdata.mem_cmd <= '0';
-                    micro_tdata.mem_seg <= rr_tdata_buf.es_seg_val;
-                    micro_tdata.mem_addr <= di_s_tdata;
-                    micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
-                when 5 =>
-                    mem_off; di_inc_off; si_inc_off;
-                    micro_tdata.read_fifo <= '1';
-
-                    micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
-                    micro_tdata.alu_code <= ALU_OP_CMP;
-                    micro_tdata.alu_wb <= '0';
-                    micro_tdata.alu_upd_fl <= '1';
-                    micro_tdata.alu_a_buf <= '1';
-                    micro_tdata.alu_b_mem <= '1';
-                when 4 =>
-                    alu_off;
-                    micro_tdata.read_fifo <= '0';
-
-                when 0 =>
-                    if (rep_mode = '1' and ((rep_nz = '0' and flags_s_tdata(FLAG_ZF) = '0') or (rep_nz = '1' and flags_s_tdata(FLAG_ZF) = '1'))) then
-                        di_inc_on;
-                        micro_tdata.di_keep_lock <= '0';
-                        micro_tdata.di_inc_data <= x"0000";
-
-                        si_inc_on;
-                        micro_tdata.si_keep_lock <= '0';
-                        micro_tdata.si_inc_data <= x"0000";
-                    else
-                        alu_off; di_inc_off; si_inc_on;
-                        update_si_keep_lock;
-                        mem_read(seg => rr_tdata_buf.seg_val, addr => si_s_tdata, w => rr_tdata_buf.w);
-                        micro_tdata.read_fifo <= '0';
-
-                    end if;
-                when others => null;
-            end case;
-        end procedure;
-
-        procedure do_str_cmd_1_movs is begin
-            case micro_cnt is
-                when 1 =>
-                    micro_tdata.read_fifo <= '1';
-                    di_inc_on;
-                    si_inc_off;
-
-                    if rep_mode = '1' then
-                        micro_tdata.di_keep_lock <= '1';
-                    else
-                        micro_tdata.di_keep_lock <= '0';
-                    end if;
-
-                    micro_tdata.mem_cmd <= '1';
-                    micro_tdata.mem_seg <= rr_tdata_buf.es_seg_val;
-                    micro_tdata.mem_addr <= di_s_tdata;
-                    micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
-
-                when 0 =>
-                    micro_tdata.read_fifo <= '0';
-                    di_inc_off; si_inc_on;
-                    update_si_keep_lock;
-
-                    micro_tdata.alu_a_val <= si_s_tdata;
-                    micro_tdata.alu_dreg <= rr_tdata_buf.sreg;
-
-                    micro_tdata.mem_cmd <= '0';
-                    micro_tdata.mem_seg <= rr_tdata_buf.seg_val;
-                    micro_tdata.mem_addr <= si_s_tdata;
-
-                when others => null;
-            end case;
-        end procedure;
-
-        procedure do_str_cmd_1_scas is begin
-            case micro_cnt is
-                when 5 =>
-                    mem_off; di_inc_off;
-                    micro_tdata.cmd(MICRO_OP_CMD_ALU) <= '1';
-                    micro_tdata.read_fifo <= '1';
-
-                    micro_tdata.alu_code <= ALU_OP_CMP;
-                    micro_tdata.alu_wb <= '0';
-                    micro_tdata.alu_upd_fl <= '1';
-                    micro_tdata.alu_a_val <= rr_tdata_buf.sreg_val;
-                    micro_tdata.alu_b_mem <= '1';
-                when 4 =>
-                    alu_off;
-                    micro_tdata.read_fifo <= '0';
-                when 0 =>
-                    di_inc_on;
-                    if (rep_mode = '1' and ((rep_nz = '0' and flags_s_tdata(FLAG_ZF) = '0') or (rep_nz = '1' and flags_s_tdata(FLAG_ZF) = '1'))) then
-                        micro_tdata.di_keep_lock <= '0';
-                        micro_tdata.di_inc_data <= x"0000";
-                    else
-                        update_di_keep_lock;
-                        mem_read(seg => rr_tdata_buf.es_seg_val, addr => di_s_tdata, w => rr_tdata_buf.w);
-                    end if;
-                when others => null;
-            end case;
         end procedure;
 
         procedure do_stack_cmd_0 is begin
@@ -2295,15 +2062,15 @@ begin
                             when SYS_DIV_INT_OP => do_div_intr_1;
                             when others => null;
                         end case;
-                    when STR =>
-                        case rr_tdata_buf.code is
-                            when CMPS_OP => do_str_cmd_1_cmps;
-                            -- --when LODS_OP => do_str_cmd_1_lods;
-                            when STOS_OP => do_str_cmd_1_stos;
-                            when SCAS_OP => do_str_cmd_1_scas;
-                            when MOVS_OP => do_str_cmd_1_movs;
-                            when others => null;
-                        end case;
+                    -- when STR =>
+                    --     case rr_tdata_buf.code is
+                    --         when CMPS_OP => do_str_cmd_1_cmps;
+                    --         -- --when LODS_OP => do_str_cmd_1_lods;
+                    --         when STOS_OP => do_str_cmd_1_stos;
+                    --         when SCAS_OP => do_str_cmd_1_scas;
+                    --         when MOVS_OP => do_str_cmd_1_movs;
+                    --         when others => null;
+                    --     end case;
 
                     when MOVU =>
                         micro_tdata.unlk_fl <= '0';

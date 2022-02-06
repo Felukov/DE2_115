@@ -53,11 +53,17 @@ architecture rtl of mexec_str is
         );
     end component;
 
+    type cmps_iter_t is (st_first, st_second);
+
+
     signal instr_movs           : std_logic;
     signal instr_scas           : std_logic;
     signal instr_cmps           : std_logic;
     signal instr_lods           : std_logic;
     signal instr_stos           : std_logic;
+
+    signal cmps_req_iter        : cmps_iter_t;
+    signal cmps_res_iter        : cmps_iter_t;
 
     signal rd_req_tvalid        : std_logic;
     signal rd_req_tready        : std_logic;
@@ -135,6 +141,7 @@ architecture rtl of mexec_str is
 
     signal active_trans_cnt     : natural range 0 to 31;
     signal di_addr_val          : std_logic_vector(15 downto 0);
+    signal si_addr_val          : std_logic_vector(15 downto 0);
 
     signal scas_finish_vector   : std_logic_vector(1 downto 0);
 
@@ -169,15 +176,15 @@ begin
     lsu_req_m_tdata <= wr_req_tdata;
 
     lsu_req_m_tcmd <= '1' when wr_req_tvalid = '1' else '0';
-    lsu_req_m_taddr <= es_di_addr when wr_req_tvalid = '1' or (rd_req_tvalid = '1' and instr_scas = '1') else ds_si_addr;
+    lsu_req_m_taddr <= es_di_addr when wr_req_tvalid = '1' or (rd_req_tvalid = '1' and (instr_scas = '1' or (instr_cmps = '1' and cmps_res_iter = st_second))) else ds_si_addr;
 
     reg_wr_tready <= '1' when (wr_req_tvalid = '0' or (wr_req_tvalid = '1' and wr_req_tready = '1')) else '0';
 
     es_di_addr <= std_logic_vector(unsigned(req_s_tdata.es_val & x"0") + unsigned(x"0" & di_addr_val));
-    ds_si_addr <= std_logic_vector(unsigned(req_s_tdata.ds_val & x"0") + unsigned(x"0" & res_m_tdata.si_val));
+    ds_si_addr <= std_logic_vector(unsigned(req_s_tdata.ds_val & x"0") + unsigned(x"0" & si_addr_val));
 
-    fifo_m_tready <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' else '0';
-    cmp_tready <= '1' when instr_scas = '1' else '0';
+    fifo_m_tready <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and (instr_scas = '1' or (instr_cmps = '1' and cmps_res_iter = st_second)) else '0';
+    cmp_tready <= '1' when instr_scas = '1' or instr_cmps = '1' else '0';
 
     event_stop <= '1' when cmp_tvalid = '1' and cmp_tready = '1' and req_s_tdata.rep = '1' and
         ((req_s_tdata.rep_nz = '1' and flags_zf_next = '1') or (req_s_tdata.rep_nz = '0' and flags_zf_next = '0')) else '0';
@@ -200,7 +207,7 @@ begin
                 if (req_s_tvalid = '1') then
                     work_done_fl <= '0';
                 elsif (rd_req_tvalid = '1' and rd_req_tready = '1') then
-                    if (rd_req_cnt = rep_cnt_m1) then
+                    if (rd_req_cnt = rep_cnt_m1 and (instr_movs = '1' or instr_lods = '1' or (instr_cmps = '1' and cmps_req_iter = st_second))) then
                         work_done_fl <= '1';
                     end if;
                 elsif (reg_wr_tvalid = '1' and reg_wr_tready = '1') then
@@ -218,11 +225,20 @@ begin
                 if (req_s_tvalid = '1') then
                     rep_cnt_m1 <= to_integer(unsigned(req_s_tdata.cx_val)) - 1;
                 elsif (rd_req_tvalid = '1' and rd_req_tready = '1') then
-                    if (rd_req_cnt = rep_cnt_m1) then
+                    if rd_req_cnt = rep_cnt_m1 and ((instr_cmps = '1' and cmps_req_iter = st_second) or
+                        instr_movs = '1' or instr_scas = '1' or instr_lods = '1') then
                         rep_cnt_m1 <= 0;
-                    elsif (instr_movs = '1' and rd_req_cnt = 15) then
+                    elsif ((instr_movs = '1' or (instr_cmps = '1' and cmps_req_iter = st_second)) and rd_req_cnt = 15) then
                         rep_cnt_m1 <= rep_cnt_m1 - 16;
                     end if;
+
+                    -- if (rd_req_cnt = rep_cnt_m1 and instr_cmps = '1' and cmps_req_iter = st_first) then
+                    --     rep_cnt_m1 <= rep_cnt_m1;
+                    -- elsif (rd_req_cnt = rep_cnt_m1) then
+                    --     rep_cnt_m1 <= 0;
+                    -- elsif ((instr_movs = '1' or (instr_cmps = '1' and cmps_req_iter = st_second)) and rd_req_cnt = 15) then
+                    --     rep_cnt_m1 <= rep_cnt_m1 - 16;
+                    -- end if;
                 end if;
 
                 if req_s_tvalid = '1' then
@@ -301,13 +317,17 @@ begin
                 res_m_tdata.rep <= req_s_tdata.rep;
                 res_m_tdata.w <= req_s_tdata.w;
 
-                if (req_s_tdata.code = MOVS_OP or req_s_tdata.code = STOS_OP or req_s_tdata.code = SCAS_OP) then
+                if req_s_tdata.code = MOVS_OP or req_s_tdata.code = STOS_OP or
+                    req_s_tdata.code = SCAS_OP or req_s_tdata.code = CMPS_OP
+                then
                     res_m_tdata.di_upd_fl <= '1';
                 else
                     res_m_tdata.di_upd_fl <= '0';
                 end if;
 
-                if (req_s_tdata.code = MOVS_OP or req_s_tdata.code = LODS_OP) then
+                if req_s_tdata.code = MOVS_OP or req_s_tdata.code = LODS_OP or
+                    req_s_tdata.code = CMPS_OP
+                then
                     res_m_tdata.si_upd_fl <= '1';
                 else
                     res_m_tdata.si_upd_fl <= '0';
@@ -339,8 +359,15 @@ begin
 
             if (req_s_tvalid = '1') then
                 res_m_tdata.si_val <= req_s_tdata.si_val;
-            elsif (rd_req_tvalid = '1' and rd_req_tready = '1') then
+            elsif (rd_req_tvalid = '1' and rd_req_tready = '1' and (instr_movs = '1' or instr_lods = '1')) or (cmp_res_tvalid = '1') then
                 res_m_tdata.si_val <= std_logic_vector(unsigned(res_m_tdata.si_val) + unsigned(increment));
+            end if;
+
+            if (req_s_tvalid = '1') then
+                si_addr_val <= req_s_tdata.si_val;
+            elsif (rd_req_tvalid = '1' and rd_req_tready = '1' and (instr_movs = '1' or instr_lods = '1' or
+                (instr_cmps = '1' and cmps_res_iter = st_first))) then
+                si_addr_val <= std_logic_vector(unsigned(si_addr_val) + unsigned(increment));
             end if;
 
             if (req_s_tvalid = '1') then
@@ -351,7 +378,8 @@ begin
 
             if (req_s_tvalid = '1') then
                 di_addr_val <= req_s_tdata.di_val;
-            elsif (wr_req_tvalid = '1' and wr_req_tready = '1') or (rd_req_tvalid = '1' and rd_req_tready = '1' and instr_scas = '1') then
+            elsif (wr_req_tvalid = '1' and wr_req_tready = '1') or (rd_req_tvalid = '1' and rd_req_tready = '1' and
+                (instr_scas = '1' or (instr_cmps = '1' and cmps_res_iter = st_second))) then
                 di_addr_val <= std_logic_vector(unsigned(di_addr_val) + unsigned(increment));
             end if;
 
@@ -368,12 +396,14 @@ begin
 
     event_lods_rd_start <= '1' when req_s_tvalid = '1' and req_s_tdata.code = LODS_OP else '0';
     event_lods_rd_next <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and
-        (lsu_rd_s_cnt = 15 or lsu_rd_s_cnt = lsu_rd_s_max) and work_done_fl = '0' and
-        instr_lods = '1' else '0';
+        (lsu_rd_s_cnt = 15 or lsu_rd_s_cnt = lsu_rd_s_max) and
+        (work_done_fl = '0') and (instr_lods = '1') else '0';
 
     event_scas_rd_start <= '1' when req_s_tvalid = '1' and req_s_tdata.code = SCAS_OP else '0';
     event_cmps_rd_start <= '1' when req_s_tvalid = '1' and req_s_tdata.code = CMPS_OP else '0';
-
+    event_cmps_rd_next <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and
+        (lsu_rd_s_cnt = 15 or lsu_rd_s_cnt = lsu_rd_s_max) and
+        (work_done_fl = '0') and (instr_cmps = '1') else '0';
 
     mem_rd_proc: process (clk) begin
         if rising_edge(clk) then
@@ -383,16 +413,28 @@ begin
             else
 
                 if event_movs_rd_start = '1' or event_movs_rd_next = '1' or
-                    event_lods_rd_start = '1' or event_lods_rd_next = '1' or
-                    event_scas_rd_start = '1'
+                    event_lods_rd_start = '1' or event_scas_rd_start = '1' or
+                    event_cmps_rd_start = '1' or event_cmps_rd_next = '1'
                 then
                     rd_req_tvalid <= '1';
-                elsif (rd_req_tvalid = '1' and rd_req_tready = '1' and ((rd_req_cnt = 15 and instr_movs = '1') or rd_req_cnt = rep_cnt_m1 or stop_fl = '1')) then
+                --elsif (rd_req_tvalid = '1' and rd_req_tready = '1' and ((rd_req_cnt = 15 and (instr_movs = '1' or instr_cmps = '1')) or rd_req_cnt = rep_cnt_m1 or stop_fl = '1')) then
+                elsif rd_req_tvalid = '1' and rd_req_tready = '1' and
+                    ((instr_movs = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1)) or
+                     (instr_cmps = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1 or stop_fl = '1')) or
+                     (instr_scas = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1 or stop_fl = '1')) or
+                     (instr_lods = '1' and (rd_req_cnt = rep_cnt_m1)))
+                then
                     rd_req_tvalid <= '0';
                 end if;
 
                 if (rd_req_tvalid = '1' and rd_req_tready = '1') then
-                    if ((rd_req_cnt = 15 and instr_movs = '1') or rd_req_cnt = rep_cnt_m1 or stop_fl = '1') then
+                    --if ((rd_req_cnt = 15 and (instr_movs = '1' or instr_cmps = '1')) or rd_req_cnt = rep_cnt_m1 or stop_fl = '1') then
+                    if rd_req_tvalid = '1' and rd_req_tready = '1' and
+                        ((instr_movs = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1)) or
+                        (instr_cmps = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1 or stop_fl = '1')) or
+                        (instr_scas = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1 or stop_fl = '1')) or
+                        (instr_lods = '1' and (rd_req_cnt = rep_cnt_m1)))
+                    then
                         rd_req_cnt <= 0;
                     else
                         rd_req_cnt <= rd_req_cnt + 1;
@@ -429,6 +471,36 @@ begin
         end if;
     end process;
 
+    cmps_proc : process (clk) begin
+
+        if rising_edge(clk) then
+            if resetn = '0' then
+                cmps_req_iter <= st_first;
+                cmps_res_iter <= st_first;
+            else
+
+                if (instr_cmps = '1' and rd_req_tvalid = '1' and rd_req_tready = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1)) then
+                    if cmps_req_iter = st_first then
+                        cmps_req_iter <= st_second;
+                    elsif cmps_req_iter = st_second then
+                        cmps_req_iter <= st_first;
+                    end if;
+                end if;
+
+
+                if (instr_cmps = '1' and lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and (lsu_rd_s_cnt = 15 or lsu_rd_s_cnt = lsu_rd_s_max)) then
+                    if cmps_res_iter = st_first then
+                        cmps_res_iter <= st_second;
+                    elsif cmps_res_iter = st_second then
+                        cmps_res_iter <= st_first;
+                    end if;
+                end if;
+
+            end if;
+        end if;
+
+    end process;
+
     cmp_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
@@ -442,6 +514,8 @@ begin
 
                 if (rd_req_tvalid = '1' and rd_req_tready = '1' and instr_scas = '1') then
                     fifo_s_tvalid <= '1';
+                elsif (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and instr_cmps = '1' and cmps_res_iter = st_first) then
+                    fifo_s_tvalid <= '1';
                 else
                     fifo_s_tvalid <= '0';
                 end if;
@@ -453,7 +527,7 @@ begin
                 end if;
 
                 if (fifo_m_tvalid = '1' and fifo_m_tready = '1') then
-                    if (active_trans_cnt = 1) then
+                    if (active_trans_cnt = 1 and (rep_cnt_m1 = 0 or stop_fl = '1')) then
                         cmp_tlast <= '1';
                     else
                         cmp_tlast <= '0';
@@ -488,6 +562,8 @@ begin
 
             if (req_s_tvalid = '1' and req_s_tdata.code = SCAS_OP) then
                 fifo_s_tdata <= req_s_tdata.ax_val;
+            elsif (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and instr_cmps = '1' and cmps_res_iter = st_first) then
+                fifo_s_tdata <= lsu_rd_s_tdata;
             end if;
 
             if (fifo_m_tvalid = '1' and fifo_m_tready = '1') then
@@ -509,8 +585,10 @@ begin
                 wr_req_tlast <= '0';
             else
 
-                if (rd_req_tvalid = '1' and rd_req_tready = '1') then
-                    if ((rd_req_cnt = 15 and instr_movs = '1') or rd_req_cnt = rep_cnt_m1) then
+                if (req_s_tvalid = '1') then
+                    lsu_rd_s_max <= 15;
+                elsif (rd_req_tvalid = '1' and rd_req_tready = '1') then
+                    if ((rd_req_cnt = 15 and (instr_movs = '1' or instr_cmps = '1')) or rd_req_cnt = rep_cnt_m1) then
                         lsu_rd_s_max <= rd_req_cnt;
                     end if;
                 end if;
@@ -518,7 +596,7 @@ begin
                 if (req_s_tvalid = '1') then
                     lsu_rd_s_cnt <= 0;
                 elsif (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1') then
-                    if (lsu_rd_s_cnt = 15 or lsu_rd_s_cnt = lsu_rd_s_max) then
+                    if ((lsu_rd_s_cnt = 15 and (instr_movs = '1' or instr_cmps = '1')) or lsu_rd_s_cnt = lsu_rd_s_max) then
                         lsu_rd_s_cnt <= 0;
                     else
                         lsu_rd_s_cnt <= lsu_rd_s_cnt + 1;
@@ -598,7 +676,7 @@ begin
     event_stos_finish <= '1' when instr_stos = '1' and wr_req_tvalid = '1' and wr_req_tready = '1' and wr_req_tlast = '1' and work_done_fl = '1' else '0';
     event_lods_finish <= '1' when instr_lods = '1' and lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and lsu_rd_s_cnt = lsu_rd_s_max and work_done_fl = '1' else '0';
     event_scas_finish <= '1' when instr_scas = '1' and (scas_finish_vector = "11") else '0';
-    event_cmps_finish <= '0';
+    event_cmps_finish <= '1' when instr_cmps = '1' and (scas_finish_vector = "11") else '0';
 
     foriming_output : process (clk) begin
         if rising_edge(clk) then
