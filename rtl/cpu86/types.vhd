@@ -86,8 +86,12 @@ package cpu86_types is
     constant MOVS_OP        : std_logic_vector (3 downto 0) := "0000";
     constant STOS_OP        : std_logic_vector (3 downto 0) := "0001";
     constant LODS_OP        : std_logic_vector (3 downto 0) := "0010";
-    constant CMPS_OP        : std_logic_vector (3 downto 0) := "1000";
-    constant SCAS_OP        : std_logic_vector (3 downto 0) := "1001";
+    constant CMPS_OP        : std_logic_vector (3 downto 0) := "0011";
+    constant SCAS_OP        : std_logic_vector (3 downto 0) := "0100";
+    constant OUTS_OP        : std_logic_vector (3 downto 0) := "1000";
+    constant OUT_OP         : std_logic_vector (3 downto 0) := "1001";
+    constant INS_OP         : std_logic_vector (3 downto 0) := "1010";
+    constant IN_OP          : std_logic_vector (3 downto 0) := "1011";
 
     constant IMUL_AXDX      : std_logic_vector (3 downto 0) := "0000";
     constant IMUL_RR        : std_logic_vector (3 downto 0) := "0001";
@@ -336,9 +340,10 @@ package cpu86_types is
 
         str_code        : std_logic_vector(3 downto 0);
         str_rep         : std_logic;
-        str_rep_nz       : std_logic;
+        str_rep_nz      : std_logic;
         str_direction   : std_logic;
         str_w           : std_logic;
+        str_port        : std_logic_vector(15 downto 0);
         str_ax_val      : std_logic_vector(15 downto 0);
         str_cx_val      : std_logic_vector(15 downto 0);
         str_es_val      : std_logic_vector(15 downto 0);
@@ -360,12 +365,12 @@ package cpu86_types is
         mem_data_src    : mem_data_src_t;
         mem_data        : std_logic_vector(15 downto 0);
 
-        io_cmd          : std_logic;
-        io_w            : std_logic;
-        io_port         : std_logic_vector(15 downto 0);
-        io_data         : std_logic_vector(15 downto 0);
-        io_data_src     : io_data_src_t;
-        io_wb           : std_logic;
+        -- io_cmd          : std_logic;
+        -- io_w            : std_logic;
+        -- io_port         : std_logic_vector(15 downto 0);
+        -- io_data         : std_logic_vector(15 downto 0);
+        -- io_data_src     : io_data_src_t;
+        -- io_wb           : std_logic;
 
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
@@ -394,6 +399,7 @@ package cpu86_types is
         rep_nz          : std_logic;
         direction       : std_logic;
         w               : std_logic;
+        io_port         : std_logic_vector(15 downto 0);
         ax_val          : std_logic_vector(15 downto 0);
         cx_val          : std_logic_vector(15 downto 0);
         es_val          : std_logic_vector(15 downto 0);

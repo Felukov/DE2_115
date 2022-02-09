@@ -220,6 +220,14 @@ architecture rtl of mexec is
             lsu_rd_s_tready         : out std_logic;
             lsu_rd_s_tdata          : in std_logic_vector(15 downto 0);
 
+            io_req_m_tvalid         : out std_logic;
+            io_req_m_tready         : in std_logic;
+            io_req_m_tdata          : out std_logic_vector(39 downto 0);
+
+            io_rd_s_tvalid          : in std_logic;
+            io_rd_s_tready          : out std_logic;
+            io_rd_s_tdata           : in std_logic_vector(15 downto 0);
+
             event_interrupt         : in std_logic
         );
     end component;
@@ -361,7 +369,7 @@ architecture rtl of mexec is
     signal mexec_wait_bcd       : std_logic;
     signal mexec_wait_shf       : std_logic;
     signal mexec_wait_jmp       : std_logic;
-    signal mexec_wait_io        : std_logic;
+    --signal mexec_wait_io        : std_logic;
     signal mexec_wait_str       : std_logic;
 
     signal mexec_unlk_fl        : std_logic;
@@ -380,7 +388,7 @@ architecture rtl of mexec is
     signal mem_wait_alu         : std_logic;
     signal mem_wait_shf         : std_logic;
     signal mem_wait_fifo        : std_logic;
-    signal mem_wait_io          : std_logic;
+    --signal mem_wait_io          : std_logic;
 
     signal jmp_busy             : std_logic;
     signal jmp_wait_alu         : std_logic;
@@ -394,7 +402,7 @@ architecture rtl of mexec is
     signal dbg_0_tvalid         : std_logic;
     signal dbg_1_tvalid         : std_logic;
 
-    signal res_tdata_selector   : std_logic_vector(8 downto 0);
+    signal res_tdata_selector   : std_logic_vector(7 downto 0);
     signal flags_wr_selector    : std_logic_vector(8 downto 0);
 
     signal io_cmd_w             : std_logic;
@@ -516,6 +524,14 @@ begin
         lsu_rd_s_tready         => str_lsu_rd_tready,
         lsu_rd_s_tdata          => str_lsu_rd_tdata,
 
+        io_req_m_tvalid         => io_req_m_tvalid,
+        io_req_m_tready         => io_req_m_tready,
+        io_req_m_tdata          => io_req_m_tdata,
+
+        io_rd_s_tvalid          => io_rd_s_tvalid,
+        io_rd_s_tready          => io_rd_s_tready,
+        io_rd_s_tdata           => io_rd_s_tdata,
+
         event_interrupt         => '0'
     );
 
@@ -552,7 +568,7 @@ begin
         mem_wait_alu = '0' and
         mem_wait_one = '0' and
         mem_wait_shf = '0' and
-        mem_wait_io = '0' and
+        --mem_wait_io = '0' and
         --mexec_wait_bcd = '0' and
         --mexec_wait_shf = '0' and
         --mexec_wait_jmp = '0' and
@@ -601,7 +617,7 @@ begin
                 mexec_wait_bcd <= '0';
                 mexec_wait_shf <= '0';
                 mexec_wait_jmp <= '0';
-                mexec_wait_io <= '0';
+                --mexec_wait_io <= '0';
                 mexec_wait_str <= '0';
             else
 
@@ -611,8 +627,8 @@ begin
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BCD) = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1') or
                     (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') or
-                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_STR) = '1') or
-                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' and micro_tdata.io_cmd = '0')
+                    (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_STR) = '1')
+                    --(micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' and micro_tdata.io_cmd = '0')
                 then
                     mexec_busy <= '1';
                 elsif (mexec_busy = '1') then
@@ -622,8 +638,8 @@ begin
                         not (mexec_wait_bcd = '1' xor bcd_res_tvalid = '1') and
                         not (mexec_wait_shf = '1' xor (shf8_res_tvalid = '1' or shf16_res_tvalid = '1')) and
                         not (mexec_wait_jmp = '1' xor jmp_tvalid = '1') and
-                        not (mexec_wait_str = '1' xor str_res_tvalid = '1') and
-                        not (mexec_wait_io = '1' xor (io_rd_s_tvalid = '1' and io_rd_s_tready = '1'))
+                        not (mexec_wait_str = '1' xor str_res_tvalid = '1')
+                        --not (mexec_wait_io = '1' xor (io_rd_s_tvalid = '1' and io_rd_s_tready = '1'))
                     then
                         mexec_busy <= '0';
                     end if;
@@ -673,11 +689,11 @@ begin
                     mexec_wait_str <= '0';
                 end if;
 
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' and micro_tdata.io_cmd = '0')  then
-                    mexec_wait_io <= '1';
-                elsif (io_rd_s_tvalid = '1' and io_rd_s_tready = '1') then
-                    mexec_wait_io <= '0';
-                end if;
+                -- if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' and micro_tdata.io_cmd = '0')  then
+                --     mexec_wait_io <= '1';
+                -- elsif (io_rd_s_tvalid = '1' and io_rd_s_tready = '1') then
+                --     mexec_wait_io <= '0';
+                -- end if;
 
             end if;
         end if;
@@ -993,6 +1009,7 @@ begin
                 str_req_tdata.rep_nz <= micro_tdata.str_rep_nz;
                 str_req_tdata.direction <= micro_tdata.str_direction;
                 str_req_tdata.w <= micro_tdata.str_w;
+                str_req_tdata.io_port <= micro_tdata.str_port;
                 str_req_tdata.ax_val <= micro_tdata.str_ax_val;
                 str_req_tdata.cx_val <= micro_tdata.str_cx_val;
                 str_req_tdata.es_val <= micro_tdata.str_es_val;
@@ -1011,38 +1028,38 @@ begin
     res_tdata_selector(4) <= shf16_res_tvalid;
     res_tdata_selector(5) <= mul_res_tvalid;
     res_tdata_selector(6) <= div_res_tvalid;
-    res_tdata_selector(7) <= '1' when io_rd_s_tvalid = '1' and io_rd_s_tready = '1' else '0';
-    res_tdata_selector(8) <= str_res_tvalid;
+    --res_tdata_selector(7) <= '1' when io_rd_s_tvalid = '1' and io_rd_s_tready = '1' else '0';
+    res_tdata_selector(7) <= str_res_tvalid;
 
     res_proc : process (clk) begin
         if rising_edge(clk) then
 
             case res_tdata_selector is
-                when "000000010" =>
+                when "00000010" =>
                     res_tdata.code <= one_res_tdata.code;
                     res_tdata.dmask <= one_res_tdata.dmask;
                     res_tdata.dval_lo <= one_res_tdata.dval(15 downto 0);
                     res_tdata.dval_hi <= one_res_tdata.dval(15 downto 0);
                     res_tuser <= one_res_tuser;
-                when "000000100" =>
+                when "00000100" =>
                     res_tdata.code <= bcd_res_tdata.code;
                     res_tdata.dmask <= bcd_res_tdata.dmask;
                     res_tdata.dval_lo <= bcd_res_tdata.dval(15 downto 0);
                     res_tdata.dval_hi <= bcd_res_tdata.dval(15 downto 0);
                     res_tuser <= bcd_res_tuser;
-                when "000001000" =>
+                when "00001000" =>
                     res_tdata.code <= shf8_res_tdata.code;
                     res_tdata.dmask <= shf8_res_tdata.dmask;
                     res_tdata.dval_lo(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
                     res_tdata.dval_hi(7 downto 0) <= shf8_res_tdata.dval(7 downto 0);
                     res_tuser <= shf8_res_tuser;
-                when "000010000" =>
+                when "00010000" =>
                     res_tdata.code <= shf16_res_tdata.code;
                     res_tdata.dmask <= shf16_res_tdata.dmask;
                     res_tdata.dval_lo <= shf16_res_tdata.dval(15 downto 0);
                     res_tdata.dval_hi <= shf16_res_tdata.dval(15 downto 0);
                     res_tuser <= shf16_res_tuser;
-                when "000100000" =>
+                when "00100000" =>
                     res_tdata.code <= mul_res_tdata.code;
                     res_tdata.dmask <= mul_res_tdata.dmask;
                     res_tdata.dval_lo <= mul_res_tdata.dval(15 downto 0);
@@ -1052,7 +1069,7 @@ begin
                         res_tdata.dval_hi <= mul_res_tdata.dval(15 downto 0);
                     end if;
                     res_tuser <= mul_res_tuser;
-                when "001000000" =>
+                when "01000000" =>
                     res_tdata.code <= div_res_tdata.code;
                     res_tdata.dmask <= "11";
                     if (div_res_tdata.code = DIVU_AAM) then
@@ -1066,14 +1083,14 @@ begin
                     end if;
                     res_tdata.dval_hi <= div_res_tdata.rval;
                     res_tuser <= div_res_tuser;
-                when "010000000" =>
-                    if (io_cmd_w = '1') then
-                        res_tdata.dmask <= "11";
-                    else
-                        res_tdata.dmask <= "01";
-                    end if;
-                    res_tdata.dval_lo <= io_rd_s_tdata(15 downto 0);
-                when "100000000" =>
+                -- when "010000000" =>
+                --     if (io_cmd_w = '1') then
+                --         res_tdata.dmask <= "11";
+                --     else
+                --         res_tdata.dmask <= "01";
+                --     end if;
+                --     res_tdata.dval_lo <= io_rd_s_tdata(15 downto 0);
+                when "10000000" =>
                     res_tuser <= str_res_tuser;
                 when others =>
                     res_tdata.code <= alu_res_tdata.code;
@@ -1109,7 +1126,7 @@ begin
                     (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = AX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = AX) or
                     (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = AX) or
-                    (io_rd_s_tvalid = '1' and io_rd_s_tready = '1' and io_cmd_wb = '1') or
+                    --(io_rd_s_tvalid = '1' and io_rd_s_tready = '1' and io_cmd_wb = '1') or
                     (str_res_tvalid = '1' and str_res_tdata.ax_upd_fl = '1') or
                     (bcd_res_tvalid = '1')) then
                     ax_m_wr_tvalid <= '1';
@@ -1239,13 +1256,13 @@ begin
             elsif (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = AX) then
                 ax_m_wr_tdata <= shf16_res_tdata.dval;
                 ax_m_wr_tmask <= shf16_res_tdata.dmask;
-            elsif (io_rd_s_tvalid = '1' and io_rd_s_tready = '1' and io_cmd_wb = '1') then
-                if (io_cmd_w = '1') then
-                    ax_m_wr_tmask <= "11";
-                else
-                    ax_m_wr_tmask <= "01";
-                end if;
-                ax_m_wr_tdata <= io_rd_s_tdata(15 downto 0);
+            -- elsif (io_rd_s_tvalid = '1' and io_rd_s_tready = '1' and io_cmd_wb = '1') then
+            --     if (io_cmd_w = '1') then
+            --         ax_m_wr_tmask <= "11";
+            --     else
+            --         ax_m_wr_tmask <= "01";
+            --     end if;
+            --     ax_m_wr_tdata <= io_rd_s_tdata(15 downto 0);
             elsif (bcd_res_tvalid = '1') then
                 ax_m_wr_tmask <= bcd_res_tdata.dmask;
                 ax_m_wr_tdata <= bcd_res_tdata.dval(15 downto 0);
@@ -1723,10 +1740,11 @@ begin
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1') then
-                    if (micro_tdata.read_fifo = '1' or micro_tdata.cmd(MICRO_OP_CMD_DIV) = '1' or
+                    if micro_tdata.read_fifo = '1' or micro_tdata.cmd(MICRO_OP_CMD_DIV) = '1' or
                         micro_tdata.cmd(MICRO_OP_CMD_MUL) = '1' or micro_tdata.cmd(MICRO_OP_CMD_BCD) = '1' or
                         micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' or micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1' or
-                        (micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' and micro_tdata.io_cmd = '0'))
+                        micro_tdata.cmd(MICRO_OP_CMD_STR) = '1'
+                        --(micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' and micro_tdata.io_cmd = '0'))
                     then
                        jmp_lock_m_wr_tvalid <= '0';
                     else
@@ -1742,7 +1760,8 @@ begin
                         not (mexec_wait_mul = '1' xor mul_res_tvalid = '1') and
                         not (mexec_wait_bcd = '1' xor bcd_res_tvalid = '1') and
                         not (mexec_wait_shf = '1' xor (shf8_res_tvalid = '1' or shf16_res_tvalid = '1')) and
-                        not (mexec_wait_io = '1' xor (io_rd_s_tvalid = '1' and io_rd_s_tready = '1')) and
+                        --not (mexec_wait_io = '1' xor (io_rd_s_tvalid = '1' and io_rd_s_tready = '1')) and
+                        not (mexec_wait_str = '1' xor (str_res_tvalid = '1')) and
                         not (mexec_wait_jmp = '1' xor jmp_tvalid = '1')
                     then
                         if (mexec_unlk_fl = '1') then
@@ -1884,7 +1903,7 @@ begin
                 mem_wait_one <= '0';
                 mem_wait_fifo <= '0';
                 mem_wait_shf <= '0';
-                mem_wait_io <= '0';
+                --mem_wait_io <= '0';
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MEM) = '1') then
@@ -1927,15 +1946,15 @@ begin
                     mem_wait_fifo <= '0';
                 end if;
 
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MEM) = '1') then
-                    if (micro_tdata.mem_cmd = '1' and micro_tdata.mem_data_src = MEM_DATA_SRC_IO) then
-                        mem_wait_io <= '1';
-                    else
-                        mem_wait_io <= '0';
-                    end if;
-                elsif (mem_wait_io = '1' and io_rd_s_tvalid = '1') then
-                    mem_wait_io <= '0';
-                end if;
+                -- if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MEM) = '1') then
+                --     if (micro_tdata.mem_cmd = '1' and micro_tdata.mem_data_src = MEM_DATA_SRC_IO) then
+                --         mem_wait_io <= '1';
+                --     else
+                --         mem_wait_io <= '0';
+                --     end if;
+                -- elsif (mem_wait_io = '1' and io_rd_s_tvalid = '1') then
+                --     mem_wait_io <= '0';
+                -- end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MEM) = '1') then
                     if (micro_tdata.mem_cmd = '1' and
@@ -1951,11 +1970,11 @@ begin
                     end if;
                 elsif (str_lsu_req_tvalid = '1' and str_lsu_req_tready = '1') then
                     lsu_req_tvalid <= '1';
-                elsif (mem_wait_alu = '1' or mem_wait_fifo = '1' or mem_wait_one = '1' or mem_wait_shf = '1' or mem_wait_io = '1') and
+                elsif (mem_wait_alu = '1' or mem_wait_fifo = '1' or mem_wait_one = '1' or mem_wait_shf = '1') and
                     not (alu_res_tvalid = '1' xor mem_wait_alu = '1') and
                     not (one_res_tvalid = '1' xor mem_wait_one = '1') and
                     not (lsu_rd_s_tvalid = '1' xor mem_wait_fifo = '1') and
-                    not (io_rd_s_tvalid = '1' xor mem_wait_io = '1') and
+                    --not (io_rd_s_tvalid = '1' xor mem_wait_io = '1') and
                     not ((shf8_res_tvalid = '1' or shf16_res_tvalid = '1') xor mem_wait_shf = '1') then
                     lsu_req_tvalid <= '1';
                 elsif (lsu_req_tready = '1') then
@@ -1988,79 +2007,79 @@ begin
                 lsu_req_tdata <= shf16_res_tdata.dval;
             elsif (mem_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 lsu_req_tdata <= lsu_rd_s_tdata;
-            elsif (mem_wait_io = '1' and io_rd_s_tvalid = '1') then
-                lsu_req_tdata <= io_rd_s_tdata;
+            -- elsif (mem_wait_io = '1' and io_rd_s_tvalid = '1') then
+            --     lsu_req_tdata <= io_rd_s_tdata;
             end if;
 
         end if;
     end process;
 
-    io_request_forming_proc : process (clk) begin
-        if rising_edge(clk) then
-            if resetn = '0' then
-                io_req_m_tvalid <= '0';
-                io_wait_fifo <= '0';
-                io_cmd_w <= '0';
-                io_cmd_wb <= '0';
-            else
+    -- io_request_forming_proc : process (clk) begin
+    --     if rising_edge(clk) then
+    --         if resetn = '0' then
+    --             io_req_m_tvalid <= '0';
+    --             io_wait_fifo <= '0';
+    --             io_cmd_w <= '0';
+    --             io_cmd_wb <= '0';
+    --         else
 
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1') then
-                    if (micro_tdata.io_data_src = IO_DATA_SRC_IMM) then
-                        io_req_m_tvalid <= '1';
-                    else
-                        io_req_m_tvalid <= '0';
-                    end if;
-                elsif (io_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
-                    io_req_m_tvalid <= '1';
-                elsif (io_req_m_tready = '1') then
-                    io_req_m_tvalid <= '0';
-                end if;
+    --             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1') then
+    --                 if (micro_tdata.io_data_src = IO_DATA_SRC_IMM) then
+    --                     io_req_m_tvalid <= '1';
+    --                 else
+    --                     io_req_m_tvalid <= '0';
+    --                 end if;
+    --             elsif (io_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+    --                 io_req_m_tvalid <= '1';
+    --             elsif (io_req_m_tready = '1') then
+    --                 io_req_m_tvalid <= '0';
+    --             end if;
 
-                if (micro_tvalid = '1' and micro_tready = '1') then
-                    if (micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' AND micro_tdata.io_data_src = IO_DATA_SRC_FIFO) then
-                        io_wait_fifo <= '1';
-                    else
-                        io_wait_fifo <= '0';
-                    end if;
-                elsif (io_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
-                    io_wait_fifo <= '0';
-                end if;
+    --             if (micro_tvalid = '1' and micro_tready = '1') then
+    --                 if (micro_tdata.cmd(MICRO_OP_CMD_IO) = '1' AND micro_tdata.io_data_src = IO_DATA_SRC_FIFO) then
+    --                     io_wait_fifo <= '1';
+    --                 else
+    --                     io_wait_fifo <= '0';
+    --                 end if;
+    --             elsif (io_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+    --                 io_wait_fifo <= '0';
+    --             end if;
 
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1') then
-                    io_cmd_w <= micro_tdata.io_w;
-                    io_cmd_wb <= micro_tdata.io_wb;
-                end if;
+    --             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1') then
+    --                 io_cmd_w <= micro_tdata.io_w;
+    --                 io_cmd_wb <= micro_tdata.io_wb;
+    --             end if;
 
-            end if;
+    --         end if;
 
-            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1') then
-                io_req_m_tdata(39 downto 33) <= (others => '0');
-                io_req_m_tdata(32) <= micro_tdata.io_cmd;
-                io_req_m_tdata(31 downto 16) <= micro_tdata.io_port;
-            end if;
+    --         if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1') then
+    --             io_req_m_tdata(39 downto 33) <= (others => '0');
+    --             io_req_m_tdata(32) <= micro_tdata.io_cmd;
+    --             io_req_m_tdata(31 downto 16) <= micro_tdata.io_port;
+    --         end if;
 
-            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1') then
-                io_req_m_tdata(15 downto 0) <= micro_tdata.io_data;
-            elsif (io_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
-                io_req_m_tdata(15 downto 0) <= lsu_rd_s_tdata;
-            end if;
+    --         if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_IO) = '1') then
+    --             io_req_m_tdata(15 downto 0) <= micro_tdata.io_data;
+    --         elsif (io_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
+    --             io_req_m_tdata(15 downto 0) <= lsu_rd_s_tdata;
+    --         end if;
 
-        end if;
-    end process;
+    --     end if;
+    -- end process;
 
-    io_response_handing_proc : process (clk) begin
-        if rising_edge(clk) then
-            if resetn = '0' then
-                io_rd_s_tready <= '0';
-            else
-                if (io_req_m_tvalid = '1' and io_req_m_tready = '1' and io_req_m_tdata(32) = '0') then
-                    io_rd_s_tready <= '1';
-                elsif (io_rd_s_tvalid = '1' and io_rd_s_tready = '1') then
-                    io_rd_s_tready <= '0';
-                end if;
-            end if;
-        end if;
-    end process;
+    -- io_response_handing_proc : process (clk) begin
+    --     if rising_edge(clk) then
+    --         if resetn = '0' then
+    --             io_rd_s_tready <= '0';
+    --         else
+    --             if (io_req_m_tvalid = '1' and io_req_m_tready = '1' and io_req_m_tdata(32) = '0') then
+    --                 io_rd_s_tready <= '1';
+    --             elsif (io_rd_s_tvalid = '1' and io_rd_s_tready = '1') then
+    --                 io_rd_s_tready <= '0';
+    --             end if;
+    --         end if;
+    --     end if;
+    -- end process;
 
     bound_check_process : process (clk) begin
         if rising_edge(clk) then
