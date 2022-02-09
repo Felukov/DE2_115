@@ -52,13 +52,13 @@ entity mexec is
         sp_m_inc_tdata          : out std_logic_vector(15 downto 0);
         sp_m_inc_tkeep_lock     : out std_logic;
 
-        di_m_inc_tvalid         : out std_logic;
-        di_m_inc_tdata          : out std_logic_vector(15 downto 0);
-        di_m_inc_tkeep_lock     : out std_logic;
+        -- di_m_inc_tvalid         : out std_logic;
+        -- di_m_inc_tdata          : out std_logic_vector(15 downto 0);
+        -- di_m_inc_tkeep_lock     : out std_logic;
 
-        si_m_inc_tvalid         : out std_logic;
-        si_m_inc_tdata          : out std_logic_vector(15 downto 0);
-        si_m_inc_tkeep_lock     : out std_logic;
+        -- si_m_inc_tvalid         : out std_logic;
+        -- si_m_inc_tdata          : out std_logic_vector(15 downto 0);
+        -- si_m_inc_tkeep_lock     : out std_logic;
 
         bp_m_inc_tvalid         : out std_logic;
 
@@ -546,20 +546,14 @@ begin
     lsu_req_m_twidth <= lsu_req_twidth;
     lsu_req_m_tdata <= lsu_req_tdata;
 
-    --ax_m_wr_tdata <= res_tdata.dval_lo;
     bx_m_wr_tdata <= res_tdata.dval_lo;
-    -- cx_m_wr_tdata <= res_tdata.dval_lo;
     dx_m_wr_tdata <= res_tdata.dval_hi;
 
-    --ax_m_wr_tmask <= res_tdata.dmask;
     bx_m_wr_tmask <= res_tdata.dmask;
-    -- cx_m_wr_tmask <= res_tdata.dmask;
     dx_m_wr_tmask <= res_tdata.dmask;
 
     bp_m_wr_tdata <= res_tdata.dval_lo;
     sp_m_wr_tdata <= res_tdata.dval_lo;
-    -- di_m_wr_tdata <= res_tdata.dval_lo;
-    -- si_m_wr_tdata <= res_tdata.dval_lo;
     ds_m_wr_tdata <= res_tdata.dval_lo;
     es_m_wr_tdata <= res_tdata.dval_lo;
     ss_m_wr_tdata <= res_tdata.dval_lo;
@@ -587,16 +581,6 @@ begin
     sp_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.sp_inc = '1' else '0';
     sp_m_inc_tdata <= micro_tdata.sp_inc_data;
     sp_m_inc_tkeep_lock <= micro_tdata.sp_keep_lock;
-
-    -- di increment
-    di_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.di_inc = '1' else '0';
-    di_m_inc_tdata <= micro_tdata.di_inc_data;
-    di_m_inc_tkeep_lock <= micro_tdata.di_keep_lock;
-
-    -- si increment
-    si_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.si_inc = '1' else '0';
-    si_m_inc_tdata <= micro_tdata.si_inc_data;
-    si_m_inc_tkeep_lock <= micro_tdata.si_keep_lock;
 
     -- bp increment
     bp_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.bp_inc = '1' else '0';

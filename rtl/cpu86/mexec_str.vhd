@@ -101,13 +101,12 @@ architecture rtl of mexec_str is
     signal reg_wr_taddr         : std_logic_vector(19 downto 0);
     signal reg_wr_cnt           : natural range 0 to 2**16-1;
 
-    signal lsu_rd_s_cnt         : natural range 0 to 2**16-1;
-    signal lsu_rd_s_max         : natural range 0 to 2**16-1;
     signal rep_cnt_m1           : natural range 0 to 2**16-1;
     signal increment            : std_logic_vector(15 downto 0);
 
+    signal lsu_rd_s_tlast       : std_logic;
     signal lsu_rd_s_tready_mask : std_logic;
-    signal io_rd_s_tready_mask : std_logic;
+    signal io_rd_s_tready_mask  : std_logic;
 
     signal work_done_fl         : std_logic;
     signal stop_fl              : std_logic;
@@ -212,6 +211,8 @@ begin
         (wr_req_tvalid = '0' or (wr_req_tvalid = '1' and wr_req_tready = '1')) and
         (io_wr_req_tvalid = '0' or (io_wr_req_tvalid = '1' and io_wr_req_tready = '1')) else '0';
 
+    lsu_rd_s_tlast <= '1' when mem_trans_cnt = 1 and rd_req_tvalid = '0' else '0';
+
     io_rd_s_tready <= '1' when io_rd_s_tready_mask = '0' and
         (wr_req_tvalid = '0' or (wr_req_tvalid = '1' and wr_req_tready = '1')) else '0';
 
@@ -278,14 +279,6 @@ begin
                     elsif ((instr_movs = '1' or (instr_cmps = '1' and cmps_req_iter = st_second)) and rd_req_cnt = 15) then
                         rep_cnt_m1 <= rep_cnt_m1 - 16;
                     end if;
-
-                    -- if (rd_req_cnt = rep_cnt_m1 and instr_cmps = '1' and cmps_req_iter = st_first) then
-                    --     rep_cnt_m1 <= rep_cnt_m1;
-                    -- elsif (rd_req_cnt = rep_cnt_m1) then
-                    --     rep_cnt_m1 <= 0;
-                    -- elsif ((instr_movs = '1' or (instr_cmps = '1' and cmps_req_iter = st_second)) and rd_req_cnt = 15) then
-                    --     rep_cnt_m1 <= rep_cnt_m1 - 16;
-                    -- end if;
                 end if;
 
                 if req_s_tvalid = '1' then
@@ -481,8 +474,7 @@ begin
     event_scas_rd_start <= '1' when req_s_tvalid = '1' and req_s_tdata.code = SCAS_OP else '0';
 
     event_cmps_rd_start <= '1' when req_s_tvalid = '1' and req_s_tdata.code = CMPS_OP else '0';
-    event_cmps_rd_next <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and
-        (lsu_rd_s_cnt = 15 or lsu_rd_s_cnt = lsu_rd_s_max) and
+    event_cmps_rd_next <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and lsu_rd_s_tlast = '1' and
         (work_done_fl = '0') and (instr_cmps = '1') else '0';
 
     mem_rd_proc: process (clk) begin
@@ -568,7 +560,7 @@ begin
                 end if;
 
 
-                if (instr_cmps = '1' and lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and (lsu_rd_s_cnt = 15 or lsu_rd_s_cnt = lsu_rd_s_max)) then
+                if (instr_cmps = '1' and lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and lsu_rd_s_tlast = '1') then
                     if cmps_res_iter = st_first then
                         cmps_res_iter <= st_second;
                     elsif cmps_res_iter = st_second then
@@ -607,7 +599,7 @@ begin
                 end if;
 
                 if (fifo_m_tvalid = '1' and fifo_m_tready = '1') then
-                    if (mem_trans_cnt = 1 and io_rd_req_tvalid = '0' and (rep_cnt_m1 = 0 or stop_fl = '1')) then
+                    if (lsu_rd_s_tlast = '1' and (rep_cnt_m1 = 0 or stop_fl = '1')) then
                         cmp_tlast <= '1';
                     else
                         cmp_tlast <= '0';
@@ -659,29 +651,9 @@ begin
         if rising_edge(clk) then
 
             if resetn = '0' then
-                lsu_rd_s_cnt <= 0;
-                lsu_rd_s_max <= 0;
                 wr_req_tvalid <= '0';
                 wr_req_tlast <= '0';
             else
-
-                if (req_s_tvalid = '1') then
-                    lsu_rd_s_max <= 15;
-                elsif (rd_req_tvalid = '1' and rd_req_tready = '1') then
-                    if ((rd_req_cnt = 15 and (instr_movs = '1' or instr_cmps = '1')) or rd_req_cnt = rep_cnt_m1) then
-                        lsu_rd_s_max <= rd_req_cnt;
-                    end if;
-                end if;
-
-                if (req_s_tvalid = '1') then
-                    lsu_rd_s_cnt <= 0;
-                elsif (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1') then
-                    if ((lsu_rd_s_cnt = 15 and (instr_movs = '1' or instr_cmps = '1')) or lsu_rd_s_cnt = lsu_rd_s_max) then
-                        lsu_rd_s_cnt <= 0;
-                    else
-                        lsu_rd_s_cnt <= lsu_rd_s_cnt + 1;
-                    end if;
-                end if;
 
                 if (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and instr_movs = '1') or
                     (io_rd_s_tvalid = '1' and io_rd_s_tready = '1' and instr_ins = '1') or
@@ -692,7 +664,7 @@ begin
                 end if;
 
                 if (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and instr_movs = '1') then
-                    if (lsu_rd_s_cnt = 15 or lsu_rd_s_cnt = lsu_rd_s_max) then
+                    if (lsu_rd_s_tlast = '1') then
                         wr_req_tlast <= '1';
                     else
                         wr_req_tlast <= '0';
@@ -728,8 +700,7 @@ begin
 
     event_movs_req_last <= '1' when instr_movs = '1' and rd_req_tvalid = '1' and rd_req_tready = '1' and
         (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1) else '0';
-    event_movs_res_last <= '1' when instr_movs = '1' and lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and
-        (lsu_rd_s_cnt = 15 or lsu_rd_s_cnt = lsu_rd_s_max) else '0';
+    event_movs_res_last <= '1' when instr_movs = '1' and lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and lsu_rd_s_tlast = '1' else '0';
 
     mem_troughput_controller : process (clk) begin
         if rising_edge(clk) then
@@ -794,8 +765,8 @@ begin
                     io_wr_req_tvalid <= '0';
                 end if;
 
-                if (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1') then
-                    if (lsu_rd_s_cnt = lsu_rd_s_max and instr_outs = '1') then
+                if (lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and instr_outs = '1') then
+                    if (lsu_rd_s_tlast = '1') then
                         io_wr_req_tlast <= '1';
                     else
                         io_wr_req_tlast <= '0';
@@ -843,7 +814,7 @@ begin
 
     event_movs_finish <= '1' when instr_movs = '1' and wr_req_tvalid = '1' and wr_req_tready = '1' and wr_req_tlast = '1' and work_done_fl = '1' else '0';
     event_stos_finish <= '1' when instr_stos = '1' and wr_req_tvalid = '1' and wr_req_tready = '1' and wr_req_tlast = '1' and work_done_fl = '1' else '0';
-    event_lods_finish <= '1' when instr_lods = '1' and lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and lsu_rd_s_cnt = lsu_rd_s_max and work_done_fl = '1' else '0';
+    event_lods_finish <= '1' when instr_lods = '1' and lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and lsu_rd_s_tlast = '1' and work_done_fl = '1' else '0';
     event_scas_finish <= '1' when instr_scas = '1' and (cmp_finish_vector = "11") else '0';
     event_cmps_finish <= '1' when instr_cmps = '1' and (cmp_finish_vector = "11") else '0';
 

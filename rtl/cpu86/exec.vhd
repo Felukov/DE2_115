@@ -239,9 +239,7 @@ architecture rtl of exec is
             sp_s_tdata              : in std_logic_vector(15 downto 0);
             sp_s_tdata_next         : in std_logic_vector(15 downto 0);
             di_s_tdata              : in std_logic_vector(15 downto 0);
-            di_s_tdata_next         : in std_logic_vector(15 downto 0);
             si_s_tdata              : in std_logic_vector(15 downto 0);
-            si_s_tdata_next         : in std_logic_vector(15 downto 0);
             flags_s_tdata           : in std_logic_vector(15 downto 0);
 
             ax_m_wr_tvalid          : out std_logic;
@@ -253,7 +251,6 @@ architecture rtl of exec is
             cx_m_wr_tvalid          : out std_logic;
             cx_m_wr_tdata           : out std_logic_vector(15 downto 0);
             cx_m_wr_tmask           : out std_logic_vector(1 downto 0);
-            cx_m_wr_tkeep_lock      : out std_logic;
             dx_m_wr_tvalid          : out std_logic;
             dx_m_wr_tdata           : out std_logic_vector(15 downto 0);
             dx_m_wr_tmask           : out std_logic_vector(1 downto 0);
@@ -329,14 +326,6 @@ architecture rtl of exec is
             sp_m_inc_tvalid         : out std_logic;
             sp_m_inc_tdata          : out std_logic_vector(15 downto 0);
             sp_m_inc_tkeep_lock     : out std_logic;
-
-            di_m_inc_tvalid         : out std_logic;
-            di_m_inc_tdata          : out std_logic_vector(15 downto 0);
-            di_m_inc_tkeep_lock     : out std_logic;
-
-            si_m_inc_tvalid         : out std_logic;
-            si_m_inc_tdata          : out std_logic_vector(15 downto 0);
-            si_m_inc_tkeep_lock     : out std_logic;
 
             bp_m_inc_tvalid         : out std_logic;
 
@@ -513,25 +502,15 @@ architecture rtl of exec is
 
     signal si_tvalid                : std_logic;
     signal si_tdata                 : std_logic_vector(15 downto 0);
-    signal si_tdata_next            : std_logic_vector(15 downto 0);
     signal si_lock_tvalid           : std_logic;
     signal si_wr_tvalid             : std_logic;
     signal si_wr_tdata              : std_logic_vector(15 downto 0);
 
-    signal si_inc_tvalid            : std_logic;
-    signal si_inc_tdata             : std_logic_vector(15 downto 0);
-    signal si_inc_tkeep_lock        : std_logic;
-
     signal di_tvalid                : std_logic;
     signal di_tdata                 : std_logic_vector(15 downto 0);
-    signal di_tdata_next            : std_logic_vector(15 downto 0);
     signal di_lock_tvalid           : std_logic;
     signal di_wr_tvalid             : std_logic;
     signal di_wr_tdata              : std_logic_vector(15 downto 0);
-
-    signal di_inc_tvalid            : std_logic;
-    signal di_inc_tdata             : std_logic_vector(15 downto 0);
-    signal di_inc_tkeep_lock        : std_logic;
 
     signal flags_tvalid             : std_logic;
     signal flags_tdata              : std_logic_vector(15 downto 0);
@@ -557,7 +536,6 @@ architecture rtl of exec is
     signal ifeu_cx_wr_tvalid        : std_logic;
     signal ifeu_cx_wr_tdata         : std_logic_vector(15 downto 0);
     signal ifeu_cx_wr_tmask         : std_logic_vector(1 downto 0);
-    signal ifeu_cx_wr_tkeep_lock    : std_logic;
     signal ifeu_dx_wr_tvalid        : std_logic;
     signal ifeu_dx_wr_tdata         : std_logic_vector(15 downto 0);
     signal ifeu_dx_wr_tmask         : std_logic_vector(1 downto 0);
@@ -602,15 +580,9 @@ architecture rtl of exec is
 
     signal mexec_di_wr_tvalid       : std_logic;
     signal mexec_di_wr_tdata        : std_logic_vector(15 downto 0);
-    signal mexec_di_inc_tvalid      : std_logic;
-    signal mexec_di_inc_tdata       : std_logic_vector(15 downto 0);
-    signal mexec_di_inc_tkeep_lock  : std_logic;
 
     signal mexec_si_wr_tvalid       : std_logic;
     signal mexec_si_wr_tdata        : std_logic_vector(15 downto 0);
-    signal mexec_si_inc_tvalid      : std_logic;
-    signal mexec_si_inc_tdata       : std_logic_vector(15 downto 0);
-    signal mexec_si_inc_tkeep_lock  : std_logic;
 
     signal mexec_ds_wr_tvalid       : std_logic;
     signal mexec_ds_wr_tdata        : std_logic_vector(15 downto 0);
@@ -632,9 +604,6 @@ architecture rtl of exec is
     signal lsu_rd_tvalid            : std_logic;
     signal lsu_rd_tready            : std_logic;
     signal lsu_rd_tdata             : std_logic_vector(15 downto 0);
-
-    -- signal dcache_tvalid            : std_logic;
-    -- signal dcache_tdata             : std_logic_vector(15 downto 0);
 
     signal dcache_tvalid            : std_logic;
     signal dcache_tready            : std_logic;
@@ -800,7 +769,7 @@ begin
         wr_s_tvalid             => cx_wr_tvalid,
         wr_s_tdata              => cx_wr_tdata,
         wr_s_tmask              => cx_wr_tmask,
-        wr_s_tkeep_lock         => cx_wr_tkeep_lock,
+        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => cx_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -875,7 +844,7 @@ begin
     );
 
 
-    cpu_reg_di : cpu_reg_acc generic map (
+    cpu_reg_di : cpu_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -884,21 +853,17 @@ begin
         wr_s_tvalid             => di_wr_tvalid,
         wr_s_tdata              => di_wr_tdata,
         wr_s_tmask              => "11",
-
-        inc_s_tvalid            => di_inc_tvalid,
-        inc_s_tdata             => di_inc_tdata,
-        inc_s_tkeep_lock        => di_inc_tkeep_lock,
+        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => di_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
 
         reg_m_tvalid            => di_tvalid,
-        reg_m_tdata             => di_tdata,
-        reg_m_tdata_next        => di_tdata_next
+        reg_m_tdata             => di_tdata
     );
 
 
-    cpu_reg_si : cpu_reg_acc generic map (
+    cpu_reg_si : cpu_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -907,18 +872,13 @@ begin
         wr_s_tvalid             => si_wr_tvalid,
         wr_s_tdata              => si_wr_tdata,
         wr_s_tmask              => "11",
-
-        inc_s_tvalid            => si_inc_tvalid,
-        inc_s_tdata             => si_inc_tdata,
-        inc_s_tkeep_lock        => si_inc_tkeep_lock,
+        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => si_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
 
         reg_m_tvalid            => si_tvalid,
-        reg_m_tdata             => si_tdata,
-        reg_m_tdata_next        => si_tdata_next
-
+        reg_m_tdata             => si_tdata
     );
 
 
@@ -1106,9 +1066,7 @@ begin
         sp_s_tdata              => sp_tdata,
         sp_s_tdata_next         => sp_tdata_next,
         di_s_tdata              => di_tdata,
-        di_s_tdata_next         => di_tdata_next,
         si_s_tdata              => si_tdata,
-        si_s_tdata_next         => si_tdata_next,
 
         flags_s_tdata           => flags_tdata,
 
@@ -1121,7 +1079,6 @@ begin
         cx_m_wr_tvalid          => ifeu_cx_wr_tvalid,
         cx_m_wr_tdata           => ifeu_cx_wr_tdata,
         cx_m_wr_tmask           => ifeu_cx_wr_tmask,
-        cx_m_wr_tkeep_lock      => ifeu_cx_wr_tkeep_lock,
         dx_m_wr_tvalid          => ifeu_dx_wr_tvalid,
         dx_m_wr_tdata           => ifeu_dx_wr_tdata,
         dx_m_wr_tmask           => ifeu_dx_wr_tmask,
@@ -1192,14 +1149,6 @@ begin
         sp_m_inc_tvalid         => mexec_sp_inc_tvalid,
         sp_m_inc_tdata          => mexec_sp_inc_tdata,
         sp_m_inc_tkeep_lock     => mexec_sp_inc_tkeep_lock,
-
-        di_m_inc_tvalid         => mexec_di_inc_tvalid,
-        di_m_inc_tdata          => mexec_di_inc_tdata,
-        di_m_inc_tkeep_lock     => mexec_di_inc_tkeep_lock,
-
-        si_m_inc_tvalid         => mexec_si_inc_tvalid,
-        si_m_inc_tdata          => mexec_si_inc_tdata,
-        si_m_inc_tkeep_lock     => mexec_si_inc_tkeep_lock,
 
         bp_m_inc_tvalid         => bp_m_inc_tvalid,
 
@@ -1285,21 +1234,6 @@ begin
         lsu_rd_m_tdata          => lsu_rd_tdata
     );
 
-    -- dcache_inst : dcache port map (
-    --     clk                     => clk,
-    --     resetn                  => resetn,
-
-    --     lsu_req_s_tvalid        => lsu_req_tvalid,
-    --     lsu_req_s_tready        => lsu_req_tready,
-    --     lsu_req_s_tcmd          => lsu_req_tcmd,
-    --     lsu_req_s_taddr         => lsu_req_taddr,
-    --     lsu_req_s_twidth        => lsu_req_twidth,
-    --     lsu_req_s_tdata         => lsu_req_tdata,
-
-    --     dcache_m_tvalid         => dcache_tvalid,
-    --     dcache_m_tdata          => dcache_tdata
-    -- );
-
     ax_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_ax_wr_tvalid = '1' or mexec_ax_wr_tvalid = '1') else '0';
     bx_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_bx_wr_tvalid = '1' or mexec_bx_wr_tvalid = '1') else '0';
     cx_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_cx_wr_tvalid = '1' or mexec_cx_wr_tvalid = '1') else '0';
@@ -1331,19 +1265,9 @@ begin
     ss_wr_tdata <= mexec_ss_wr_tdata when mexec_ss_wr_tvalid = '1' else ifeu_ss_wr_tdata;
     es_wr_tdata <= mexec_es_wr_tdata when mexec_es_wr_tvalid = '1' else ifeu_es_wr_tdata;
 
-    cx_wr_tkeep_lock <= '1' when ifeu_cx_wr_tkeep_lock = '1' else '0';
-
     sp_inc_tvalid <= mexec_sp_inc_tvalid;
     sp_inc_tdata <= mexec_sp_inc_tdata;
     sp_inc_tkeep_lock <= mexec_sp_inc_tkeep_lock;
-
-    di_inc_tvalid <= mexec_di_inc_tvalid;
-    di_inc_tdata <= mexec_di_inc_tdata;
-    di_inc_tkeep_lock <= mexec_di_inc_tkeep_lock;
-
-    si_inc_tvalid <= mexec_si_inc_tvalid;
-    si_inc_tdata <= mexec_si_inc_tdata;
-    si_inc_tkeep_lock <= mexec_si_inc_tkeep_lock;
 
     req_m_tvalid <= jump_tvalid;
     req_m_tdata <= jump_tdata;

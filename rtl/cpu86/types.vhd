@@ -260,7 +260,7 @@ package cpu86_types is
         fast_instr  : std_logic;
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 13;
+    constant MICRO_OP_CMD_WIDTH : natural := 12;
     constant MICRO_OP_CMD_MEM : natural := 0;
     constant MICRO_OP_CMD_ALU : natural := 1;
     constant MICRO_OP_CMD_JMP : natural := 2;
@@ -271,9 +271,8 @@ package cpu86_types is
     constant MICRO_OP_CMD_BCD : natural := 7;
     constant MICRO_OP_CMD_SHF : natural := 8;
     constant MICRO_OP_CMD_DIV : natural := 9;
-    constant MICRO_OP_CMD_IO  : natural := 10;
-    constant MICRO_OP_CMD_BND : natural := 11;
-    constant MICRO_OP_CMD_STR : natural := 12;
+    constant MICRO_OP_CMD_BND : natural := 10;
+    constant MICRO_OP_CMD_STR : natural := 11;
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -365,27 +364,12 @@ package cpu86_types is
         mem_data_src    : mem_data_src_t;
         mem_data        : std_logic_vector(15 downto 0);
 
-        -- io_cmd          : std_logic;
-        -- io_w            : std_logic;
-        -- io_port         : std_logic_vector(15 downto 0);
-        -- io_data         : std_logic_vector(15 downto 0);
-        -- io_data_src     : io_data_src_t;
-        -- io_wb           : std_logic;
-
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
 
         sp_inc          : std_logic;
         sp_inc_data     : std_logic_vector(15 downto 0);
         sp_keep_lock    : std_logic;
-
-        si_inc          : std_logic;
-        si_inc_data     : std_logic_vector(15 downto 0);
-        si_keep_lock    : std_logic;
-
-        di_inc          : std_logic;
-        di_inc_data     : std_logic_vector(15 downto 0);
-        di_keep_lock    : std_logic;
 
         bp_inc          : std_logic;
 
