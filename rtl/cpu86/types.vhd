@@ -260,35 +260,38 @@ package cpu86_types is
         fast_instr  : std_logic;
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 13;
-    constant MICRO_OP_CMD_MEM : natural := 0;
-    constant MICRO_OP_CMD_ALU : natural := 1;
-    constant MICRO_OP_CMD_JMP : natural := 2;
-    constant MICRO_OP_CMD_FLG : natural := 3;
-    constant MICRO_OP_CMD_MUL : natural := 4;
-    constant MICRO_OP_CMD_DBG : natural := 5;
-    constant MICRO_OP_CMD_ONE : natural := 6;
-    constant MICRO_OP_CMD_BCD : natural := 7;
-    constant MICRO_OP_CMD_SHF : natural := 8;
-    constant MICRO_OP_CMD_DIV : natural := 9;
-    constant MICRO_OP_CMD_BND : natural := 10;
-    constant MICRO_OP_CMD_STR : natural := 11;
-    constant MICRO_OP_CMD_MRD : natural := 12;
+    constant MICRO_OP_CMD_WIDTH : natural := 14;
+    constant MICRO_OP_CMD_MEM   : natural := 0;
+    constant MICRO_OP_CMD_ALU   : natural := 1;
+    constant MICRO_OP_CMD_JMP   : natural := 2;
+    constant MICRO_OP_CMD_FLG   : natural := 3;
+    constant MICRO_OP_CMD_MUL   : natural := 4;
+    constant MICRO_OP_CMD_DBG   : natural := 5;
+    constant MICRO_OP_CMD_ONE   : natural := 6;
+    constant MICRO_OP_CMD_BCD   : natural := 7;
+    constant MICRO_OP_CMD_SHF   : natural := 8;
+    constant MICRO_OP_CMD_DIV   : natural := 9;
+    constant MICRO_OP_CMD_BND   : natural := 10;
+    constant MICRO_OP_CMD_STR   : natural := 11;
+    constant MICRO_OP_CMD_MRD   : natural := 12;
+    constant MICRO_OP_CMD_UNLK  : natural := 13;
 
-    constant MICRO_NOP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000000";
-    constant MICRO_MRD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "1000000000000";
-    constant MICRO_STR_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0100000000000";
-    constant MICRO_BND_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0010000000000";
-    constant MICRO_DIV_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0001000000000";
-    constant MICRO_SHF_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000100000000";
-    constant MICRO_BCD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000010000000";
-    constant MICRO_ONE_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000001000000";
-    constant MICRO_DBG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000100000";
-    constant MICRO_MUL_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000010000";
-    constant MICRO_FLG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000001000";
-    constant MICRO_JMP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000100";
-    constant MICRO_ALU_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000010";
-    constant MICRO_MEM_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000001";
+    constant MICRO_UNLK_OP      : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "10000000000000";
+    constant MICRO_MRD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "01000000000000";
+    constant MICRO_STR_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00100000000000";
+    constant MICRO_BND_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00010000000000";
+    constant MICRO_DIV_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00001000000000";
+    constant MICRO_SHF_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000100000000";
+    constant MICRO_BCD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000010000000";
+    constant MICRO_ONE_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000001000000";
+    constant MICRO_DBG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000100000";
+    constant MICRO_MUL_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000010000";
+    constant MICRO_FLG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000001000";
+    constant MICRO_JMP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000000100";
+    constant MICRO_ALU_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000000010";
+    constant MICRO_MEM_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000000001";
+    constant MICRO_NOP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000000000";
+
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -296,9 +299,7 @@ package cpu86_types is
 
     type micro_op_t is record
         cmd             : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0);
-        unlk_fl         : std_logic;
-        --read_fifo       : std_logic;
-        --wr              : std_logic;
+        --unlk_fl         : std_logic;
         alu_code        : std_logic_vector(3 downto 0);
         alu_w           : std_logic;
         alu_dreg        : reg_t;

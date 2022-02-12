@@ -460,7 +460,6 @@ begin
             end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') then
-
                 rr_tdata.op <= instr_tdata.op;
                 rr_tdata.w <= instr_tdata.w;
                 rr_tdata.fl <= instr_tdata.fl;
@@ -491,7 +490,6 @@ begin
                 end if;
 
                 rr_tuser <= instr_tuser;
-
             end if;
 
         end if;

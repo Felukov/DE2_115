@@ -1685,7 +1685,7 @@ begin
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1') then
-                    mexec_unlk_fl <= micro_tdata.unlk_fl;
+                    mexec_unlk_fl <= micro_tdata.cmd(MICRO_OP_CMD_UNLK);
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1') then
@@ -1696,7 +1696,7 @@ begin
                     then
                        jmp_lock_m_wr_tvalid <= '0';
                     else
-                        if (micro_tdata.unlk_fl = '1') then
+                        if (micro_tdata.cmd(MICRO_OP_CMD_UNLK) = '1') then
                             jmp_lock_m_wr_tvalid <= '1';
                         else
                             jmp_lock_m_wr_tvalid <= '0';
