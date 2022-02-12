@@ -42,10 +42,10 @@ begin
                 reg_tdata <= (others => '0');
             else
 
-                if (lock_s_tvalid = '1') then
-                    reg_tvalid <= '0';
-                elsif ((wr_s_tvalid = '1' and wr_s_tkeep_lock = '0') or unlk_s_tvalid = '1') then
+                if ((wr_s_tvalid = '1' and wr_s_tkeep_lock = '0') or unlk_s_tvalid = '1') then
                     reg_tvalid <= '1';
+                elsif (lock_s_tvalid = '1') then
+                    reg_tvalid <= '0';
                 end if;
 
                 if (wr_s_tvalid = '1') then

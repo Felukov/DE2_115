@@ -75,6 +75,7 @@ architecture rtl of register_reader is
     signal instr_tready         : std_logic;
     signal instr_tdata          : decoded_instr_t;
     signal instr_tuser          : user_t;
+    signal instr_hazards_resolved : std_logic;
 
     signal rr_tvalid            : std_logic;
     signal rr_tready            : std_logic;
@@ -217,130 +218,206 @@ begin
 
     end process;
 
-    instr_tready <= '1' when
-        (instr_tdata.wait_ax = '0' or (instr_tdata.wait_ax = '1' and ax_s_tvalid = '1')) and
-        (instr_tdata.wait_bx = '0' or (instr_tdata.wait_bx = '1' and bx_s_tvalid = '1')) and
-        (instr_tdata.wait_cx = '0' or (instr_tdata.wait_cx = '1' and cx_s_tvalid = '1')) and
-        (instr_tdata.wait_dx = '0' or (instr_tdata.wait_dx = '1' and dx_s_tvalid = '1')) and
-        (instr_tdata.wait_bp = '0' or (instr_tdata.wait_bp = '1' and bp_s_tvalid = '1')) and
-        (instr_tdata.wait_si = '0' or (instr_tdata.wait_si = '1' and si_s_tvalid = '1')) and
-        (instr_tdata.wait_di = '0' or (instr_tdata.wait_di = '1' and di_s_tvalid = '1')) and
-        (instr_tdata.wait_sp = '0' or (instr_tdata.wait_sp = '1' and sp_s_tvalid = '1')) and
-        (instr_tdata.wait_ds = '0' or (instr_tdata.wait_ds = '1' and ds_s_tvalid = '1')) and
-        (instr_tdata.wait_es = '0' or (instr_tdata.wait_es = '1' and es_s_tvalid = '1')) and
-        (instr_tdata.wait_ss = '0' or (instr_tdata.wait_ss = '1' and ss_s_tvalid = '1')) and
-        (instr_tdata.wait_fl = '0' or (instr_tdata.wait_fl = '1' and flags_s_tvalid = '1')) and
-        (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) else '0';
+    instr_hazards_resolved <= '1' when
+        (instr_tdata.wait_ax = '0' or (instr_tdata.wait_ax = '1' and ax_s_tvalid = '1' and ax_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_bx = '0' or (instr_tdata.wait_bx = '1' and bx_s_tvalid = '1' and bx_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_cx = '0' or (instr_tdata.wait_cx = '1' and cx_s_tvalid = '1' and cx_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_dx = '0' or (instr_tdata.wait_dx = '1' and dx_s_tvalid = '1' and dx_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_bp = '0' or (instr_tdata.wait_bp = '1' and bp_s_tvalid = '1' and bp_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_si = '0' or (instr_tdata.wait_si = '1' and si_s_tvalid = '1' and si_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_di = '0' or (instr_tdata.wait_di = '1' and di_s_tvalid = '1' and di_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_sp = '0' or (instr_tdata.wait_sp = '1' and sp_s_tvalid = '1' and sp_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_ds = '0' or (instr_tdata.wait_ds = '1' and ds_s_tvalid = '1' and ds_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_es = '0' or (instr_tdata.wait_es = '1' and es_s_tvalid = '1' and es_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_ss = '0' or (instr_tdata.wait_ss = '1' and ss_s_tvalid = '1' and ss_m_lock_tvalid = '0')) and
+        (instr_tdata.wait_fl = '0' or (instr_tdata.wait_fl = '1' and flags_s_tvalid = '1' and flags_m_lock_tvalid = '0')) else '0';
 
-    reg_lock_proc2: process (all) begin
-        ax_m_lock_tvalid <= '0';
-        bx_m_lock_tvalid <= '0';
-        cx_m_lock_tvalid <= '0';
-        dx_m_lock_tvalid <= '0';
-        bp_m_lock_tvalid <= '0';
-        sp_m_lock_tvalid <= '0';
-        si_m_lock_tvalid <= '0';
-        di_m_lock_tvalid <= '0';
+    instr_tready <= '1' when (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) and instr_hazards_resolved = '1' else '0';
 
-        ds_m_lock_tvalid <= '0';
-        es_m_lock_tvalid <= '0';
-        ss_m_lock_tvalid <= '0';
+    reg_lock_proc1: process (clk) begin
 
-        flags_m_lock_tvalid <= '0';
+        if rising_edge(clk) then
+            if resetn = '0' then
+                ax_m_lock_tvalid <= '0';
+                bx_m_lock_tvalid <= '0';
+                cx_m_lock_tvalid <= '0';
+                dx_m_lock_tvalid <= '0';
+                bp_m_lock_tvalid <= '0';
+                sp_m_lock_tvalid <= '0';
+                si_m_lock_tvalid <= '0';
+                di_m_lock_tvalid <= '0';
 
-        if (instr_tvalid = '1' and instr_tready = '1' and resetn = '1') then
+                ds_m_lock_tvalid <= '0';
+                es_m_lock_tvalid <= '0';
+                ss_m_lock_tvalid <= '0';
 
-            if (instr_tdata.lock_ax = '1') or
-                (instr_tdata.lock_all = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = AX) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = AX)
-            then
-                ax_m_lock_tvalid <= '1';
-            end if;
+                flags_m_lock_tvalid <= '0';
+            else
 
-            if (instr_tdata.lock_all = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = BX) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = BX)
-            then
-                bx_m_lock_tvalid <= '1';
-            end if;
-
-            if (instr_tdata.lock_all = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = CX) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = CX)
-            then
-                if (instr_tdata.op = REP and cx_s_tdata = x"0000") then
-                    cx_m_lock_tvalid <= '0';
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_ax = '1') or
+                        (instr_tdata.lock_all = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = AX) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = AX)
+                    then
+                        ax_m_lock_tvalid <= '1';
+                    else
+                        ax_m_lock_tvalid <= '0';
+                    end if;
                 else
-                    cx_m_lock_tvalid <= '1';
+                    ax_m_lock_tvalid <= '0';
                 end if;
-            end if;
 
-            if (instr_tdata.lock_all = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = DX) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = DX)
-            then
-                dx_m_lock_tvalid <= '1';
-            end if;
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_all = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = BX) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = BX)
+                    then
+                        bx_m_lock_tvalid <= '1';
+                    else
+                        bx_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    bx_m_lock_tvalid <= '0';
+                end if;
 
-            if (instr_tdata.lock_all = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = BP) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = BP)
-            then
-                bp_m_lock_tvalid <= '1';
-            end if;
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_all = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = CX) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = CX)
+                    then
+                        if (instr_tdata.op = REP and cx_s_tdata = x"0000") then
+                            cx_m_lock_tvalid <= '0';
+                        else
+                            cx_m_lock_tvalid <= '1';
+                        end if;
+                    else
+                        cx_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    cx_m_lock_tvalid <= '0';
+                end if;
 
-            if (instr_tdata.lock_sp = '1') or
-                (instr_tdata.lock_all = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = SP) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = SP)
-            then
-                sp_m_lock_tvalid <= '1';
-            end if;
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_all = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = DX) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = DX)
+                    then
+                        dx_m_lock_tvalid <= '1';
+                    else
+                        dx_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    dx_m_lock_tvalid <= '0';
+                end if;
 
-            if (instr_tdata.lock_di = '1' and skip_next = '0') or
-                (instr_tdata.lock_all = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = DI) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = DI)
-            then
-                di_m_lock_tvalid <= '1';
-            end if;
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_all = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = BP) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = BP)
+                    then
+                        bp_m_lock_tvalid <= '1';
+                    else
+                        bp_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    bp_m_lock_tvalid <= '0';
+                end if;
 
-            if (instr_tdata.lock_si = '1' and skip_next = '0') or
-                (instr_tdata.lock_all = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = SI) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = SI)
-            then
-                si_m_lock_tvalid <= '1';
-            end if;
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_sp = '1') or
+                        (instr_tdata.lock_all = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = SP) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = SP)
+                    then
+                        sp_m_lock_tvalid <= '1';
+                    else
+                        sp_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    sp_m_lock_tvalid <= '0';
+                end if;
 
-            if (instr_tdata.lock_ds = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = DS) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = DS)
-            then
-                ds_m_lock_tvalid <= '1';
-            end if;
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_di = '1' and skip_next = '0') or
+                        (instr_tdata.lock_all = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = DI) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = DI)
+                    then
+                        di_m_lock_tvalid <= '1';
+                    else
+                        di_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    di_m_lock_tvalid <= '0';
+                end if;
 
-            if (instr_tdata.lock_es = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = ES) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = ES)
-            then
-                es_m_lock_tvalid <= '1';
-            end if;
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_si = '1' and skip_next = '0') or
+                        (instr_tdata.lock_all = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = SI) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = SI)
+                    then
+                        si_m_lock_tvalid <= '1';
+                    else
+                        si_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    si_m_lock_tvalid <= '0';
+                end if;
 
-            if (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = SS) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = SS)
-            then
-                ss_m_lock_tvalid <= '1';
-            end if;
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_ds = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = DS) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = DS)
+                    then
+                        ds_m_lock_tvalid <= '1';
+                    else
+                        ds_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    ds_m_lock_tvalid <= '0';
+                end if;
 
-            if (instr_tdata.lock_fl = '1') or
-                (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = FL) or
-                (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = FL)
-            then
-                flags_m_lock_tvalid <= '1';
-            end if;
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_es = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = ES) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = ES)
+                    then
+                        es_m_lock_tvalid <= '1';
+                    else
+                        es_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    es_m_lock_tvalid <= '0';
+                end if;
 
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = SS) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = SS)
+                    then
+                        ss_m_lock_tvalid <= '1';
+                    else
+                        ss_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    ss_m_lock_tvalid <= '0';
+                end if;
+
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.lock_fl = '1') or
+                        (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = FL) or
+                        (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = FL)
+                    then
+                        flags_m_lock_tvalid <= '1';
+                    else
+                        flags_m_lock_tvalid <= '0';
+                    end if;
+                else
+                    flags_m_lock_tvalid <= '0';
+                end if;
+
+            end if;
         end if;
 
     end process;
@@ -395,13 +472,14 @@ begin
                 rr_tdata.sreg <= instr_tdata.sreg;
                 rr_tdata.data <= instr_tdata.data;
                 rr_tdata.disp <= instr_tdata.disp;
+                rr_tdata.level <= to_integer(unsigned(instr_tdata.imm8(4 downto 0)));
+
                 rr_tdata.sreg_val <= sreg_tdata;
                 rr_tdata.dreg_val <= dreg_tdata;
                 rr_tdata.ea_val <= ea_tdata;
                 rr_tdata.seg_val <= seg_tdata;
                 rr_tdata.ss_seg_val <= ss_s_tdata;
                 rr_tdata.es_seg_val <= es_s_tdata;
-                rr_tdata.level <= to_integer(unsigned(instr_tdata.imm8(4 downto 0)));
 
                 if (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
                     ((instr_tdata.op = MOVU or instr_tdata.op = XCHG) and (instr_tdata.dir = R2R or instr_tdata.dir = I2R)) or

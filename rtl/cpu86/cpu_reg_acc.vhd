@@ -73,10 +73,10 @@ begin
                 reg_tdata <= (others => '0');
             else
 
-                if (lock_s_tvalid = '1') then
-                    reg_tvalid <= '0';
-                elsif (wr_s_tvalid = '1' or unlk_s_tvalid = '1' or (inc_s_tvalid = '1' and inc_s_tkeep_lock = '0')) then
+                if (wr_s_tvalid = '1' or unlk_s_tvalid = '1' or (inc_s_tvalid = '1' and inc_s_tkeep_lock = '0')) then
                     reg_tvalid <= '1';
+                elsif (lock_s_tvalid = '1') then
+                    reg_tvalid <= '0';
                 end if;
 
                 reg_tdata <= reg_tdata_next;
