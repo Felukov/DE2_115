@@ -2371,6 +2371,7 @@ begin
 
                     when x"60" | x"61" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
                     when x"68" | x"6A" => instr_tdata.sreg <= SP; instr_tdata.smask <= "11";
+                    when x"6E" | x"6F" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
 
                     when x"E2" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
 
@@ -2391,6 +2392,7 @@ begin
                     when x"AA" | x"AE" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
                     when x"AB" | x"AF" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
                     when x"D2" | x"D3" => instr_tdata.sreg <= CX; instr_tdata.smask <= "01";
+                    when x"E6" | x"E7" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
                     when x"F2" | x"F3" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
 
                     when others => null;
