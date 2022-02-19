@@ -446,6 +446,7 @@ begin
                     when M2R => micro_cnt_next <= 1;
                     when R2M => micro_cnt_next <= 1;
                     when M2M => micro_cnt_next <= 1;
+                    when I2M => micro_cnt_next <= 1;
                     when others => micro_cnt_next <= 0;
                 end case;
 
@@ -727,6 +728,10 @@ begin
                     micro_tdata.cmd <= MICRO_MEM_OP;
                     mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
 
+                when I2M =>
+                    micro_tdata.cmd <= MICRO_MEM_OP;
+                    mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
+
                 when I2R =>
                     micro_tdata.cmd <= MICRO_ALU_OP;
 
@@ -804,8 +809,25 @@ begin
                     micro_tdata.alu_upd_fl <= '1';
                     micro_tdata.alu_a_mem <= '1';
                     micro_tdata.alu_b_val <= rr_tdata_buf.sreg_val;
-                    micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
-                    micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
+
+                    micro_tdata.mem_cmd <= '1';
+                    micro_tdata.mem_width <= rr_tdata_buf.w;
+                    micro_tdata.mem_seg <= rr_tdata_buf.seg_val;
+                    micro_tdata.mem_addr <= ea_val_plus_disp;
+                    micro_tdata.mem_data_src <= MEM_DATA_SRC_ALU;
+
+                when I2M =>
+                    if (rr_tdata_buf.code = ALU_OP_CMP or rr_tdata_buf.code = ALU_OP_TST) then
+                        micro_tdata.cmd <= MICRO_ALU_OP or MICRO_MRD_OP;
+                    else
+                        micro_tdata.cmd <= MICRO_MEM_OP or MICRO_ALU_OP or MICRO_MRD_OP;
+                    end if;
+
+                    micro_tdata.alu_code <= rr_tdata_buf.code;
+                    micro_tdata.alu_wb <= '0';
+                    micro_tdata.alu_upd_fl <= '1';
+                    micro_tdata.alu_a_mem <= '1';
+                    micro_tdata.alu_b_val <= rr_tdata_buf.data;
 
                     micro_tdata.mem_cmd <= '1';
                     micro_tdata.mem_width <= rr_tdata_buf.w;

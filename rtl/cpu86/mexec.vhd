@@ -1745,7 +1745,9 @@ begin
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
-                    if (micro_tdata.jump_cond = cx_ne_0) then
+                    if (micro_tdata.jump_cond = cx_ne_0 or micro_tdata.jump_cond = cx_ne_0_and_zf or
+                        micro_tdata.jump_cond = cx_ne_0_and_nzf)
+                    then
                         jmp_wait_alu <= '1';
                     else
                         jmp_wait_alu <= '0';
@@ -1951,7 +1953,18 @@ begin
                                 else
                                     jmp_tdata <= '0';
                                 end if;
-
+                            when cx_ne_0_and_zf =>
+                                if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_s_tdata(FLAG_ZF) = '1' then
+                                    jmp_tdata <= '1';
+                                else
+                                    jmp_tdata <= '0';
+                                end if;
+                            when cx_ne_0_and_nzf =>
+                                if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_s_tdata(FLAG_ZF) = '0' then
+                                    jmp_tdata <= '1';
+                                else
+                                    jmp_tdata <= '0';
+                                end if;
                             when others =>
                                 jmp_tdata <= '0';
                         end case;

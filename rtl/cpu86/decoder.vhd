@@ -841,26 +841,26 @@ begin
                 when x"FF" => no_lock; no_wait;
 
                 -- FEU
-                when x"8D" => set_op(FEU, FEU_LEA,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
-                when x"98" => set_op(FEU, FEU_CBW,    '0', LOCK_DREG,    WAIT_AX);
-                when x"99" => set_op(FEU, FEU_CWD,    '1', LOCK_DREG,    WAIT_AX or WAIT_DX);
+                when x"8D" => set_op(FEU, FEU_LEA,       '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"98" => set_op(FEU, FEU_CBW,       '0', LOCK_DREG,    WAIT_AX);
+                when x"99" => set_op(FEU, FEU_CWD,       '1', LOCK_DREG,    WAIT_AX or WAIT_DX);
 
                 -- STR
-                when x"A4" => set_op(STR, MOVS_OP,    '0', LOCK_SI or LOCK_DI,            WAIT_SI or WAIT_DI or WAIT_ES or WAIT_DS or WAIT_FL);
-                when x"A5" => set_op(STR, MOVS_OP,    '1', LOCK_SI or LOCK_DI,            WAIT_SI or WAIT_DI or WAIT_ES or WAIT_DS or WAIT_FL);
-                when x"A6" => set_op(STR, CMPS_OP,    '0', LOCK_SI or LOCK_DI or LOCK_FL, WAIT_SI or WAIT_DI or WAIT_ES or WAIT_DS or WAIT_FL);
-                when x"A7" => set_op(STR, CMPS_OP,    '1', LOCK_SI or LOCK_DI or LOCK_FL, WAIT_SI or WAIT_DI or WAIT_ES or WAIT_DS or WAIT_FL);
-                when x"AA" => set_op(STR, STOS_OP,    '0', LOCK_DI,                       WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
-                when x"AB" => set_op(STR, STOS_OP,    '1', LOCK_DI,                       WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
-                when x"AC" => set_op(STR, LODS_OP,    '0', LOCK_AX or LOCK_DI,            WAIT_AX or WAIT_SI or WAIT_DS or WAIT_FL);
-                when x"AD" => set_op(STR, LODS_OP,    '1', LOCK_AX or LOCK_DI,            WAIT_AX or WAIT_SI or WAIT_DS or WAIT_FL);
-                when x"AE" => set_op(STR, SCAS_OP,    '0', LOCK_DI or LOCK_FL,            WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
-                when x"AF" => set_op(STR, SCAS_OP,    '1', LOCK_DI or LOCK_FL,            WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
+                when x"A4" => set_op(STR, MOVS_OP,       '0', LOCK_SI or LOCK_DI,            WAIT_SI or WAIT_DI or WAIT_ES or WAIT_DS or WAIT_FL);
+                when x"A5" => set_op(STR, MOVS_OP,       '1', LOCK_SI or LOCK_DI,            WAIT_SI or WAIT_DI or WAIT_ES or WAIT_DS or WAIT_FL);
+                when x"A6" => set_op(STR, CMPS_OP,       '0', LOCK_SI or LOCK_DI or LOCK_FL, WAIT_SI or WAIT_DI or WAIT_ES or WAIT_DS or WAIT_FL);
+                when x"A7" => set_op(STR, CMPS_OP,       '1', LOCK_SI or LOCK_DI or LOCK_FL, WAIT_SI or WAIT_DI or WAIT_ES or WAIT_DS or WAIT_FL);
+                when x"AA" => set_op(STR, STOS_OP,       '0', LOCK_DI,                       WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
+                when x"AB" => set_op(STR, STOS_OP,       '1', LOCK_DI,                       WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
+                when x"AC" => set_op(STR, LODS_OP,       '0', LOCK_AX or LOCK_DI,            WAIT_AX or WAIT_SI or WAIT_DS or WAIT_FL);
+                when x"AD" => set_op(STR, LODS_OP,       '1', LOCK_AX or LOCK_DI,            WAIT_AX or WAIT_SI or WAIT_DS or WAIT_FL);
+                when x"AE" => set_op(STR, SCAS_OP,       '0', LOCK_DI or LOCK_FL,            WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
+                when x"AF" => set_op(STR, SCAS_OP,       '1', LOCK_DI or LOCK_FL,            WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
 
                 -- MISC
-                when x"62" => set_op(LFP, MISC_BOUND, '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
-                when x"C4" => set_op(LFP, LFP_LES,    '1', LOCK_ES or LOCK_DREG, WAIT_ES);
-                when x"C5" => set_op(LFP, LFP_LDS,    '1', LOCK_DS or LOCK_DREG, WAIT_DS);
+                when x"62" => set_op(LFP, MISC_BOUND,    '1', LOCK_NO_LOCK,         WAIT_NO_WAIT);
+                when x"C4" => set_op(LFP, LFP_LES,       '1', LOCK_ES or LOCK_DREG, WAIT_ES);
+                when x"C5" => set_op(LFP, LFP_LDS,       '1', LOCK_DS or LOCK_DREG, WAIT_DS);
 
                 -- SYS
                 when x"CD" => set_op(SYS, SYS_INT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
@@ -868,6 +868,8 @@ begin
                 when x"F4" => set_op(SYS, SYS_HLT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
 
                 -- LOOP
+                when x"E0" => set_op(LOOPU, LOOP_OP_NE,  '1', LOCK_DREG,    WAIT_CX or WAIT_FL);
+                when x"E1" => set_op(LOOPU, LOOP_OP_E,   '1', LOCK_DREG,    WAIT_CX or WAIT_FL);
                 when x"E2" => set_op(LOOPU, LOOP_OP,     '1', LOCK_DREG,    WAIT_CX);
                 when x"E3" => set_op(LOOPU, LOOP_JCXZ,   '1', LOCK_NO_LOCK, WAIT_CX);
 
@@ -1524,6 +1526,8 @@ begin
                         instr_tdata.dreg <= AX;
                         instr_tdata.dmask <= "11";
 
+                    when x"E0" => instr_tdata.dreg <= CX; instr_tdata.dmask <= "11";
+                    when x"E1" => instr_tdata.dreg <= CX; instr_tdata.dmask <= "11";
                     when x"E2" => instr_tdata.dreg <= CX; instr_tdata.dmask <= "11";
 
                     when x"07" => instr_tdata.dreg <= ES; instr_tdata.dmask <= "11";
@@ -1864,6 +1868,8 @@ begin
                     when x"68" | x"6A" => instr_tdata.sreg <= SP; instr_tdata.smask <= "11";
                     when x"6E" | x"6F" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
 
+                    when x"E0" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
+                    when x"E1" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
                     when x"E2" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
                     when x"E3" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
 
@@ -2139,7 +2145,7 @@ begin
                             when x"40" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" |
                                  x"48" | x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" =>
                                 instr_tdata.data <= x"0001";
-                            when x"E2" =>
+                            when x"E0" | x"E1" | x"E2" =>
                                 instr_tdata.data <= x"FFFF";
                             when x"0E" | x"1E" | x"16" | x"06" =>
                                 instr_tdata.data <= x"FFFE";
