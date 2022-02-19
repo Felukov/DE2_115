@@ -147,6 +147,7 @@ begin
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
         ((rr_tdata.op = LOOPU) or
          (rr_tdata.op = JMPU) or
+         (rr_tdata.op = BRANCH) or
          (rr_tdata.op = DIVU) or
          (rr_tdata.op = DBG) or
          (rr_tdata.op = IO) or
@@ -1501,14 +1502,19 @@ begin
             micro_tdata.jump_ip_mem <= '0';
             micro_tdata.jump_cs <= rr_tuser(31 downto 16);
             micro_tdata.jump_ip <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + unsigned(rr_tdata.disp));
+            micro_tdata.jump_cx <= rr_tdata.sreg_val;
 
-            -- CX = CX - 1
-            alu_command_imm(cmd => ALU_OP_ADD,
-                aval => rr_tdata.sreg_val,
-                bval => rr_tdata.data,
-                dreg => rr_tdata.dreg,
-                dmask => rr_tdata.dmask,
-                upd_fl => '0');
+            if (rr_tdata.code = LOOP_OP or rr_tdata.code = LOOP_OP_E or rr_tdata.code = LOOP_OP_NE) then
+                -- CX = CX - 1
+                alu_command_imm(cmd => ALU_OP_ADD,
+                    aval => rr_tdata.sreg_val,
+                    bval => rr_tdata.data,
+                    dreg => rr_tdata.dreg,
+                    dmask => rr_tdata.dmask,
+                    upd_fl => '0');
+
+            end if;
+
         end procedure;
 
         procedure do_loop_cmd_1 is begin
@@ -1523,9 +1529,42 @@ begin
                     micro_tdata.jump_cond <= cx_ne_0_and_zf;
                 when LOOP_OP_NE(1 downto 0) =>
                     micro_tdata.jump_cond <= cx_ne_0_and_nzf;
+                when LOOP_JCXZ(1 downto 0) =>
+                    micro_tdata.jump_cond <= cx_eq_0;
                 when others => null;
             end case;
 
+        end procedure;
+
+        procedure do_bra_cmd is begin
+            micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
+
+            -- configure jump
+            case rr_tdata.code is
+                when BRA_JO  => micro_tdata.jump_cond <= j_jo;
+                when BRA_JNO => micro_tdata.jump_cond <= j_jno;
+                when BRA_JB  => micro_tdata.jump_cond <= j_jb;
+                when BRA_JAE => micro_tdata.jump_cond <= j_jae;
+                when BRA_JE  => micro_tdata.jump_cond <= j_je;
+                when BRA_JNE => micro_tdata.jump_cond <= j_jne;
+                when BRA_JBE => micro_tdata.jump_cond <= j_jbe;
+                when BRA_JA  => micro_tdata.jump_cond <= j_ja;
+                when BRA_JS  => micro_tdata.jump_cond <= j_js;
+                when BRA_JNS => micro_tdata.jump_cond <= j_jns;
+                when BRA_JP  => micro_tdata.jump_cond <= j_jp;
+                when BRA_JNP => micro_tdata.jump_cond <= j_jnp;
+                when BRA_JL  => micro_tdata.jump_cond <= j_jl;
+                when BRA_JGE => micro_tdata.jump_cond <= j_jge;
+                when BRA_JLE => micro_tdata.jump_cond <= j_jle;
+                when BRA_JG  => micro_tdata.jump_cond <= j_jg;
+                when others => null;
+            end case;
+
+            micro_tdata.jump_imm <= '1';
+            micro_tdata.jump_cs_mem <= '0';
+            micro_tdata.jump_ip_mem <= '0';
+            micro_tdata.jump_cs <= rr_tuser(31 downto 16);
+            micro_tdata.jump_ip <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + unsigned(rr_tdata.disp));
         end procedure;
 
         procedure do_jmp_0 is begin
@@ -1730,6 +1769,7 @@ begin
                     when SET_FLAG => do_set_flg_cmd_0;
                     when LOOPU => do_loop_cmd_0;
                     when JMPU => do_jmp_0;
+                    when BRANCH => do_bra_cmd;
                     when LFP =>
                         case rr_tdata.code is
                             when MISC_BOUND => do_misc_bound_0;

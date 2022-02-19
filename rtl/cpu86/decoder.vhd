@@ -475,6 +475,19 @@ begin
             instr_tdata.lock_sp   <= val(0);
         end;
 
+        procedure upd_lock (val : std_logic_vector(9 downto 0)) is begin
+            instr_tdata.lock_fl   <= instr_tdata.lock_fl   or val(9);
+            instr_tdata.lock_sreg <= instr_tdata.lock_sreg or val(8);
+            instr_tdata.lock_dreg <= instr_tdata.lock_dreg or val(7);
+            instr_tdata.lock_ax   <= instr_tdata.lock_ax   or val(6);
+            instr_tdata.lock_si   <= instr_tdata.lock_si   or val(5);
+            instr_tdata.lock_di   <= instr_tdata.lock_di   or val(4);
+            instr_tdata.lock_all  <= instr_tdata.lock_all  or val(3);
+            instr_tdata.lock_ds   <= instr_tdata.lock_ds   or val(2);
+            instr_tdata.lock_es   <= instr_tdata.lock_es   or val(1);
+            instr_tdata.lock_sp   <= instr_tdata.lock_sp   or val(0);
+        end;
+
         procedure set_wait (val : std_logic_vector(11 downto 0)) is begin
             instr_tdata.wait_ax <= val(11);
             instr_tdata.wait_bx <= val(10);
@@ -855,30 +868,30 @@ begin
                 when x"F4" => set_op(SYS, SYS_HLT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
 
                 -- LOOP
-                when x"E2" => set_op(LOOPU, LOOP_OP,     '1', LOCK_DREG, WAIT_CX);
+                when x"E2" => set_op(LOOPU, LOOP_OP,     '1', LOCK_DREG,    WAIT_CX);
+                when x"E3" => set_op(LOOPU, LOOP_JCXZ,   '1', LOCK_NO_LOCK, WAIT_CX);
 
                 -- JMP
                 when x"E9" => set_op(JMPU, JMP_REL16,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
                 when x"EA" => set_op(JMPU, JMP_PTR16_16, '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
                 when x"EB" => set_op(JMPU, JMP_REL8,     '0', LOCK_NO_LOCK, WAIT_NO_WAIT);
-
                 -- BRANCH
                 when x"70" => set_op(BRANCH, BRA_JO,     '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"71" => set_op(BRANCH, BRA_JNO,    '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"72" => set_op(BRANCH, BRA_JB,     '1', LOCK_NO_LOCK, WAIT_FL);
-                when x"73" => set_op(BRANCH, BRA_JNB,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"73" => set_op(BRANCH, BRA_JAE,    '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"74" => set_op(BRANCH, BRA_JE,     '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"75" => set_op(BRANCH, BRA_JNE,    '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"76" => set_op(BRANCH, BRA_JBE,    '1', LOCK_NO_LOCK, WAIT_FL);
-                when x"77" => set_op(BRANCH, BRA_JNBE,   '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"77" => set_op(BRANCH, BRA_JA,     '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"78" => set_op(BRANCH, BRA_JS,     '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"79" => set_op(BRANCH, BRA_JNS,    '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"7A" => set_op(BRANCH, BRA_JP,     '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"7B" => set_op(BRANCH, BRA_JNP,    '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"7C" => set_op(BRANCH, BRA_JL,     '1', LOCK_NO_LOCK, WAIT_FL);
-                when x"7D" => set_op(BRANCH, BRA_JNL,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"7D" => set_op(BRANCH, BRA_JGE,    '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"7E" => set_op(BRANCH, BRA_JLE,    '1', LOCK_NO_LOCK, WAIT_FL);
-                when x"7F" => set_op(BRANCH, BRA_JNLE,   '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"7F" => set_op(BRANCH, BRA_JG,     '1', LOCK_NO_LOCK, WAIT_FL);
 
                 -- IO
                 when x"E4" => set_op(IO, IO_IN_IMM,      '0', LOCK_AX,      WAIT_NO_WAIT);
@@ -943,9 +956,9 @@ begin
             end if;
 
             if (u8_tdata(7 downto 6) = "11") then
-                set_lock(LOCK_DREG or LOCK_FL);
+                upd_lock(LOCK_DREG or LOCK_FL);
             else
-                set_lock(LOCK_FL);
+                upd_lock(LOCK_FL);
             end if;
 
         end procedure;
@@ -980,9 +993,9 @@ begin
             end if;
 
             if (u8_tdata(7 downto 6) = "11") then
-                set_lock(LOCK_DREG or LOCK_FL);
+                upd_lock(LOCK_DREG or LOCK_FL);
             else
-                set_lock(LOCK_FL);
+                upd_lock(LOCK_FL);
             end if;
         end procedure;
 
@@ -1015,9 +1028,9 @@ begin
             end if;
 
             if (u8_tdata(7 downto 6) = "11") then
-                set_lock(LOCK_DREG or LOCK_FL);
+                upd_lock(LOCK_DREG or LOCK_FL);
             else
-                set_lock(LOCK_FL);
+                upd_lock(LOCK_FL);
             end if;
         end procedure;
 
@@ -1051,9 +1064,9 @@ begin
             end if;
 
             if (u8_tdata(7 downto 6) = "11") then
-                set_lock(LOCK_DREG or LOCK_FL);
+                upd_lock(LOCK_DREG or LOCK_FL);
             else
-                set_lock(LOCK_FL);
+                upd_lock(LOCK_FL);
             end if;
         end procedure;
 
@@ -1076,9 +1089,9 @@ begin
             end if;
 
             if (u8_tdata(7 downto 6) = "11") then
-                set_lock(LOCK_DREG or LOCK_FL);
+                upd_lock(LOCK_DREG or LOCK_FL);
             else
-                set_lock(LOCK_FL);
+                upd_lock(LOCK_FL);
             end if;
         end procedure;
 
@@ -1101,9 +1114,9 @@ begin
             end if;
 
             if (u8_tdata(7 downto 6) = "11") then
-                set_lock(LOCK_DREG or LOCK_FL);
+                upd_lock(LOCK_DREG or LOCK_FL);
             else
-                set_lock(LOCK_FL);
+                upd_lock(LOCK_FL);
             end if;
         end procedure;
 
@@ -1114,9 +1127,9 @@ begin
             instr_tdata.wait_dx <= w;
 
             if (w = '1') then
-                set_lock(LOCK_AX or LOCK_DREG or LOCK_FL);
+                upd_lock(LOCK_AX or LOCK_DREG or LOCK_FL);
             else
-                set_lock(LOCK_DREG or LOCK_FL);
+                upd_lock(LOCK_DREG or LOCK_FL);
             end if;
         end procedure;
 
@@ -1127,9 +1140,9 @@ begin
             instr_tdata.wait_dx <= w;
 
             if (w = '1') then
-                set_lock(LOCK_AX or LOCK_DREG);
+                upd_lock(LOCK_AX or LOCK_DREG);
             else
-                set_lock(LOCK_DREG);
+                upd_lock(LOCK_DREG);
             end if;
         end procedure;
 
@@ -1193,7 +1206,7 @@ begin
                     when others => null;
                 end case;
 
-                set_lock(LOCK_DREG);
+                upd_lock(LOCK_DREG);
             end if;
         end;
 
@@ -1239,7 +1252,7 @@ begin
 
         procedure decode_op_mod_reg_rm is begin
             if (u8_tdata(7 downto 6) = "11" or (u8_tdata(7 downto 6) /= "11" and reg_rm_direction = TO_REG)) then
-                set_lock(LOCK_DREG);
+                upd_lock(LOCK_DREG);
             end if;
 
             wait_rm;
@@ -1274,7 +1287,7 @@ begin
 
         procedure decode_op_mod_seg_rm is begin
             if (u8_tdata(7 downto 6) = "11" or (u8_tdata(7 downto 6) /= "11" and reg_rm_direction = TO_REG)) then
-                set_lock(LOCK_DREG);
+                upd_lock(LOCK_DREG);
             end if;
 
             case u8_tdata_rm is
@@ -1852,6 +1865,7 @@ begin
                     when x"6E" | x"6F" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
 
                     when x"E2" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
+                    when x"E3" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";
 
                     when x"98" => instr_tdata.sreg <= AX; instr_tdata.smask <= "01";
                     when x"99" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";

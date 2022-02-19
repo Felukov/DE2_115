@@ -73,6 +73,7 @@ package cpu86_types is
     constant LOOP_OP        : std_logic_vector (3 downto 0) := "0000";
     constant LOOP_OP_E      : std_logic_vector (3 downto 0) := "0001";
     constant LOOP_OP_NE     : std_logic_vector (3 downto 0) := "0010";
+    constant LOOP_JCXZ      : std_logic_vector (3 downto 0) := "0011";
 
     constant REPZ_OP        : std_logic_vector (3 downto 0) := "0000";
     constant REPNZ_OP       : std_logic_vector (3 downto 0) := "0001";
@@ -139,19 +140,19 @@ package cpu86_types is
     constant BRA_JO         : std_logic_vector (3 downto 0) := x"0";
     constant BRA_JNO        : std_logic_vector (3 downto 0) := x"1";
     constant BRA_JB         : std_logic_vector (3 downto 0) := x"2";
-    constant BRA_JNB        : std_logic_vector (3 downto 0) := x"3";
+    constant BRA_JAE        : std_logic_vector (3 downto 0) := x"3";
     constant BRA_JE         : std_logic_vector (3 downto 0) := x"4";
     constant BRA_JNE        : std_logic_vector (3 downto 0) := x"5";
     constant BRA_JBE        : std_logic_vector (3 downto 0) := x"6";
-    constant BRA_JNBE       : std_logic_vector (3 downto 0) := x"7";
+    constant BRA_JA         : std_logic_vector (3 downto 0) := x"7";
     constant BRA_JS         : std_logic_vector (3 downto 0) := x"8";
     constant BRA_JNS        : std_logic_vector (3 downto 0) := x"9";
     constant BRA_JP         : std_logic_vector (3 downto 0) := x"A";
     constant BRA_JNP        : std_logic_vector (3 downto 0) := x"B";
     constant BRA_JL         : std_logic_vector (3 downto 0) := x"C";
-    constant BRA_JNL        : std_logic_vector (3 downto 0) := x"D";
+    constant BRA_JGE        : std_logic_vector (3 downto 0) := x"D";
     constant BRA_JLE        : std_logic_vector (3 downto 0) := x"E";
-    constant BRA_JNLE       : std_logic_vector (3 downto 0) := x"F";
+    constant BRA_JG         : std_logic_vector (3 downto 0) := x"F";
 
     constant FLAG_15        : natural := 15;
     constant FLAG_14        : natural := 14;
@@ -320,24 +321,25 @@ package cpu86_types is
         j_always,
         j_never,
         cx_ne_0,
+        cx_eq_0,
         cx_ne_0_and_zf,
         cx_ne_0_and_nzf,
         j_jo,
         j_jno,
         j_jb,
-        j_jnb,
+        j_jae,
         j_je,
         j_jne,
         j_jbe,
-        j_jnbe,
+        j_ja,
         j_js,
         j_jns,
         j_jp,
         j_jnp,
         j_jl,
-        j_jnl,
+        j_jge,
         j_jle,
-        j_jnle);
+        j_jg);
 
     type micro_op_t is record
         cmd             : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0);
@@ -415,6 +417,7 @@ package cpu86_types is
         jump_cs         : std_logic_vector(15 downto 0);
         jump_ip_mem     : std_logic;
         jump_ip         : std_logic_vector(15 downto 0);
+        jump_cx         : std_logic_vector(15 downto 0);
 
         mem_cmd         : std_logic;
         mem_width       : std_logic;
