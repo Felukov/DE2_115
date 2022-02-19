@@ -21,7 +21,7 @@ package cpu86_types is
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU, IO
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, JMPU, BRANCH, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU, IO
     );
 
     type mem_data_src_t is (
@@ -47,8 +47,6 @@ package cpu86_types is
     constant ALU_OP_INC     : std_logic_vector (3 downto 0) := "1000";
     constant ALU_OP_DEC     : std_logic_vector (3 downto 0) := "1001";
     constant ALU_OP_TST     : std_logic_vector (3 downto 0) := "1010";
-    -- constant ALU_SF_DEC     : std_logic_vector (3 downto 0) := "1110";
-    -- constant ALU_SF_ADD     : std_logic_vector (3 downto 0) := "1111";
 
     constant ONE_OP_NOT     : std_logic_vector (3 downto 0) := "0000";
     constant ONE_OP_NEG     : std_logic_vector (3 downto 0) := "0001";
@@ -131,6 +129,29 @@ package cpu86_types is
     constant IO_INS_DX      : std_logic_vector (3 downto 0) := "0101";
     constant IO_OUTS_IMM    : std_logic_vector (3 downto 0) := "1100";
     constant IO_OUTS_DX     : std_logic_vector (3 downto 0) := "1101";
+
+    constant JMP_REL16      : std_logic_vector (3 downto 0) := "0000";
+    constant JMP_PTR16_16   : std_logic_vector (3 downto 0) := "0001";
+    constant JMP_REL8       : std_logic_vector (3 downto 0) := "0010";
+    constant JMP_RM16       : std_logic_vector (3 downto 0) := "0011";
+    constant JMP_M16_16     : std_logic_vector (3 downto 0) := "0100";
+
+    constant BRA_JO         : std_logic_vector (3 downto 0) := x"0";
+    constant BRA_JNO        : std_logic_vector (3 downto 0) := x"1";
+    constant BRA_JB         : std_logic_vector (3 downto 0) := x"2";
+    constant BRA_JNB        : std_logic_vector (3 downto 0) := x"3";
+    constant BRA_JE         : std_logic_vector (3 downto 0) := x"4";
+    constant BRA_JNE        : std_logic_vector (3 downto 0) := x"5";
+    constant BRA_JBE        : std_logic_vector (3 downto 0) := x"6";
+    constant BRA_JNBE       : std_logic_vector (3 downto 0) := x"7";
+    constant BRA_JS         : std_logic_vector (3 downto 0) := x"8";
+    constant BRA_JNS        : std_logic_vector (3 downto 0) := x"9";
+    constant BRA_JP         : std_logic_vector (3 downto 0) := x"A";
+    constant BRA_JNP        : std_logic_vector (3 downto 0) := x"B";
+    constant BRA_JL         : std_logic_vector (3 downto 0) := x"C";
+    constant BRA_JNL        : std_logic_vector (3 downto 0) := x"D";
+    constant BRA_JLE        : std_logic_vector (3 downto 0) := x"E";
+    constant BRA_JNLE       : std_logic_vector (3 downto 0) := x"F";
 
     constant FLAG_15        : natural := 15;
     constant FLAG_14        : natural := 14;
@@ -295,7 +316,28 @@ package cpu86_types is
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
-    type micro_op_jmp_cond_t is (j_always, j_never, cx_ne_0, cx_ne_0_and_zf, cx_ne_0_and_nzf);
+    type micro_op_jmp_cond_t is (
+        j_always,
+        j_never,
+        cx_ne_0,
+        cx_ne_0_and_zf,
+        cx_ne_0_and_nzf,
+        j_jo,
+        j_jno,
+        j_jb,
+        j_jnb,
+        j_je,
+        j_jne,
+        j_jbe,
+        j_jnbe,
+        j_js,
+        j_jns,
+        j_jp,
+        j_jnp,
+        j_jl,
+        j_jnl,
+        j_jle,
+        j_jnle);
 
     type micro_op_t is record
         cmd             : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0);

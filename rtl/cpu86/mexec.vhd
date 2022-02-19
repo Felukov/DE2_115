@@ -1778,11 +1778,60 @@ begin
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
-                    if (micro_tdata.jump_cs_mem = '0' and micro_tdata.jump_ip_mem = '0' and micro_tdata.jump_cond = j_always) then
-                        jmp_tvalid <= '1';
-                    else
-                        jmp_tvalid <= '0';
-                    end if;
+                    case micro_tdata.jump_cond is
+                        when j_always =>
+                            if (micro_tdata.jump_cs_mem = '0' and micro_tdata.jump_ip_mem = '0') then
+                                jmp_tvalid <= '1';
+                            else
+                                jmp_tvalid <= '0';
+                            end if;
+
+                        when j_jnbe =>
+                            if (flags_s_tdata(FLAG_ZF) = '0' and flags_s_tdata(FLAG_CF) = '0') then
+                                jmp_tvalid <= '1';
+                            else
+                                jmp_tvalid <= '0';
+                            end if;
+
+                        when j_jnb =>
+                            if (flags_s_tdata(FLAG_CF) = '0') then
+                                jmp_tvalid <= '1';
+                            else
+                                jmp_tvalid <= '0';
+                            end if;
+
+                        when j_jb =>
+                            if (flags_s_tdata(FLAG_CF) = '1') then
+                                jmp_tvalid <= '1';
+                            else
+                                jmp_tvalid <= '0';
+                            end if;
+
+                        when j_jbe =>
+                            if (flags_s_tdata(FLAG_ZF) = '1' or flags_s_tdata(FLAG_CF) = '1') then
+                                jmp_tvalid <= '1';
+                            else
+                                jmp_tvalid <= '0';
+                            end if;
+
+                        when j_je =>
+                            if (flags_s_tdata(FLAG_ZF) = '1') then
+                                jmp_tvalid <= '1';
+                            else
+                                jmp_tvalid <= '0';
+                            end if;
+
+                        when j_jnle =>
+                            if (flags_s_tdata(FLAG_ZF) = '0' and flags_s_tdata(FLAG_CF) = flags_s_tdata(FLAG_OF)) then
+                                jmp_tvalid <= '1';
+                            else
+                                jmp_tvalid <= '0';
+                            end if;
+
+                        when others =>
+                            jmp_tvalid <= '0';
+                    end case;
+
                 elsif (jmp_busy = '1') then
                     if not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
                         not (jmp_wait_alu = '1' xor alu_res_tvalid = '1')
@@ -1809,7 +1858,7 @@ begin
                             when j_always =>
                                 jmp_tdata <= '1';
                             when cx_ne_0 =>
-                                if alu_res_tdata.dval(15 downto 0) /= x"00" then
+                                if alu_res_tdata.dval(15 downto 0) /= x"0000" then
                                     jmp_tdata <= '1';
                                 else
                                     jmp_tdata <= '0';

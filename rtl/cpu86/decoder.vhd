@@ -825,6 +825,7 @@ begin
                 when x"D3" => no_lock; no_wait;
                 when x"F6" => no_lock; no_wait;
                 when x"F7" => no_lock; no_wait;
+                when x"FF" => no_lock; no_wait;
 
                 -- FEU
                 when x"8D" => set_op(FEU, FEU_LEA,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
@@ -849,35 +850,54 @@ begin
                 when x"C5" => set_op(LFP, LFP_LDS,    '1', LOCK_DS or LOCK_DREG, WAIT_DS);
 
                 -- SYS
-                when x"CD" => set_op(SYS, SYS_INT_OP, '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
-                when x"CF" => set_op(SYS, SYS_IRET_OP,'1', LOCK_NO_LOCK, WAIT_NO_WAIT);
-                when x"F4" => set_op(SYS, SYS_HLT_OP, '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"CD" => set_op(SYS, SYS_INT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"CF" => set_op(SYS, SYS_IRET_OP,   '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"F4" => set_op(SYS, SYS_HLT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
 
                 -- LOOP
-                when x"E2" => set_op(LOOPU, LOOP_OP,  '1', LOCK_DREG, WAIT_CX);
+                when x"E2" => set_op(LOOPU, LOOP_OP,     '1', LOCK_DREG, WAIT_CX);
 
                 -- JMP
-                when x"E9" => set_op(JMPU, JMP_REL16, '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
-                when x"EB" => set_op(JMPU, JMP_REL8,  '0', LOCK_FL,      WAIT_NO_WAIT);
+                when x"E9" => set_op(JMPU, JMP_REL16,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"EA" => set_op(JMPU, JMP_PTR16_16, '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"EB" => set_op(JMPU, JMP_REL8,     '0', LOCK_NO_LOCK, WAIT_NO_WAIT);
+
+                -- BRANCH
+                when x"70" => set_op(BRANCH, BRA_JO,     '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"71" => set_op(BRANCH, BRA_JNO,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"72" => set_op(BRANCH, BRA_JB,     '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"73" => set_op(BRANCH, BRA_JNB,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"74" => set_op(BRANCH, BRA_JE,     '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"75" => set_op(BRANCH, BRA_JNE,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"76" => set_op(BRANCH, BRA_JBE,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"77" => set_op(BRANCH, BRA_JNBE,   '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"78" => set_op(BRANCH, BRA_JS,     '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"79" => set_op(BRANCH, BRA_JNS,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"7A" => set_op(BRANCH, BRA_JP,     '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"7B" => set_op(BRANCH, BRA_JNP,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"7C" => set_op(BRANCH, BRA_JL,     '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"7D" => set_op(BRANCH, BRA_JNL,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"7E" => set_op(BRANCH, BRA_JLE,    '1', LOCK_NO_LOCK, WAIT_FL);
+                when x"7F" => set_op(BRANCH, BRA_JNLE,   '1', LOCK_NO_LOCK, WAIT_FL);
 
                 -- IO
-                when x"E4" => set_op(IO, IO_IN_IMM,   '0', LOCK_AX,      WAIT_NO_WAIT);
-                when x"E5" => set_op(IO, IO_IN_IMM,   '1', LOCK_AX,      WAIT_NO_WAIT);
-                when x"E6" => set_op(IO, IO_OUT_IMM,  '0', LOCK_NO_LOCK, WAIT_AX);
-                when x"E7" => set_op(IO, IO_OUT_IMM,  '1', LOCK_NO_LOCK, WAIT_AX);
-                when x"EC" => set_op(IO, IO_IN_DX,    '0', LOCK_AX,      WAIT_DX);
-                when x"ED" => set_op(IO, IO_IN_DX,    '1', LOCK_AX,      WAIT_DX);
-                when x"EE" => set_op(IO, IO_OUT_DX,   '0', LOCK_NO_LOCK, WAIT_AX or WAIT_DX);
-                when x"EF" => set_op(IO, IO_OUT_DX,   '1', LOCK_NO_LOCK, WAIT_AX or WAIT_DX);
+                when x"E4" => set_op(IO, IO_IN_IMM,      '0', LOCK_AX,      WAIT_NO_WAIT);
+                when x"E5" => set_op(IO, IO_IN_IMM,      '1', LOCK_AX,      WAIT_NO_WAIT);
+                when x"E6" => set_op(IO, IO_OUT_IMM,     '0', LOCK_NO_LOCK, WAIT_AX);
+                when x"E7" => set_op(IO, IO_OUT_IMM,     '1', LOCK_NO_LOCK, WAIT_AX);
+                when x"EC" => set_op(IO, IO_IN_DX,       '0', LOCK_AX,      WAIT_DX);
+                when x"ED" => set_op(IO, IO_IN_DX,       '1', LOCK_AX,      WAIT_DX);
+                when x"EE" => set_op(IO, IO_OUT_DX,      '0', LOCK_NO_LOCK, WAIT_AX or WAIT_DX);
+                when x"EF" => set_op(IO, IO_OUT_DX,      '1', LOCK_NO_LOCK, WAIT_AX or WAIT_DX);
 
-                when x"6C" => set_op(IO, IO_INS_DX,   '0', LOCK_NO_LOCK, WAIT_DX or WAIT_SI or WAIT_DS or WAIT_FL);
-                when x"6D" => set_op(IO, IO_INS_DX,   '1', LOCK_NO_LOCK, WAIT_DX or WAIT_SI or WAIT_DS or WAIT_FL);
-                when x"6E" => set_op(IO, IO_OUTS_DX,  '0', LOCK_NO_LOCK, WAIT_DX or WAIT_DI or WAIT_ES or WAIT_FL);
-                when x"6F" => set_op(IO, IO_OUTS_DX,  '1', LOCK_NO_LOCK, WAIT_DX or WAIT_DI or WAIT_ES or WAIT_FL);
+                when x"6C" => set_op(IO, IO_INS_DX,      '0', LOCK_NO_LOCK, WAIT_DX or WAIT_SI or WAIT_DS or WAIT_FL);
+                when x"6D" => set_op(IO, IO_INS_DX,      '1', LOCK_NO_LOCK, WAIT_DX or WAIT_SI or WAIT_DS or WAIT_FL);
+                when x"6E" => set_op(IO, IO_OUTS_DX,     '0', LOCK_NO_LOCK, WAIT_DX or WAIT_DI or WAIT_ES or WAIT_FL);
+                when x"6F" => set_op(IO, IO_OUTS_DX,     '1', LOCK_NO_LOCK, WAIT_DX or WAIT_DI or WAIT_ES or WAIT_FL);
 
                 -- REP
-                when x"F2" => set_op(REP, REPNZ_OP,   '1', LOCK_DREG, WAIT_CX);
-                when x"F3" => set_op(REP, REPZ_OP,    '1', LOCK_DREG, WAIT_CX);
+                when x"F2" => set_op(REP, REPNZ_OP,      '1', LOCK_DREG, WAIT_CX);
+                when x"F3" => set_op(REP, REPZ_OP,       '1', LOCK_DREG, WAIT_CX);
 
                 -- FLG
                 when x"F5" => set_flag_op(FLAG_CF, TOGGLE, LOCK_DREG or LOCK_FL, WAIT_FL);
@@ -1207,6 +1227,8 @@ begin
                         when "000" => set_op(ALU, ALU_OP_INC, '1');
                         when "001" => set_op(ALU, ALU_OP_DEC, '1');
                         when "110" => set_stack_op(STACKU_PUSHM, LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
+                        when "100" => set_op(JMPU, JMP_RM16,   '1');
+                        when "101" => set_op(JMPU, JMP_M16_16, '1');
                         when others => null;
                     end case;
 
@@ -1298,14 +1320,17 @@ begin
                 when x"9F" =>
                     instr_tdata.dir <= R2F;
 
-                when x"A0" | x"A1" =>
-                    instr_tdata.dir <= M2R;
-
                 when x"C6" | x"C7" =>
                     instr_tdata.dir <= I2M;
 
+                when x"A0" | x"A1" =>
+                    instr_tdata.dir <= M2R;
+
                 when x"A2" | x"A3" =>
                     instr_tdata.dir <= R2M;
+
+                when x"E9" | x"EA" | x"EB" =>
+                    instr_tdata.dir <= I2R;
 
                 when x"F2" | x"F3" =>
                     instr_tdata.dir <= I2R;
@@ -1345,21 +1370,20 @@ begin
 
         procedure decode_dir_mod_aux_rm is begin
             case byte0 is
-
-                when x"F6" => decode_dir_f6_f7;
-                when x"F7" => decode_dir_f6_f7;
                 when x"C0" | x"C1" | x"D0" | x"D1" =>
                     if (u8_tdata(7 downto 6) = "11") then
                         instr_tdata.dir <= I2R;
                     else
                         instr_tdata.dir <= I2M;
                     end if;
+
                 when x"D2" | x"D3" =>
                     if (u8_tdata(7 downto 6) = "11") then
                         instr_tdata.dir <= R2R;
                     else
                         instr_tdata.dir <= R2M;
                     end if;
+
                 when x"80" | x"81" | x"83" =>
                     if (u8_tdata(7 downto 6) = "11") then
                         instr_tdata.dir <= I2R;
@@ -1367,6 +1391,8 @@ begin
                         instr_tdata.dir <= I2M;
                     end if;
 
+                when x"F6" => decode_dir_f6_f7;
+                when x"F7" => decode_dir_f6_f7;
                 when x"FE" =>
                     if (u8_tdata(7 downto 6) = "11") then
                         instr_tdata.dir <= R2R;
@@ -1382,7 +1408,14 @@ begin
                             else
                                 instr_tdata.dir <= M2M;
                             end if;
-
+                        when "100" =>
+                            if (u8_tdata(7 downto 6) = "11") then
+                                instr_tdata.dir <= R2R;
+                            else
+                                instr_tdata.dir <= M2M;
+                            end if;
+                        when "101" =>
+                            instr_tdata.dir <= M2M;
                         when others =>
                             null;
 
@@ -2059,7 +2092,7 @@ begin
 
                     when x"FF" =>
                         case u8_tdata(5 downto 3) is
-                            when "000" | "001" =>
+                            when "000" | "001" | "100" =>
                                 case u8_tdata_rm is
                                     when "000" => instr_tdata.sreg <= AX;
                                     when "001" => instr_tdata.sreg <= CX;
