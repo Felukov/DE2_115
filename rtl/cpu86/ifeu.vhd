@@ -28,18 +28,6 @@ entity ifeu is
         micro_m_tready          : in std_logic;
         micro_m_tdata           : out micro_op_t;
 
-        ax_s_tdata              : in std_logic_vector(15 downto 0);
-        bx_s_tdata              : in std_logic_vector(15 downto 0);
-        cx_s_tdata              : in std_logic_vector(15 downto 0);
-        dx_s_tdata              : in std_logic_vector(15 downto 0);
-        bp_s_tdata              : in std_logic_vector(15 downto 0);
-        bp_s_tdata_next         : in std_logic_vector(15 downto 0);
-        sp_s_tdata              : in std_logic_vector(15 downto 0);
-        di_s_tdata              : in std_logic_vector(15 downto 0);
-        si_s_tdata              : in std_logic_vector(15 downto 0);
-
-        flags_s_tdata           : in std_logic_vector(15 downto 0);
-
         ax_m_wr_tvalid          : out std_logic;
         ax_m_wr_tdata           : out std_logic_vector(15 downto 0);
         ax_m_wr_tmask           : out std_logic_vector(1 downto 0);
@@ -121,6 +109,7 @@ architecture rtl of ifeu is
     signal sp_tdata_selector    : std_logic_vector(2 downto 0);
 
     signal sp_val               : std_logic_vector(15 downto 0);
+    signal bp_val               : std_logic_vector(15 downto 0);
 
 begin
     rr_tvalid <= rr_s_tvalid;
@@ -150,7 +139,6 @@ begin
          (rr_tdata.op = DBG) or
          (rr_tdata.op = IO) or
          (rr_tdata.op = LFP and rr_tdata.code = MISC_BOUND) or
-         (rr_tdata.op = STACKU and rr_tdata.code = STACKU_PUSHA) or
          (rr_tdata.op = SYS and (rr_tdata.code = SYS_INT_OP))) else '0';
 
     ea_val_plus_disp_next <= std_logic_vector(unsigned(rr_tdata.ea_val) + unsigned(rr_tdata.disp));
@@ -453,14 +441,6 @@ begin
 
     micro_cmd_gen_proc : process (clk)
 
-        procedure bp_inc_on is begin
-            micro_tdata.bp_inc <= '1';
-        end procedure;
-
-        procedure bp_inc_off is begin
-            micro_tdata.bp_inc <= '0';
-        end procedure;
-
         procedure flag_update (flag : std_logic_vector; val : fl_action_t) is begin
             micro_tdata.flg_no <= flag;
             micro_tdata.fl <= val;
@@ -552,26 +532,26 @@ begin
 
             case rr_tdata.code is
                 when IO_IN_IMM => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
-                when IO_IN_DX =>  micro_tdata.str_port <= dx_s_tdata;
+                when IO_IN_DX =>  micro_tdata.str_port <= rr_tdata.dx_tdata;
                 when IO_INS_IMM => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
-                when IO_INS_DX => micro_tdata.str_port <= dx_s_tdata;
+                when IO_INS_DX => micro_tdata.str_port <= rr_tdata.dx_tdata;
                 when IO_OUT_IMM => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
-                when IO_OUT_DX => micro_tdata.str_port <= dx_s_tdata;
+                when IO_OUT_DX => micro_tdata.str_port <= rr_tdata.dx_tdata;
                 when IO_OUTS_IMM => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
-                when IO_OUTS_DX => micro_tdata.str_port <= dx_s_tdata;
+                when IO_OUTS_DX => micro_tdata.str_port <= rr_tdata.dx_tdata;
                 when others => null;
             end case;
 
             micro_tdata.str_rep <= rep_mode;
             micro_tdata.str_rep_nz <= rep_nz;
-            micro_tdata.str_direction <= flags_s_tdata(FLAG_DF);
+            micro_tdata.str_direction <= rr_tdata.fl_tdata(FLAG_DF);
             micro_tdata.str_w <= rr_tdata.w;
             micro_tdata.str_ax_val <= rr_tdata.sreg_val;
             micro_tdata.str_cx_val <= rep_cx_cnt;
             micro_tdata.str_es_val <= rr_tdata.es_seg_val;
-            micro_tdata.str_di_val <= di_s_tdata;
+            micro_tdata.str_di_val <= rr_tdata.di_tdata;
             micro_tdata.str_ds_val <= rr_tdata.seg_val;
-            micro_tdata.str_si_val <= si_s_tdata;
+            micro_tdata.str_si_val <= rr_tdata.si_tdata;
         end procedure;
 
         procedure do_mul_cmd_0 is begin
@@ -596,11 +576,11 @@ begin
                 when IMUL_AXDX =>
                     if (rr_tdata.w = '0') then
                         for i in 15 downto 8 loop
-                            micro_tdata.mul_b_val(i) <= ax_s_tdata(7);
+                            micro_tdata.mul_b_val(i) <= rr_tdata.ax_tdata(7);
                         end loop;
-                        micro_tdata.mul_b_val(7 downto 0) <= ax_s_tdata(7 downto 0);
+                        micro_tdata.mul_b_val(7 downto 0) <= rr_tdata.ax_tdata(7 downto 0);
                     else
-                        micro_tdata.mul_b_val <= ax_s_tdata;
+                        micro_tdata.mul_b_val <= rr_tdata.ax_tdata;
                     end if;
                 when others => null;
             end case;
@@ -621,13 +601,13 @@ begin
             micro_tdata.div_cs_val <= rr_tuser(31 downto 16);
             micro_tdata.div_ip_next_val <= rr_tuser(15 downto 0);
 
-            micro_tdata.div_a_val(15 downto 0) <= ax_s_tdata;
+            micro_tdata.div_a_val(15 downto 0) <= rr_tdata.ax_tdata;
             if (rr_tdata.w = '1') then
-                micro_tdata.div_a_val(31 downto 16) <= dx_s_tdata;
+                micro_tdata.div_a_val(31 downto 16) <= rr_tdata.dx_tdata;
             else
                 case rr_tdata.code is
                     when DIVU_IDIV =>
-                        micro_tdata.div_a_val(31 downto 16) <= (others => ax_s_tdata(15));
+                        micro_tdata.div_a_val(31 downto 16) <= (others => rr_tdata.ax_tdata(15));
                     when others =>
                         micro_tdata.div_a_val(31 downto 16) <= (others => '0');
                 end case;
@@ -904,7 +884,7 @@ begin
                 when R2R =>
                     micro_tdata.cmd <= MICRO_SHF_OP;
                     micro_tdata.shf_wb <= '1';
-                    micro_tdata.shf_ival <= x"00" & cx_s_tdata(7 downto 0);
+                    micro_tdata.shf_ival <= x"00" & rr_tdata.cx_tdata(7 downto 0);
 
                 when others => null;
             end case;
@@ -924,7 +904,7 @@ begin
             micro_tdata.jump_ip_mem <= '0';
 
             -- push FLAGS
-            mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => rr_tdata.sp_val, val => flags_s_tdata, w => rr_tdata_buf.w);
+            mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.fl_tdata, w => rr_tdata_buf.w);
 
             sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
         end;
@@ -997,7 +977,7 @@ begin
                 when 6 =>
                     -- push FLAGS
                     micro_tdata.cmd <= MICRO_MEM_OP;
-                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => flags_s_tdata, w => '1');
+                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => rr_tdata.fl_tdata, w => '1');
                 when 5 =>
                     micro_tdata.cmd <= MICRO_MEM_OP or MICRO_FLG_OP;
                     -- TF = 0
@@ -1060,7 +1040,7 @@ begin
                 when 6 =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
                     -- push FLAGS
-                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => flags_s_tdata, w => '1');
+                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => rr_tdata.fl_tdata, w => '1');
                 when 5 =>
                     micro_tdata.cmd <= MICRO_MEM_OP or MICRO_FLG_OP;
                     -- TF = 0
@@ -1198,14 +1178,14 @@ begin
             micro_tdata.str_code <= rr_tdata.code;
             micro_tdata.str_rep <= rep_mode;
             micro_tdata.str_rep_nz <= rep_nz;
-            micro_tdata.str_direction <= flags_s_tdata(FLAG_DF);
+            micro_tdata.str_direction <= rr_tdata.fl_tdata(FLAG_DF);
             micro_tdata.str_w <= rr_tdata.w;
             micro_tdata.str_ax_val <= rr_tdata.sreg_val;
             micro_tdata.str_cx_val <= rep_cx_cnt;
             micro_tdata.str_es_val <= rr_tdata.es_seg_val;
-            micro_tdata.str_di_val <= di_s_tdata;
+            micro_tdata.str_di_val <= rr_tdata.di_tdata;
             micro_tdata.str_ds_val <= rr_tdata.seg_val;
-            micro_tdata.str_si_val <= si_s_tdata;
+            micro_tdata.str_si_val <= rr_tdata.si_tdata;
         end procedure;
 
         procedure do_stack_cmd_0 is begin
@@ -1336,13 +1316,13 @@ begin
                     micro_tdata.mem_addr <= sp_val;
 
                     case micro_cnt is
-                        when 7 => micro_tdata.mem_data <= cx_s_tdata;
-                        when 6 => micro_tdata.mem_data <= dx_s_tdata;
-                        when 5 => micro_tdata.mem_data <= bx_s_tdata;
+                        when 7 => micro_tdata.mem_data <= rr_tdata_buf.cx_tdata;
+                        when 6 => micro_tdata.mem_data <= rr_tdata_buf.dx_tdata;
+                        when 5 => micro_tdata.mem_data <= rr_tdata_buf.bx_tdata;
                         when 4 => micro_tdata.mem_data <= rr_tdata_buf.dreg_val;
-                        when 3 => micro_tdata.mem_data <= bp_s_tdata;
-                        when 2 => micro_tdata.mem_data <= si_s_tdata;
-                        when 1 => micro_tdata.mem_data <= di_s_tdata;
+                        when 3 => micro_tdata.mem_data <= rr_tdata_buf.bp_tdata;
+                        when 2 => micro_tdata.mem_data <= rr_tdata_buf.si_tdata;
+                        when 1 => micro_tdata.mem_data <= rr_tdata_buf.di_tdata;
                         when others => null;
                     end case;
 
@@ -1423,9 +1403,8 @@ begin
 
         procedure do_stack_enter_0 is begin
             micro_tdata.cmd <= MICRO_NOP_OP;
-            --sp_inc_on; bp_inc_off;
-            bp_inc_off;
             sp_val <= rr_tdata.sp_val;
+            bp_val <= rr_tdata.bp_tdata;
         end procedure;
 
         procedure do_stack_enter_1 is begin
@@ -1464,11 +1443,7 @@ begin
                 when others =>
                     -- push BP
                     micro_tdata.cmd <= MICRO_MEM_OP;
-                    if (micro_tdata.bp_inc = '0') then
-                        mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => bp_s_tdata, w => rr_tdata_buf.w);
-                    else
-                        mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => bp_s_tdata_next, w => rr_tdata_buf.w);
-                    end if;
+                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => bp_val, w => rr_tdata_buf.w);
 
                     if not (micro_cnt = 4 and rr_tdata_buf.level = 0) then
                         sp_val <= sp_val + rr_tdata_buf.sp_offset;
@@ -1476,9 +1451,7 @@ begin
 
                     -- BP = BP - 2
                     if micro_cnt /= 4 then
-                        bp_inc_on;
-                    else
-                        bp_inc_off;
+                        bp_val <= std_logic_vector(unsigned(bp_val) - to_unsigned(2, 16));
                     end if;
                 end case;
 
@@ -1487,12 +1460,12 @@ begin
         procedure do_stack_leave_0 is begin
             micro_tdata.cmd <= MICRO_MEM_OP or MICRO_ALU_OP;
 
-            mem_read_word(seg => rr_tdata.ss_seg_val, addr => bp_s_tdata);
+            mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.bp_tdata);
             -- SP = BP;
             micro_tdata.alu_code <= ALU_OP_ADD;
             micro_tdata.alu_wb <= '1';
             micro_tdata.alu_a_val <= x"0002";
-            micro_tdata.alu_b_val <= bp_s_tdata;
+            micro_tdata.alu_b_val <= rr_tdata.bp_tdata;
             micro_tdata.alu_upd_fl <= '0';
             micro_tdata.alu_dreg <= SP;
             micro_tdata.alu_dmask <= "11";

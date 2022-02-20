@@ -48,8 +48,6 @@ entity mexec is
         ss_m_wr_tvalid          : out std_logic;
         ss_m_wr_tdata           : out std_logic_vector(15 downto 0);
 
-        bp_m_inc_tvalid         : out std_logic;
-
         flags_m_wr_tvalid       : out std_logic;
         flags_m_wr_tdata        : out std_logic_vector(15 downto 0);
 
@@ -187,36 +185,36 @@ architecture rtl of mexec is
 
     component mexec_str is
         port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
+            clk                 : in std_logic;
+            resetn              : in std_logic;
 
-            req_s_tvalid            : in std_logic;
-            req_s_tdata             : in str_req_t;
+            req_s_tvalid        : in std_logic;
+            req_s_tdata         : in str_req_t;
 
-            res_m_tvalid            : out std_logic;
-            res_m_tdata             : out str_res_t;
-            res_m_tuser             : out std_logic_vector(15 downto 0);
+            res_m_tvalid        : out std_logic;
+            res_m_tdata         : out str_res_t;
+            res_m_tuser         : out std_logic_vector(15 downto 0);
 
-            lsu_req_m_tvalid        : out std_logic;
-            lsu_req_m_tready        : in std_logic;
-            lsu_req_m_tcmd          : out std_logic;
-            lsu_req_m_twidth        : out std_logic;
-            lsu_req_m_taddr         : out std_logic_vector(19 downto 0);
-            lsu_req_m_tdata         : out std_logic_vector(15 downto 0);
+            lsu_req_m_tvalid    : out std_logic;
+            lsu_req_m_tready    : in std_logic;
+            lsu_req_m_tcmd      : out std_logic;
+            lsu_req_m_twidth    : out std_logic;
+            lsu_req_m_taddr     : out std_logic_vector(19 downto 0);
+            lsu_req_m_tdata     : out std_logic_vector(15 downto 0);
 
-            lsu_rd_s_tvalid         : in std_logic;
-            lsu_rd_s_tready         : out std_logic;
-            lsu_rd_s_tdata          : in std_logic_vector(15 downto 0);
+            lsu_rd_s_tvalid     : in std_logic;
+            lsu_rd_s_tready     : out std_logic;
+            lsu_rd_s_tdata      : in std_logic_vector(15 downto 0);
 
-            io_req_m_tvalid         : out std_logic;
-            io_req_m_tready         : in std_logic;
-            io_req_m_tdata          : out std_logic_vector(39 downto 0);
+            io_req_m_tvalid     : out std_logic;
+            io_req_m_tready     : in std_logic;
+            io_req_m_tdata      : out std_logic_vector(39 downto 0);
 
-            io_rd_s_tvalid          : in std_logic;
-            io_rd_s_tready          : out std_logic;
-            io_rd_s_tdata           : in std_logic_vector(15 downto 0);
+            io_rd_s_tvalid      : in std_logic;
+            io_rd_s_tready      : out std_logic;
+            io_rd_s_tdata       : in std_logic_vector(15 downto 0);
 
-            event_interrupt         : in std_logic
+            event_interrupt     : in std_logic
         );
     end component;
 
@@ -562,9 +560,6 @@ begin
     str_lsu_rd_tdata <= lsu_rd_s_tdata;
 
     flags_m_wr_tdata <= ((not flags_wr_be) and flags_s_tdata) or (flags_wr_be and flags_wr_vector);
-
-    -- bp increment
-    bp_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.bp_inc = '1' else '0';
 
     div_intr_m_tvalid <= '1' when div_res_tvalid = '1' and div_res_tdata.overflow = '1' else '0';
     div_intr_m_tdata(DIV_INTR_T_SS) <= div_res_tdata.ss_val;

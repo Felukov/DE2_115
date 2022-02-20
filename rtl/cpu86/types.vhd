@@ -270,6 +270,16 @@ package cpu86_types is
     subtype DIV_INTR_T_IP_NEXT is natural range 15 downto 0;
 
     type rr_instr_t is record
+        ax_tdata    : std_logic_vector(15 downto 0);
+        bx_tdata    : std_logic_vector(15 downto 0);
+        cx_tdata    : std_logic_vector(15 downto 0);
+        dx_tdata    : std_logic_vector(15 downto 0);
+        bp_tdata    : std_logic_vector(15 downto 0);
+        sp_tdata    : std_logic_vector(15 downto 0);
+        di_tdata    : std_logic_vector(15 downto 0);
+        si_tdata    : std_logic_vector(15 downto 0);
+        fl_tdata    : std_logic_vector(15 downto 0);
+
         es_seg_val  : std_logic_vector(15 downto 0);
         ss_seg_val  : std_logic_vector(15 downto 0);
         seg_val     : std_logic_vector(15 downto 0);
@@ -278,6 +288,7 @@ package cpu86_types is
         sp_val      : std_logic_vector(15 downto 0);
         sp_offset   : std_logic_vector(15 downto 0);
         ea_val      : std_logic_vector(15 downto 0);
+
         op          : op_t;
         code        : std_logic_vector(3 downto 0);
         w           : std_logic;
@@ -440,7 +451,7 @@ package cpu86_types is
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
 
-        bp_inc          : std_logic;
+        --bp_inc          : std_logic;
 
         dbg_cs          : std_logic_vector(15 downto 0);
         dbg_ip          : std_logic_vector(15 downto 0);

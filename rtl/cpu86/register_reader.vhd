@@ -505,6 +505,18 @@ begin
             end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') then
+                rr_tdata.ax_tdata <= ax_s_tdata;
+                rr_tdata.bx_tdata <= bx_s_tdata;
+                rr_tdata.cx_tdata <= cx_s_tdata;
+                rr_tdata.dx_tdata <= dx_s_tdata;
+                rr_tdata.bp_tdata <= bp_s_tdata;
+                rr_tdata.sp_tdata <= sp_s_tdata;
+                rr_tdata.di_tdata <= di_s_tdata;
+                rr_tdata.si_tdata <= si_s_tdata;
+                rr_tdata.fl_tdata <= flags_s_tdata;
+            end if;
+
+            if (instr_tvalid = '1' and instr_tready = '1') then
                 rr_tuser <= instr_tuser;
             end if;
 

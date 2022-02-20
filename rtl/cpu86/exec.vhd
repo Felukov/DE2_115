@@ -230,18 +230,6 @@ architecture rtl of exec is
             micro_m_tready          : in std_logic;
             micro_m_tdata           : out micro_op_t;
 
-            ax_s_tdata              : in std_logic_vector(15 downto 0);
-            bx_s_tdata              : in std_logic_vector(15 downto 0);
-            cx_s_tdata              : in std_logic_vector(15 downto 0);
-            dx_s_tdata              : in std_logic_vector(15 downto 0);
-            bp_s_tdata              : in std_logic_vector(15 downto 0);
-            bp_s_tdata_next         : in std_logic_vector(15 downto 0);
-            sp_s_tdata              : in std_logic_vector(15 downto 0);
-            -- sp_s_tdata_next         : in std_logic_vector(15 downto 0);
-            di_s_tdata              : in std_logic_vector(15 downto 0);
-            si_s_tdata              : in std_logic_vector(15 downto 0);
-            flags_s_tdata           : in std_logic_vector(15 downto 0);
-
             ax_m_wr_tvalid          : out std_logic;
             ax_m_wr_tdata           : out std_logic_vector(15 downto 0);
             ax_m_wr_tmask           : out std_logic_vector(1 downto 0);
@@ -322,8 +310,6 @@ architecture rtl of exec is
 
             flags_m_wr_tvalid       : out std_logic;
             flags_m_wr_tdata        : out std_logic_vector(15 downto 0);
-
-            bp_m_inc_tvalid         : out std_logic;
 
             jump_m_tvalid           : out std_logic;
             jump_m_tdata            : out std_logic_vector(31 downto 0);
@@ -478,23 +464,15 @@ architecture rtl of exec is
 
     signal sp_tvalid                : std_logic;
     signal sp_tdata                 : std_logic_vector(15 downto 0);
-    -- signal sp_tdata_next            : std_logic_vector(15 downto 0);
     signal sp_lock_tvalid           : std_logic;
     signal sp_wr_tvalid             : std_logic;
     signal sp_wr_tdata              : std_logic_vector(15 downto 0);
 
-    -- signal sp_inc_tvalid            : std_logic;
-    -- signal sp_inc_tdata             : std_logic_vector(15 downto 0);
-    -- signal sp_inc_tkeep_lock        : std_logic;
-
     signal bp_tvalid                : std_logic;
     signal bp_tdata                 : std_logic_vector(15 downto 0);
-    signal bp_tdata_next            : std_logic_vector(15 downto 0);
     signal bp_lock_tvalid           : std_logic;
     signal bp_wr_tvalid             : std_logic;
     signal bp_wr_tdata              : std_logic_vector(15 downto 0);
-
-    signal bp_m_inc_tvalid          : std_logic;
 
     signal si_tvalid                : std_logic;
     signal si_tdata                 : std_logic_vector(15 downto 0);
@@ -570,9 +548,6 @@ architecture rtl of exec is
 
     signal mexec_sp_wr_tvalid       : std_logic;
     signal mexec_sp_wr_tdata        : std_logic_vector(15 downto 0);
-    -- signal mexec_sp_inc_tvalid      : std_logic;
-    -- signal mexec_sp_inc_tdata       : std_logic_vector(15 downto 0);
-    -- signal mexec_sp_inc_tkeep_lock  : std_logic;
 
     signal mexec_di_wr_tvalid       : std_logic;
     signal mexec_di_wr_tdata        : std_logic_vector(15 downto 0);
@@ -794,7 +769,7 @@ begin
     );
 
 
-    cpu_reg_bp : cpu_reg_acc generic map (
+    cpu_reg_bp : cpu_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -803,17 +778,13 @@ begin
         wr_s_tvalid             => bp_wr_tvalid,
         wr_s_tdata              => bp_wr_tdata,
         wr_s_tmask              => "11",
-
-        inc_s_tvalid            => bp_m_inc_tvalid,
-        inc_s_tdata             => x"FFFE",
-        inc_s_tkeep_lock        => '1',
+        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => bp_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
 
         reg_m_tvalid            => bp_tvalid,
-        reg_m_tdata             => bp_tdata,
-        reg_m_tdata_next        => bp_tdata_next
+        reg_m_tdata             => bp_tdata
     );
 
 
@@ -1049,19 +1020,6 @@ begin
         micro_m_tready          => micro_tready,
         micro_m_tdata           => micro_tdata,
 
-        ax_s_tdata              => ax_tdata,
-        bx_s_tdata              => bx_tdata,
-        cx_s_tdata              => cx_tdata,
-        dx_s_tdata              => dx_tdata,
-        bp_s_tdata              => bp_tdata,
-        bp_s_tdata_next         => bp_tdata_next,
-        sp_s_tdata              => sp_tdata,
-        --sp_s_tdata_next         => sp_tdata_next,
-        di_s_tdata              => di_tdata,
-        si_s_tdata              => si_tdata,
-
-        flags_s_tdata           => flags_tdata,
-
         ax_m_wr_tvalid          => ifeu_ax_wr_tvalid,
         ax_m_wr_tdata           => ifeu_ax_wr_tdata,
         ax_m_wr_tmask           => ifeu_ax_wr_tmask,
@@ -1137,8 +1095,6 @@ begin
         es_m_wr_tdata           => mexec_es_wr_tdata,
         ss_m_wr_tvalid          => mexec_ss_wr_tvalid,
         ss_m_wr_tdata           => mexec_ss_wr_tdata,
-
-        bp_m_inc_tvalid         => bp_m_inc_tvalid,
 
         jump_m_tvalid           => jump_tvalid,
         jump_m_tdata            => jump_tdata,
@@ -1252,10 +1208,6 @@ begin
     ds_wr_tdata <= mexec_ds_wr_tdata when mexec_ds_wr_tvalid = '1' else ifeu_ds_wr_tdata;
     ss_wr_tdata <= mexec_ss_wr_tdata when mexec_ss_wr_tvalid = '1' else ifeu_ss_wr_tdata;
     es_wr_tdata <= mexec_es_wr_tdata when mexec_es_wr_tvalid = '1' else ifeu_es_wr_tdata;
-
-    -- sp_inc_tvalid <= mexec_sp_inc_tvalid;
-    -- sp_inc_tdata <= mexec_sp_inc_tdata;
-    -- sp_inc_tkeep_lock <= mexec_sp_inc_tkeep_lock;
 
     req_m_tvalid <= jump_tvalid;
     req_m_tdata <= jump_tdata;
