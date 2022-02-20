@@ -488,7 +488,23 @@ begin
                 else
                     rr_tdata.fast_instr <= '0';
                 end if;
+            end if;
 
+            if (instr_tvalid = '1' and instr_tready = '1') then
+                if (instr_tdata.op = SYS and instr_tdata.code = SYS_INT_OP) or
+                    (instr_tdata.op = STACKU and (instr_tdata.code = STACKU_PUSHR or instr_tdata.code = STACKU_PUSHM or
+                        instr_tdata.code = STACKU_PUSHI or instr_tdata.code = STACKU_PUSHA or instr_tdata.code = STACKU_ENTER)) or
+                    (instr_tdata.op = DIVU) or (instr_tdata.op = LFP and instr_tdata.code = MISC_BOUND)
+                then
+                    rr_tdata.sp_val <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
+                    rr_tdata.sp_offset <= x"FFFE";
+                else
+                    rr_tdata.sp_val <= sp_s_tdata;
+                    rr_tdata.sp_offset <= x"0002";
+                end if;
+            end if;
+
+            if (instr_tvalid = '1' and instr_tready = '1') then
                 rr_tuser <= instr_tuser;
             end if;
 

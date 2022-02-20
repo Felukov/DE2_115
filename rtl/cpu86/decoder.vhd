@@ -776,6 +776,16 @@ begin
                 when x"C8" => set_stack_op(STACKU_ENTER,   LOCK_SP or LOCK_DREG, WAIT_SS or WAIT_SP or WAIT_BP);
                 when x"C9" => set_stack_op(STACKU_LEAVE,   LOCK_SP or LOCK_DREG, WAIT_SS or WAIT_SP or WAIT_BP);
 
+                -- CALL
+                when x"9A" => set_op(CALL, CALL_PTR16_16, '1', LOCK_SP, WAIT_SS or WAIT_SP);
+                when x"E8" => set_op(CALL, CALL_REL16,    '1', LOCK_SP, WAIT_SS or WAIT_SP);
+
+                -- RET
+                when x"C2" => set_op(RET, RET_NEAR_IMM16, '1', LOCK_SP, WAIT_SS or WAIT_SP);
+                when x"C3" => set_op(RET, RET_NEAR,       '1', LOCK_SP, WAIT_SS or WAIT_SP);
+                when x"CA" => set_op(RET, RET_FAR_IMM16,  '1', LOCK_SP, WAIT_SS or WAIT_SP);
+                when x"CB" => set_op(RET, RET_FAR,        '1', LOCK_SP, WAIT_SS or WAIT_SP);
+
                 --XCHG
                 when x"86" => set_op(XCHG, "0000",    '0', LOCK_NO_LOCK,           WAIT_NO_WAIT);
                 when x"87" => set_op(XCHG, "0000",    '1', LOCK_NO_LOCK,           WAIT_NO_WAIT);
@@ -863,7 +873,7 @@ begin
                 when x"C5" => set_op(LFP, LFP_LDS,       '1', LOCK_DS or LOCK_DREG, WAIT_DS);
 
                 -- SYS
-                when x"CD" => set_op(SYS, SYS_INT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"CD" => set_op(SYS, SYS_INT_OP,    '1', LOCK_SP,      WAIT_SS or WAIT_SP);
                 when x"CF" => set_op(SYS, SYS_IRET_OP,   '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
                 when x"F4" => set_op(SYS, SYS_HLT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
 
@@ -877,6 +887,7 @@ begin
                 when x"E9" => set_op(JMPU, JMP_REL16,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
                 when x"EA" => set_op(JMPU, JMP_PTR16_16, '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
                 when x"EB" => set_op(JMPU, JMP_REL8,     '0', LOCK_NO_LOCK, WAIT_NO_WAIT);
+
                 -- BRANCH
                 when x"70" => set_op(BRANCH, BRA_JO,     '1', LOCK_NO_LOCK, WAIT_FL);
                 when x"71" => set_op(BRANCH, BRA_JNO,    '1', LOCK_NO_LOCK, WAIT_FL);
@@ -1241,6 +1252,8 @@ begin
                     case u8_tdata(5 downto 3) is
                         when "000" => set_op(ALU, ALU_OP_INC, '1');
                         when "001" => set_op(ALU, ALU_OP_DEC, '1');
+                        when "010" => set_op(CALL, CALL_RM16,   '1'); upd_lock(LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
+                        when "011" => set_op(CALL, CALL_M16_16, '1'); upd_lock(LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
                         when "110" => set_stack_op(STACKU_PUSHM, LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
                         when "100" => set_op(JMPU, JMP_RM16,   '1');
                         when "101" => set_op(JMPU, JMP_M16_16, '1');

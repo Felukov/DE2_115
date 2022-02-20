@@ -48,10 +48,6 @@ entity mexec is
         ss_m_wr_tvalid          : out std_logic;
         ss_m_wr_tdata           : out std_logic_vector(15 downto 0);
 
-        sp_m_inc_tvalid         : out std_logic;
-        sp_m_inc_tdata          : out std_logic_vector(15 downto 0);
-        sp_m_inc_tkeep_lock     : out std_logic;
-
         bp_m_inc_tvalid         : out std_logic;
 
         flags_m_wr_tvalid       : out std_logic;
@@ -566,11 +562,6 @@ begin
     str_lsu_rd_tdata <= lsu_rd_s_tdata;
 
     flags_m_wr_tdata <= ((not flags_wr_be) and flags_s_tdata) or (flags_wr_be and flags_wr_vector);
-
-    -- sp increment
-    sp_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.sp_inc = '1' else '0';
-    sp_m_inc_tdata <= micro_tdata.sp_inc_data;
-    sp_m_inc_tkeep_lock <= micro_tdata.sp_keep_lock;
 
     -- bp increment
     bp_m_inc_tvalid <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.bp_inc = '1' else '0';

@@ -20,18 +20,19 @@ end entity mexec_div;
 
 architecture rtl of mexec_div is
 
-    constant USER_WIDTH         : natural := 91;
+    constant USER_WIDTH             : natural := 77;
 
-    constant DIV_USER_T_SIGN_D  : natural  := 90;
-    constant DIV_USER_T_SIGN_N  : natural  := 89;
-    constant DIV_USER_T_W       : natural  := 88;
-    subtype DIV_USER_T_DVAL     is natural range 87 downto 72;
-    subtype DIV_USER_T_CODE     is natural range 71 downto 68;
-    subtype DIV_USER_T_DREG     is natural range 67 downto 64;
-    subtype DIV_USER_T_SS       is natural range 63 downto 48;
-    subtype DIV_USER_T_IP       is natural range 47 downto 32;
-    subtype DIV_USER_T_CS       is natural range 31 downto 16;
-    subtype DIV_USER_T_IP_NEXT  is natural range 15 downto 0;
+    constant DIV_USER_T_SIGN_D      : natural  := 76;
+    constant DIV_USER_T_SIGN_N      : natural  := 75;
+    constant DIV_USER_T_W           : natural  := 74;
+    constant DIV_USER_T_D_HI_ZERO   : natural := 73;
+    constant DIV_USER_T_D_LO_ZERO   : natural := 72;
+    subtype  DIV_USER_T_CODE       is natural range 71 downto 68;
+    subtype  DIV_USER_T_DREG       is natural range 67 downto 64;
+    subtype  DIV_USER_T_SS         is natural range 63 downto 48;
+    subtype  DIV_USER_T_IP         is natural range 47 downto 32;
+    subtype  DIV_USER_T_CS         is natural range 31 downto 16;
+    subtype  DIV_USER_T_IP_NEXT    is natural range 15 downto 0;
 
     component axis_div_u is
         generic (
@@ -65,15 +66,11 @@ architecture rtl of mexec_div is
     signal div_m_tdata          : std_logic_vector(63 downto 0);
     signal div_m_tuser          : std_logic_vector(USER_WIDTH-1 downto 0);
 
-    signal div_m_tuser_dval     : std_logic_vector(15 downto 0);
-
     signal flags_zf             : std_logic;
     signal flags_pf             : std_logic;
     signal flags_sf             : std_logic;
 
 begin
-
-    div_m_tuser_dval <= div_m_tuser(DIV_USER_T_DVAL);
 
     res_m_tuser(FLAG_15) <= '0';
     res_m_tuser(FLAG_14) <= '0';
@@ -150,7 +147,18 @@ begin
                 div_s_tdata(31 downto 0) <= x"0000" & req_s_tdata.dval;
             end if;
 
-            div_s_tuser(DIV_USER_T_DVAL) <= req_s_tdata.dval;
+            if (req_s_tdata.dval(15 downto 8) = x"00") then
+                div_s_tuser(DIV_USER_T_D_HI_ZERO) <= '1';
+            else
+                div_s_tuser(DIV_USER_T_D_HI_ZERO) <= '0';
+            end if;
+
+            if (req_s_tdata.dval(7 downto 0) = x"00") then
+                div_s_tuser(DIV_USER_T_D_LO_ZERO) <= '1';
+            else
+                div_s_tuser(DIV_USER_T_D_LO_ZERO) <= '0';
+            end if;
+
             div_s_tuser(DIV_USER_T_CODE) <= req_s_tdata.code;
             div_s_tuser(DIV_USER_T_W) <= req_s_tdata.w;
             div_s_tuser(DIV_USER_T_DREG) <= std_logic_vector(to_unsigned(reg_t'pos(req_s_tdata.dreg), 4));
@@ -209,7 +217,7 @@ begin
 
                     if (res_m_tdata.code = DIVU_IDIV) then
 
-                        if div_m_tdata(43 downto 32) > x"07F" or div_m_tuser_dval(7 downto 0) = x"00" then
+                        if div_m_tdata(43 downto 32) > x"07F" or div_m_tuser(DIV_USER_T_D_LO_ZERO) = '1' then
                             res_m_tdata.overflow <= '1';
                         else
                             res_m_tdata.overflow <= '0';
@@ -217,7 +225,7 @@ begin
 
                     elsif (res_m_tdata.code = DIVU_DIV) then
 
-                        if div_m_tdata(43 downto 32) > x"0FF" or div_m_tuser_dval(7 downto 0) = x"00" then
+                        if div_m_tdata(43 downto 32) > x"0FF" or div_m_tuser(DIV_USER_T_D_LO_ZERO) = '1' then
                             res_m_tdata.overflow <= '1';
                         else
                             res_m_tdata.overflow <= '0';
@@ -230,7 +238,7 @@ begin
 
                     if (res_m_tdata.code = DIVU_IDIV) then
 
-                        if div_m_tdata(51 downto 32) > x"07FFF" or div_m_tuser_dval(15 downto 0) = x"0000" then
+                        if div_m_tdata(51 downto 32) > x"07FFF" or (div_m_tuser(DIV_USER_T_D_LO_ZERO) = '1' and div_m_tuser(DIV_USER_T_D_HI_ZERO) = '1') then
                             res_m_tdata.overflow <= '1';
                         else
                             res_m_tdata.overflow <= '0';
@@ -238,7 +246,7 @@ begin
 
                     elsif (res_m_tdata.code = DIVU_DIV) then
 
-                        if div_m_tdata(51 downto 32) > x"0FFFF" or div_m_tuser_dval(15 downto 0) = x"0000" then
+                        if div_m_tdata(51 downto 32) > x"0FFFF" or (div_m_tuser(DIV_USER_T_D_LO_ZERO) = '1' and div_m_tuser(DIV_USER_T_D_HI_ZERO) = '1') then
                             res_m_tdata.overflow <= '1';
                         else
                             res_m_tdata.overflow <= '0';

@@ -21,7 +21,7 @@ package cpu86_types is
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, JMPU, BRANCH, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU, IO
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, JMPU, BRANCH, CALL, RET, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU, IO
     );
 
     type mem_data_src_t is (
@@ -154,6 +154,15 @@ package cpu86_types is
     constant BRA_JLE        : std_logic_vector (3 downto 0) := x"E";
     constant BRA_JG         : std_logic_vector (3 downto 0) := x"F";
 
+    constant CALL_REL16     : std_logic_vector (3 downto 0) := x"0";
+    constant CALL_RM16      : std_logic_vector (3 downto 0) := x"0";
+    constant CALL_PTR16_16  : std_logic_vector (3 downto 0) := x"0";
+    constant CALL_M16_16    : std_logic_vector (3 downto 0) := x"0";
+    constant RET_NEAR       : std_logic_vector (3 downto 0) := x"0";
+    constant RET_FAR        : std_logic_vector (3 downto 0) := x"0";
+    constant RET_NEAR_IMM16 : std_logic_vector (3 downto 0) := x"0";
+    constant RET_FAR_IMM16  : std_logic_vector (3 downto 0) := x"0";
+
     constant FLAG_15        : natural := 15;
     constant FLAG_14        : natural := 14;
     constant FLAG_13        : natural := 13;
@@ -262,11 +271,13 @@ package cpu86_types is
 
     type rr_instr_t is record
         es_seg_val  : std_logic_vector(15 downto 0);
-        seg_val     : std_logic_vector(15 downto 0);
         ss_seg_val  : std_logic_vector(15 downto 0);
-        ea_val      : std_logic_vector(15 downto 0);
+        seg_val     : std_logic_vector(15 downto 0);
         dreg_val    : std_logic_vector(15 downto 0);
         sreg_val    : std_logic_vector(15 downto 0);
+        sp_val      : std_logic_vector(15 downto 0);
+        sp_offset   : std_logic_vector(15 downto 0);
+        ea_val      : std_logic_vector(15 downto 0);
         op          : op_t;
         code        : std_logic_vector(3 downto 0);
         w           : std_logic;
@@ -428,10 +439,6 @@ package cpu86_types is
 
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
-
-        sp_inc          : std_logic;
-        sp_inc_data     : std_logic_vector(15 downto 0);
-        sp_keep_lock    : std_logic;
 
         bp_inc          : std_logic;
 
