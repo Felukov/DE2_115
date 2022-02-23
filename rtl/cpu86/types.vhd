@@ -21,7 +21,7 @@ package cpu86_types is
     );
 
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, JMPU, BRANCH, CALL, RET, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU, IO
+        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, JMPU, BRANCH, JCALL, RET, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU, IO
     );
 
     type mem_data_src_t is (
@@ -155,13 +155,13 @@ package cpu86_types is
     constant BRA_JG         : std_logic_vector (3 downto 0) := x"F";
 
     constant CALL_REL16     : std_logic_vector (3 downto 0) := x"0";
-    constant CALL_RM16      : std_logic_vector (3 downto 0) := x"0";
-    constant CALL_PTR16_16  : std_logic_vector (3 downto 0) := x"0";
-    constant CALL_M16_16    : std_logic_vector (3 downto 0) := x"0";
+    constant CALL_RM16      : std_logic_vector (3 downto 0) := x"1";
+    constant CALL_PTR16_16  : std_logic_vector (3 downto 0) := x"2";
+    constant CALL_M16_16    : std_logic_vector (3 downto 0) := x"3";
     constant RET_NEAR       : std_logic_vector (3 downto 0) := x"0";
-    constant RET_FAR        : std_logic_vector (3 downto 0) := x"0";
-    constant RET_NEAR_IMM16 : std_logic_vector (3 downto 0) := x"0";
-    constant RET_FAR_IMM16  : std_logic_vector (3 downto 0) := x"0";
+    constant RET_FAR        : std_logic_vector (3 downto 0) := x"1";
+    constant RET_NEAR_IMM16 : std_logic_vector (3 downto 0) := x"2";
+    constant RET_FAR_IMM16  : std_logic_vector (3 downto 0) := x"3";
 
     constant FLAG_15        : natural := 15;
     constant FLAG_14        : natural := 14;

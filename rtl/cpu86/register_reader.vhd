@@ -494,7 +494,7 @@ begin
                 if (instr_tdata.op = SYS and instr_tdata.code = SYS_INT_OP) or
                     (instr_tdata.op = STACKU and (instr_tdata.code = STACKU_PUSHR or instr_tdata.code = STACKU_PUSHM or
                         instr_tdata.code = STACKU_PUSHI or instr_tdata.code = STACKU_PUSHA or instr_tdata.code = STACKU_ENTER)) or
-                    (instr_tdata.op = DIVU) or (instr_tdata.op = LFP and instr_tdata.code = MISC_BOUND)
+                    (instr_tdata.op = DIVU) or (instr_tdata.op = LFP and instr_tdata.code = MISC_BOUND) or (instr_tdata.op = JCALL)
                 then
                     rr_tdata.sp_val <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
                     rr_tdata.sp_offset <= x"FFFE";

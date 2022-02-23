@@ -777,8 +777,8 @@ begin
                 when x"C9" => set_stack_op(STACKU_LEAVE,   LOCK_SP or LOCK_DREG, WAIT_SS or WAIT_SP or WAIT_BP);
 
                 -- CALL
-                when x"9A" => set_op(CALL, CALL_PTR16_16, '1', LOCK_SP, WAIT_SS or WAIT_SP);
-                when x"E8" => set_op(CALL, CALL_REL16,    '1', LOCK_SP, WAIT_SS or WAIT_SP);
+                when x"9A" => set_op(JCALL, CALL_PTR16_16, '1', LOCK_SP, WAIT_SS or WAIT_SP);
+                when x"E8" => set_op(JCALL, CALL_REL16,    '1', LOCK_SP, WAIT_SS or WAIT_SP);
 
                 -- RET
                 when x"C2" => set_op(RET, RET_NEAR_IMM16, '1', LOCK_SP, WAIT_SS or WAIT_SP);
@@ -1252,8 +1252,8 @@ begin
                     case u8_tdata(5 downto 3) is
                         when "000" => set_op(ALU, ALU_OP_INC, '1');
                         when "001" => set_op(ALU, ALU_OP_DEC, '1');
-                        when "010" => set_op(CALL, CALL_RM16,   '1'); upd_lock(LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
-                        when "011" => set_op(CALL, CALL_M16_16, '1'); upd_lock(LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
+                        when "010" => set_op(JCALL, CALL_RM16,   '1'); upd_lock(LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
+                        when "011" => set_op(JCALL, CALL_M16_16, '1'); upd_lock(LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
                         when "110" => set_stack_op(STACKU_PUSHM, LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
                         when "100" => set_op(JMPU, JMP_RM16,   '1');
                         when "101" => set_op(JMPU, JMP_M16_16, '1');
@@ -1436,13 +1436,13 @@ begin
                             else
                                 instr_tdata.dir <= M2M;
                             end if;
-                        when "100" =>
+                        when "010" | "100" =>
                             if (u8_tdata(7 downto 6) = "11") then
                                 instr_tdata.dir <= R2R;
                             else
                                 instr_tdata.dir <= M2M;
                             end if;
-                        when "101" =>
+                        when "011" | "101" =>
                             instr_tdata.dir <= M2M;
                         when others =>
                             null;
@@ -2125,7 +2125,7 @@ begin
 
                     when x"FF" =>
                         case u8_tdata(5 downto 3) is
-                            when "000" | "001" | "100" =>
+                            when "000" | "001" | "010" | "011" | "100" =>
                                 case u8_tdata_rm is
                                     when "000" => instr_tdata.sreg <= AX;
                                     when "001" => instr_tdata.sreg <= CX;
@@ -2160,10 +2160,6 @@ begin
                                 instr_tdata.data <= x"0001";
                             when x"E0" | x"E1" | x"E2" =>
                                 instr_tdata.data <= x"FFFF";
-                            when x"0E" | x"1E" | x"16" | x"06" =>
-                                instr_tdata.data <= x"FFFE";
-                            when x"1F" | x"17" | x"07" =>
-                                instr_tdata.data <= x"0002";
                             when x"D0" | x"D1" =>
                                 instr_tdata.data <= x"0001";
                             when others =>

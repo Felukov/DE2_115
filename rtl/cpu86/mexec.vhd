@@ -392,6 +392,8 @@ architecture rtl of mexec is
     signal io_cmd_w             : std_logic;
     signal io_cmd_wb            : std_logic;
 
+    signal lsu_req_a_selector   : std_logic_vector(1 downto 0);
+
 begin
 
     mexec_alu_inst : mexec_alu port map (
@@ -1978,6 +1980,9 @@ begin
         end if;
     end process;
 
+    lsu_req_a_selector(0) <= '1' when micro_tvalid = '1' and micro_tready = '1' else '0';
+    lsu_req_a_selector(1) <= '1' when str_lsu_req_tvalid = '1' and str_lsu_req_tready = '1' else '0';
+
     lsu_request_forming_proc: process (clk) begin
         if rising_edge(clk) then
 
@@ -2055,15 +2060,17 @@ begin
 
             end if;
 
-            if (micro_tvalid = '1' and micro_tready = '1') then
-                lsu_req_tcmd <= micro_tdata.mem_cmd;
-                lsu_req_twidth <= micro_tdata.mem_width;
-                lsu_req_taddr <= std_logic_vector(unsigned(micro_tdata.mem_seg & x"0") + unsigned(x"0" & micro_tdata.mem_addr));
-            elsif (str_lsu_req_tvalid = '1' and str_lsu_req_tready = '1') then
-                lsu_req_tcmd <= str_lsu_req_tcmd;
-                lsu_req_twidth <= str_lsu_req_twidth;
-                lsu_req_taddr <= str_lsu_req_taddr;
-            end if;
+            case lsu_req_a_selector is
+                when "01" =>
+                    lsu_req_tcmd <= micro_tdata.mem_cmd;
+                    lsu_req_twidth <= micro_tdata.mem_width;
+                    lsu_req_taddr <= std_logic_vector(unsigned(micro_tdata.mem_seg & x"0") + unsigned(x"0" & micro_tdata.mem_addr));
+                when "10" =>
+                    lsu_req_tcmd <= str_lsu_req_tcmd;
+                    lsu_req_twidth <= str_lsu_req_twidth;
+                    lsu_req_taddr <= str_lsu_req_taddr;
+                when others => null;
+            end case;
 
             if (micro_tvalid = '1' and micro_tready = '1') then
                 lsu_req_tdata <= micro_tdata.mem_data;
