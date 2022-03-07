@@ -42,7 +42,7 @@ architecture rtl of axis_div_u is
 
 begin
 
-    div_m_tvalid <= '1' when div_s_tready = '0' and i = 0 else '0';
+    --div_m_tvalid <= '1' when div_s_tready = '0' and i = 0 else '0';
     div_m_tdata(2*MAX_WIDTH-1 downto MAX_WIDTH) <= std_logic_vector(q);
     div_m_tdata(MAX_WIDTH-1 downto 0) <= std_logic_vector(r);
 
@@ -57,6 +57,20 @@ begin
         elsif (div_s_tready = '0' and i /= 0) then
             if (idx > 0) then
                 idx_next <= idx - 1;
+            end if;
+        end if;
+    end process;
+
+    process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                div_m_tvalid <= '0';
+            else
+                if div_s_tready = '0' and i = 1 then
+                    div_m_tvalid <= '1';
+                elsif (div_m_tready = '1') then
+                    div_m_tvalid <= '0';
+                end if;
             end if;
         end if;
     end process;

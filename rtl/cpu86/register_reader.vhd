@@ -510,7 +510,7 @@ begin
                 rr_tdata.cx_tdata <= cx_s_tdata;
                 rr_tdata.dx_tdata <= dx_s_tdata;
                 rr_tdata.bp_tdata <= bp_s_tdata;
-                rr_tdata.sp_tdata <= sp_s_tdata;
+                --rr_tdata.sp_tdata <= sp_s_tdata;
                 rr_tdata.di_tdata <= di_s_tdata;
                 rr_tdata.si_tdata <= si_s_tdata;
                 rr_tdata.fl_tdata <= flags_s_tdata;

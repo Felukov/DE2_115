@@ -271,7 +271,7 @@ begin
                                     decode_chain(data_low, data_high, imm8, first_byte);
                                     instr_tvalid <= '0';
 
-                                when x"EA" =>
+                                when x"9A" | x"EA" =>
                                     decode_chain(disp_low, disp_high, data_low, data_high, first_byte);
                                     instr_tvalid <= '0';
 
