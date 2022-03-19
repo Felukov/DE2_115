@@ -357,7 +357,10 @@ begin
     micro_cnt_next_proc : process (all) begin
         case (rr_tdata.op) is
             when LFP =>
-                micro_cnt_next <= 2;
+                case rr_tdata.code is
+                    when MISC_XLAT => micro_cnt_next <= 1;
+                    when others => micro_cnt_next <= 2;
+                end case;
 
             when SYS =>
                 case rr_tdata.code is
@@ -1697,7 +1700,7 @@ begin
                             micro_tdata.jump_cs_mem <= '0';
                             micro_tdata.jump_ip_mem <= '1';
 
-                        when 1 =>
+                        when others =>
                             micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
 
                             -- update jump cmd
@@ -1705,8 +1708,6 @@ begin
                             micro_tdata.jump_ip_mem <= '0';
                             micro_tdata.jump_cond <= j_always;
 
-                        when others =>
-                            null;
                     end case;
 
             end case;
@@ -1743,13 +1744,12 @@ begin
                     -- push IP
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => rr_tuser_buf(15 downto 0), w => rr_tdata_buf.w);
 
-                when 1 =>
+                when others =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
                     micro_tdata.jump_cond <= j_always;
                     micro_tdata.jump_imm <= '1';
                     micro_tdata.jump_cs <= rr_tdata_buf.data;
                     micro_tdata.jump_ip <= rr_tdata_buf.disp;
-                when others => null;
             end case;
         end procedure;
 
@@ -1784,8 +1784,7 @@ begin
 
             case micro_cnt is
                 when 2 => micro_tdata.cmd <= MICRO_NOP_OP;
-                when 1 => micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
-                when others => null;
+                when others => micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
             end case;
 
         end procedure;
@@ -1827,7 +1826,7 @@ begin
 
                     -- configure mem cmd
                     mem_read(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
-                when 1 =>
+                when others =>
                     if (rr_tdata_buf.dir = R2R) then
                         micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
                     else
@@ -1843,8 +1842,6 @@ begin
                         micro_tdata.jump_ip_mem <= '1';
                         micro_tdata.jump_cond <= j_always;
                     end if;
-                when others =>
-                    null;
 
             end case;
 
@@ -1891,14 +1888,13 @@ begin
                     -- upd jump_ip
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '1';
-                when 1 =>
+                when others =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
 
                     -- update jump cmd
                     micro_tdata.jump_cs_mem <= '1';
                     micro_tdata.jump_ip_mem <= '0';
                     micro_tdata.jump_cond <= j_always;
-                when others => null;
             end case;
         end procedure;
 
@@ -1963,7 +1959,7 @@ begin
                         dmask => "11",
                         upd_fl => '0');
 
-                when 1 =>
+                when others =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
 
                     -- update jump cmd
@@ -1971,8 +1967,6 @@ begin
                     micro_tdata.jump_ip_mem <= '1';
                     micro_tdata.jump_cond <= j_always;
 
-                when others =>
-                    null;
             end case;
         end procedure;
 
@@ -2011,7 +2005,7 @@ begin
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '1';
 
-                when 1 =>
+                when others =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
 
                     -- update jump cmd
@@ -2019,8 +2013,6 @@ begin
                     micro_tdata.jump_ip_mem <= '0';
                     micro_tdata.jump_cond <= j_always;
 
-                when others =>
-                    null;
             end case;
         end procedure;
 
@@ -2068,15 +2060,30 @@ begin
                     micro_tdata.jump_cs_mem <= '1';
                     micro_tdata.jump_ip_mem <= '0';
 
-                when 1 =>
+                when others =>
                     micro_tdata.cmd <= MICRO_UNLK_OP or MICRO_JMP_OP;
                     micro_tdata.jump_cond <= j_always;
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '0';
 
-                when others =>
-                    null;
             end case;
+        end procedure;
+
+        procedure do_xlat_0 is begin
+            micro_tdata.cmd <= MICRO_MEM_OP;
+            mem_read(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata_buf.w);
+        end procedure;
+
+        procedure do_xlat_1 is begin
+            micro_tdata.cmd <= MICRO_MRD_OP or MICRO_ALU_OP;
+
+            micro_tdata.alu_code <= ALU_OP_ADD;
+            micro_tdata.alu_wb <= '1';
+            micro_tdata.alu_upd_fl <= '0';
+            micro_tdata.alu_a_val <= x"0000";
+            micro_tdata.alu_b_mem <= '1';
+            micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
+            micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
         end procedure;
 
         procedure initialize_signals is begin
@@ -2197,6 +2204,7 @@ begin
                     when LFP =>
                         case rr_tdata.code is
                             when MISC_BOUND => do_misc_bound_0;
+                            when MISC_XLAT => do_xlat_0;
                             when others => do_lfp_cmd_0;
                         end case;
                     when STACKU =>
@@ -2242,6 +2250,7 @@ begin
                     when LFP =>
                         case rr_tdata_buf.code is
                             when MISC_BOUND => do_misc_bound_1;
+                            when MISC_XLAT => do_xlat_1;
                             when others => do_lfp_cmd_1;
                         end case;
                     when STACKU =>

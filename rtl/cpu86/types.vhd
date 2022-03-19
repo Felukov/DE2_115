@@ -13,7 +13,7 @@ package cpu86_types is
     attribute enum_encoding of reg_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1001 1010 1011 1100 1101";
 
     type ea_t is (
-        BX_SI_DISP, BX_DI_DISP, BP_SI_DISP, BP_DI_DISP, SI_DISP, DI_DISP, BP_DISP, BX_DISP, DIRECT
+        BX_SI_DISP, BX_DI_DISP, BP_SI_DISP, BP_DI_DISP, SI_DISP, DI_DISP, BP_DISP, BX_DISP, DIRECT, XLAT
     );
 
     type direction_t is (
@@ -81,6 +81,7 @@ package cpu86_types is
     constant LFP_LDS        : std_logic_vector (3 downto 0) := "0000";
     constant LFP_LES        : std_logic_vector (3 downto 0) := "0001";
     constant MISC_BOUND     : std_logic_vector (3 downto 0) := "0010";
+    constant MISC_XLAT      : std_logic_vector (3 downto 0) := "0011";
 
     constant MOVS_OP        : std_logic_vector (3 downto 0) := "0000";
     constant STOS_OP        : std_logic_vector (3 downto 0) := "0001";

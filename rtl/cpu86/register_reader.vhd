@@ -209,6 +209,7 @@ begin
             when BX_DI_DISP => ea_tdata <= std_logic_vector(unsigned(bx_s_tdata) + unsigned(di_s_tdata));
             when BP_SI_DISP => ea_tdata <= std_logic_vector(unsigned(bp_s_tdata) + unsigned(si_s_tdata));
             when BP_DI_DISP => ea_tdata <= std_logic_vector(unsigned(bp_s_tdata) + unsigned(di_s_tdata));
+            when XLAT => ea_tdata <= std_logic_vector(unsigned(bx_s_tdata) + unsigned(x"00" & ax_s_tdata(7 downto 0)));
             when SI_DISP => ea_tdata <= si_s_tdata;
             when DI_DISP => ea_tdata <= di_s_tdata;
             when BP_DISP => ea_tdata <= bp_s_tdata;
@@ -510,7 +511,6 @@ begin
                 rr_tdata.cx_tdata <= cx_s_tdata;
                 rr_tdata.dx_tdata <= dx_s_tdata;
                 rr_tdata.bp_tdata <= bp_s_tdata;
-                --rr_tdata.sp_tdata <= sp_s_tdata;
                 rr_tdata.di_tdata <= di_s_tdata;
                 rr_tdata.si_tdata <= si_s_tdata;
                 rr_tdata.fl_tdata <= flags_s_tdata;
