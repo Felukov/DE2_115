@@ -44,7 +44,7 @@ architecture rtl of decoder is
     );
 
     attribute enum_encoding : string;
-    attribute enum_encoding of byte_pos_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1001 1010 1011";
+    attribute enum_encoding of byte_pos_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1001 1010 1011 1100";
 
     type bytes_chain_t is array (natural range 0 to 5) of byte_pos_t;
 
@@ -874,9 +874,9 @@ begin
                 when x"D7" => set_op(LFP, MISC_XLAT,     '0', LOCK_AX,              WAIT_DS or WAIT_AX or WAIT_BX);
 
                 -- SYS
-                when x"CC" => set_op(SYS, SYS_INT3_OP,   '1', LOCK_SP,      WAIT_SS or WAIT_SP);
+                when x"CC" => set_op(SYS, SYS_INT_OP,    '1', LOCK_SP,      WAIT_SS or WAIT_SP);
                 when x"CD" => set_op(SYS, SYS_INT_OP,    '1', LOCK_SP,      WAIT_SS or WAIT_SP);
-                when x"CE" => set_op(SYS, SYS_INTO_OP,   '1', LOCK_SP,      WAIT_SS or WAIT_SP);
+                when x"CE" => set_op(SYS, SYS_INT_OP,    '1', LOCK_SP,      WAIT_SS or WAIT_SP);
                 when x"CF" => set_op(SYS, SYS_IRET_OP,   '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
                 when x"F4" => set_op(SYS, SYS_HLT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
 
@@ -2166,6 +2166,10 @@ begin
                                 instr_tdata.data <= x"FFFF";
                             when x"D0" | x"D1" =>
                                 instr_tdata.data <= x"0001";
+                            when x"CC" =>
+                                instr_tdata.data <= x"0003";
+                            when x"CE" =>
+                                instr_tdata.data <= x"0004";
                             when others =>
                                 null;
                         end case;

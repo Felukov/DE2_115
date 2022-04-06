@@ -841,7 +841,7 @@ begin
                     micro_tdata.mem_seg <= rr_tdata_buf.seg_val;
                     micro_tdata.mem_addr <= ea_val_plus_disp_p_2;
 
-                when 1 =>
+                when others =>
                     micro_tdata.cmd <= MICRO_ALU_OP or MICRO_MRD_OP;
                     if (rr_tdata_buf.code = LFP_LDS) then
                         micro_tdata.alu_dreg <= DS;
@@ -849,7 +849,7 @@ begin
                         micro_tdata.alu_dreg <= ES;
                     end if;
 
-                when others => null;
+                --when others => null;
             end case;
         end procedure;
 
@@ -877,10 +877,9 @@ begin
                 when 2 =>
                     micro_tdata.cmd <= MICRO_MEM_OP or MICRO_MRD_OP;
                     micro_tdata.mem_addr <= ea_val_plus_disp_p_2;
-                when 1 =>
+                when others =>
                     micro_tdata.cmd <= MICRO_BND_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
-
-                when others => null;
+                --when others => null;
             end case;
         end procedure;
 
@@ -964,15 +963,15 @@ begin
                 when 2 =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_MEM_OP;
                     -- update jump_cs
-                    micro_tdata.jump_cs_mem <= '1';
-                    micro_tdata.jump_ip_mem <= '0';
+                    micro_tdata.jump_cs_mem <= '0';
+                    micro_tdata.jump_ip_mem <= '1';
                     -- read IP interrupt handler
                     mem_read_word(seg => x"0000", addr => rr_tdata_buf.data(13 downto 0) & "10");
                 when 1 =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
                     -- upd jump_ip
-                    micro_tdata.jump_cs_mem <= '0';
-                    micro_tdata.jump_ip_mem <= '1';
+                    micro_tdata.jump_cs_mem <= '1';
+                    micro_tdata.jump_ip_mem <= '0';
 
                     -- jump
                     micro_tdata.jump_cond <= j_always;
@@ -1027,15 +1026,15 @@ begin
                 when 2 =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_MEM_OP;
                     -- update jump_cs
-                    micro_tdata.jump_cs_mem <= '1';
-                    micro_tdata.jump_ip_mem <= '0';
+                    micro_tdata.jump_cs_mem <= '0';
+                    micro_tdata.jump_ip_mem <= '1';
                     -- read IP interrupt handler
                     mem_read_word(seg => x"0000", addr => x"0002");
                 when 1 =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
                     -- upd jump_ip
-                    micro_tdata.jump_cs_mem <= '0';
-                    micro_tdata.jump_ip_mem <= '1';
+                    micro_tdata.jump_cs_mem <= '1';
+                    micro_tdata.jump_ip_mem <= '0';
 
                     -- jump
                     micro_tdata.jump_cond <= j_always;
@@ -1090,15 +1089,15 @@ begin
                 when 2 =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_MEM_OP;
                     -- update jump_cs
-                    micro_tdata.jump_cs_mem <= '1';
-                    micro_tdata.jump_ip_mem <= '0';
+                    micro_tdata.jump_cs_mem <= '0';
+                    micro_tdata.jump_ip_mem <= '1';
                     -- read IP interrupt handler
                     mem_read_word(seg => x"0000", addr => x"0016");
                 when 1 =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
                     -- upd jump_ip
-                    micro_tdata.jump_cs_mem <= '0';
-                    micro_tdata.jump_ip_mem <= '1';
+                    micro_tdata.jump_cs_mem <= '1';
+                    micro_tdata.jump_ip_mem <= '0';
 
                     -- jump
                     micro_tdata.jump_cond <= j_always;

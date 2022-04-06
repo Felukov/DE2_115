@@ -47,17 +47,35 @@ architecture rtl of dcache2 is
     signal dcache_tag           : std_logic_vector(19 downto CACHE_LINE_WIDTH-1);
     signal dcache_valid         : std_logic;
     signal d_data_q             : std_logic_vector(15 downto 0);
+
+    signal dcache_tvalid        : std_logic;
+    signal dcache_tready        : std_logic;
+    signal dcache_tcmd          : std_logic;
+    signal dcache_taddr         : std_logic_vector(19 downto 0);
+    signal dcache_twidth        : std_logic;
+    signal dcache_tdata         : std_logic_vector(15 downto 0);
+    signal dcache_thit          : std_logic;
+    signal dcache_tcache        : std_logic_vector(15 downto 0);
 begin
 
-    dcache_s_tready <= '1' when dcache_m_tvalid = '0' or (dcache_m_tvalid = '1' and dcache_m_tready = '1') else '0';
+    dcache_s_tready <= '1' when dcache_tvalid = '0' or (dcache_tvalid = '1' and dcache_tready = '1') else '0';
 
-    dcache_m_thit <= '1' when dcache_valid = '1' and dcache_tag = m_tag and dcache_m_taddr(0) = '0' else '0';
+    dcache_m_tvalid <= dcache_tvalid;
+    dcache_tready <= dcache_m_tready;
+    dcache_m_tcmd <= dcache_tcmd;
+    dcache_m_taddr <= dcache_taddr;
+    dcache_m_twidth <= dcache_twidth;
+    dcache_m_tdata <= dcache_tdata;
+    dcache_m_thit <= dcache_thit;
+    dcache_m_tcache <= dcache_tcache;
+
+    dcache_thit <= '1' when dcache_valid = '1' and dcache_tag = m_tag and dcache_taddr(0) = '0' else '0';
 
     s_index <= to_integer(unsigned(dcache_s_taddr(CACHE_LINE_WIDTH downto 1)));
     s_tag <= dcache_s_taddr(19 downto CACHE_LINE_WIDTH-1);
 
-    m_index <= to_integer(unsigned(dcache_m_taddr(CACHE_LINE_WIDTH downto 1)));
-    m_tag <= dcache_m_taddr(19 downto CACHE_LINE_WIDTH-1);
+    m_index <= to_integer(unsigned(dcache_taddr(CACHE_LINE_WIDTH downto 1)));
+    m_tag <= dcache_taddr(19 downto CACHE_LINE_WIDTH-1);
 
     d_data_q <= d_data(s_index);
 
@@ -91,13 +109,13 @@ begin
         if rising_edge(clk) then
 
             if resetn = '0' then
-                dcache_m_tvalid <= '0';
+                dcache_tvalid <= '0';
             else
 
                 if (dcache_s_tvalid = '1' and dcache_s_tready = '1') then
-                    dcache_m_tvalid <= '1';
-                elsif (dcache_m_tready = '1') then
-                    dcache_m_tvalid <= '0';
+                    dcache_tvalid <= '1';
+                elsif (dcache_tready = '1') then
+                    dcache_tvalid <= '0';
                 end if;
 
             end if;
@@ -108,11 +126,11 @@ begin
             end if;
 
             if (dcache_s_tvalid = '1' and dcache_s_tready = '1') then
-                dcache_m_tcmd <= dcache_s_tcmd;
-                dcache_m_taddr <= dcache_s_taddr;
-                dcache_m_twidth <= dcache_s_twidth;
-                dcache_m_tdata <= dcache_s_tdata;
-                dcache_m_tcache <= d_data_q;
+                dcache_tcmd <= dcache_s_tcmd;
+                dcache_taddr <= dcache_s_taddr;
+                dcache_twidth <= dcache_s_twidth;
+                dcache_tdata <= dcache_s_tdata;
+                dcache_tcache <= d_data_q;
             end if;
 
         end if;

@@ -80,31 +80,6 @@ architecture rtl of exec is
         );
     end component cpu_flags;
 
-    component cpu_reg_acc is
-        generic (
-            DATA_WIDTH              : integer := 16
-        );
-        port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
-
-            wr_s_tvalid             : in std_logic;
-            wr_s_tdata              : in std_logic_vector(DATA_WIDTH-1 downto 0);
-            wr_s_tmask              : in std_logic_vector(1 downto 0);
-
-            inc_s_tvalid            : in std_logic;
-            inc_s_tdata             : in std_logic_vector(15 downto 0);
-            inc_s_tkeep_lock        : in std_logic;
-
-            lock_s_tvalid           : in std_logic;
-            unlk_s_tvalid           : in std_logic;
-
-            reg_m_tvalid            : out std_logic;
-            reg_m_tdata             : out std_logic_vector(DATA_WIDTH-1 downto 0);
-            reg_m_tdata_next        : out std_logic_vector(DATA_WIDTH-1 downto 0)
-        );
-    end component cpu_reg_acc;
-
     component axis_fifo is
         generic (
             FIFO_DEPTH              : natural := 2**8;

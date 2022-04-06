@@ -162,31 +162,31 @@ begin
         fifo_m_tdata            => fifo_1_m_tdata
     );
 
-    lsu_rd_m_tvalid <= fifo_1_m_tvalid;
-    fifo_1_m_tready <= lsu_rd_m_tready;
-    lsu_rd_m_tdata <= fifo_1_m_tdata;
+    lsu_rd_m_tvalid  <= fifo_1_m_tvalid;
+    fifo_1_m_tready  <= lsu_rd_m_tready;
+    lsu_rd_m_tdata   <= fifo_1_m_tdata;
 
-    lsu_req_tvalid <= lsu_req_s_tvalid;
+    lsu_req_tvalid   <= lsu_req_s_tvalid;
     lsu_req_s_tready <= lsu_req_tready;
 
-    mem_req_m_tdata(31 downto 0) <= mem_req_tdata;
+    mem_req_m_tdata(31 downto 0)  <= mem_req_tdata;
     mem_req_m_tdata(56 downto 32) <= "0000000" & mem_req_taddr;
-    mem_req_m_tdata(57) <= mem_req_tcmd;
+    mem_req_m_tdata(57)           <= mem_req_tcmd;
     mem_req_m_tdata(61 downto 58) <= mem_req_tmask;
     mem_req_m_tdata(63 downto 62) <= "00";
 
-    add_s_tvalid <= '1' when lsu_req_s_tvalid = '1' and lsu_req_s_tready = '1' and lsu_req_s_tcmd = '0' else '0';
+    add_s_tvalid    <= '1' when lsu_req_s_tvalid = '1' and lsu_req_s_tready = '1' and lsu_req_s_tcmd = '0' else '0';
 
-    lsu_req_tready <= '1' when req_buf_tvalid = '0' and (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) and add_s_tready = '1' else '0';
-    req_buf_tready <= '1' when (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) else '0';
+    lsu_req_tready  <= '1' when req_buf_tvalid = '0' and (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) and add_s_tready = '1' else '0';
+    req_buf_tready  <= '1' when (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) else '0';
     fifo_0_m_tready <= mem_rd_s_tvalid;
 
     buffering_req_proc: process (clk) begin
         if rising_edge(clk) then
+            -- Resettable
             if resetn = '0' then
                 req_buf_tvalid <= '0';
             else
-
                 if (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
                     if (lsu_req_s_taddr(1 downto 0) = "11" and lsu_req_s_twidth = '1') then
                         req_buf_tvalid <= '1';
@@ -196,9 +196,8 @@ begin
                 elsif req_buf_tready = '1' then
                     req_buf_tvalid <= '0';
                 end if;
-
             end if;
-
+            -- Without reset
             if (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
                 req_buf_tcmd <= lsu_req_s_tcmd;
                 req_buf_twidth <= lsu_req_s_twidth;
@@ -212,11 +211,11 @@ begin
 
     forming_mem_req_proc: process (clk) begin
         if rising_edge(clk) then
+            -- Resettable
             if resetn = '0' then
                 mem_req_m_tvalid <= '0';
                 mem_req_tlast <= '0';
             else
-
                 if (req_buf_tvalid = '1' and req_buf_tready = '1') then
                     mem_req_m_tvalid <= '1';
                 elsif (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
@@ -238,9 +237,8 @@ begin
                         mem_req_tlast <= '1';
                     end if;
                 end if;
-
             end if;
-
+            -- Without reset
             if (req_buf_tvalid = '1' and req_buf_tready = '1') then
                 mem_req_tcmd <= req_buf_tcmd;
                 mem_req_taddr <= req_buf_taddr;
@@ -287,14 +285,12 @@ begin
                 end if;
 
             end if;
-
         end if;
-
     end process;
 
     loading_wait_response_fifo_proc: process (clk) begin
         if rising_edge(clk) then
-
+            -- Resettable
             if resetn = '0' then
                 fifo_0_s_tvalid <= '0';
             else
@@ -316,27 +312,25 @@ begin
                 end if;
 
             end if;
-
+            -- Without reset
             if (req_buf_tvalid = '1' and req_buf_tready = '1') then
-                if (req_buf_tcmd = '0') then
+                --if (req_buf_tcmd = '0') then
                     fifo_0_s_tdata <= req_buf_tupd_addr & '1' & req_buf_twidth & req_buf_taddr(1 downto 0);
-                end if;
+                --end if;
             elsif (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
-                if (lsu_req_s_tcmd = '0') then
+                --if (lsu_req_s_tcmd = '0') then
                     fifo_0_s_tdata <= add_s_taddr & '0' & lsu_req_s_twidth & lsu_req_s_taddr(1 downto 0);
-                end if;
+                --end if;
             end if;
-
         end if;
     end process;
 
     parsing_results_to_fifo_proc: process (clk) begin
         if rising_edge(clk) then
-
+            -- Resettable
             if resetn = '0' then
                 upd_s_tvalid <= '0';
             else
-
                 if (mem_rd_s_tvalid = '1') then
                     if (fifo_0_m_tdata(3) = '0' and (fifo_0_m_tdata(2) = '0' or (fifo_0_m_tdata(2) = '1' and fifo_0_m_tdata(1 downto 0) /= "11"))) then
                         upd_s_tvalid <= '1';
@@ -348,9 +342,8 @@ begin
                 else
                     upd_s_tvalid <= '0';
                 end if;
-
             end if;
-
+            -- Without reset
             if (mem_rd_s_tvalid = '1') then
                 if (fifo_0_m_tdata(3) = '0') then
                     if (fifo_0_m_tdata(2) = '0') then
@@ -378,9 +371,7 @@ begin
                 end if;
 
                 upd_s_taddr <= fifo_0_m_tdata(7 downto 4);
-
             end if;
-
         end if;
     end process;
 

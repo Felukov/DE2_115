@@ -85,7 +85,6 @@ begin
                     wr_data_tready <= '0';
                 end if;
             end if;
-
         end if;
     end process;
 
@@ -113,11 +112,11 @@ begin
 
     write_proc: process (clk) begin
         if rising_edge(clk) then
+            -- Resettable
             if resetn = '0' then
                 wr_addr <= 0;
                 fifo_ram_valid <= (others => '0');
             else
-
                 for i in 0 to FIFO_DEPTH-1 loop
 
                     if (wr_data_tvalid = '1' and wr_data_tready = '1' and i = wr_addr) then
@@ -129,9 +128,8 @@ begin
                 end loop;
 
                 wr_addr <= wr_addr_next;
-
             end if;
-
+            -- Without reset
             if wr_data_tvalid = '1' and wr_data_tready = '1' then
                 fifo_ram_data(wr_addr) <= wr_data_tdata;
             end if;
@@ -164,22 +162,20 @@ begin
     register_output_gen : if (REGISTER_OUTPUT = '1') generate
         register_output_proc: process (clk) begin
             if rising_edge(clk) then
+                -- Resettable
                 if resetn = '0' then
                     out_tvalid <= '0';
                 else
-
                     if data_tvalid = '1' and data_tready = '1' and q_thit = '1' then
                         out_tvalid <= '1';
                     elsif out_tready = '1' then
                         out_tvalid <= '0';
                     end if;
-
                 end if;
-
+                -- Without reset
                 if data_tready = '1' then
                     out_tdata <= q_tdata(FIFO_WIDTH-1 downto 0);
                 end if;
-
             end if;
         end process;
     end generate;

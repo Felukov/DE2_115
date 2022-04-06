@@ -47,9 +47,10 @@ begin
     u8_m_tvalid <= u8_tvalid;
     u8_tready <= u8_m_tready;
     u8_m_tdata <= u8_tdata;
+    u8_m_tuser <= u8_tuser;
 
-    u32_tready <= '1' when u32_buf_tvalid = '0' or (u32_buf_tvalid = '1' and u32_buf_tready = '1' and hs_cnt = 3);
-    u32_buf_tready <= '1' when u8_tvalid = '0' or (u8_tvalid = '1' and u8_tready = '1');
+    u32_tready <= '1' when u32_buf_tvalid = '0' or (u32_buf_tvalid = '1' and u32_buf_tready = '1' and hs_cnt = 3) else '0';
+    u32_buf_tready <= '1' when u8_tvalid = '0' or (u8_tvalid = '1' and u8_tready = '1') else '0';
 
     process (clk) begin
         if rising_edge(clk) then
@@ -65,7 +66,7 @@ begin
                 end if;
 
                 if (u32_tvalid = '1' and u32_tready = '1') then
-                    hs_cnt <= to_integer(unsigned(u32_s_tuser));
+                    hs_cnt <= to_integer(unsigned(u32_s_tuser(1 downto 0)));
                 elsif (u32_buf_tvalid = '1' and u32_buf_tready = '1') then
                     hs_cnt <= (hs_cnt + 1) mod 4;
                 end if;

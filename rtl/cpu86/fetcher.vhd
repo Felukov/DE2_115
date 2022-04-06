@@ -146,7 +146,7 @@ begin
     mem_inc_hs <= '1' when (cmd_tvalid = '1' and cmd_tready = '1') and not (rd_tvalid = '1' and skip_hs_cnt = 0) else '0';
     mem_dec_hs <= '1' when not (cmd_tvalid = '1' and cmd_tready = '1') and (rd_tvalid = '1' and skip_hs_cnt = 0) else '0';
 
-    cmd_tdata <= std_logic_vector(unsigned(cs_tdata & x"0") + unsigned(ip_tdata(15 downto 2) & x"0"));
+    cmd_tdata <= std_logic_vector(unsigned(cs_tdata & x"0") + unsigned(x"0" & ip_tdata(15 downto 2)));
 
     process (clk) begin
         if rising_edge(clk) then
