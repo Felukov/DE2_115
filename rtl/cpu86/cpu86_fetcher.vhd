@@ -1,9 +1,35 @@
+
+-- Copyright (C) 2022, Konstantin Felukov
+-- All rights reserved.
+--
+-- Redistribution and use in source and binary forms, with or without
+-- modification, are permitted provided that the following conditions are met:
+--
+-- * Redistributions of source code must retain the above copyright notice, this
+--   list of conditions and the following disclaimer.
+--
+-- * Redistributions in binary form must reproduce the above copyright notice,
+--   this list of conditions and the following disclaimer in the documentation
+--   and/or other materials provided with the distribution.
+--
+-- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+-- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+-- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+-- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+-- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+-- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+-- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
-entity fetcher is
+entity cpu86_fetcher is
     port (
         clk                 : in std_logic;
         resetn              : in std_logic;
@@ -23,9 +49,9 @@ entity fetcher is
         buf_m_tdata         : out std_logic_vector(31 downto 0);
         buf_m_tuser         : out std_logic_vector(31 downto 0)
     );
-end entity fetcher;
+end entity cpu86_fetcher;
 
-architecture rtl of fetcher is
+architecture rtl of cpu86_fetcher is
 
     component axis_fifo is
         generic (
@@ -87,7 +113,7 @@ architecture rtl of fetcher is
     signal fifo_1_m_tdata   : std_logic_vector(63 downto 0);
 
 begin
-
+    --
     req_tvalid <= req_s_tvalid;
     req_tdata <= req_s_tdata;
 
@@ -98,6 +124,7 @@ begin
     cmd_tready <= cmd_m_tready;
     cmd_m_tdata <= cmd_tdata;
 
+    -- module axis_fifo instantiation
     axis_fifo_inst_0 : axis_fifo generic map (
         FIFO_DEPTH      => 16,
         FIFO_WIDTH      => 32
@@ -112,6 +139,7 @@ begin
         fifo_m_tdata    => fifo_0_m_tdata
     );
 
+    -- module axis_fifo instantiation
     axis_fifo_inst_1 : axis_fifo generic map (
         FIFO_DEPTH      => 32,
         FIFO_WIDTH      => 64
@@ -126,35 +154,37 @@ begin
         fifo_m_tdata    => fifo_1_m_tdata
     );
 
-    fifo_resetn <= '0' when resetn = '0' or req_tvalid = '1' else '1';
+    -- assigns
+    fifo_resetn     <= '0' when resetn = '0' or req_tvalid = '1' else '1';
 
     fifo_0_s_tvalid <= '1' when cmd_tvalid = '1' and cmd_tready = '1' else '0';
-    fifo_0_s_tdata <= cs_tdata & ip_tdata;
+    fifo_0_s_tdata  <= cs_tdata & ip_tdata;
     fifo_0_m_tready <= '1' when rd_tvalid = '1' and skip_hs_cnt = 0 else '0';
 
     fifo_1_s_tvalid <= '1' when rd_tvalid = '1' and skip_hs_cnt = 0 else '0';
-    fifo_1_s_tdata <= fifo_0_m_tdata & rd_tdata;
+    fifo_1_s_tdata  <= fifo_0_m_tdata & rd_tdata;
 
-    buf_m_tvalid <= fifo_1_m_tvalid;
+    buf_m_tvalid    <= fifo_1_m_tvalid;
     fifo_1_m_tready <= buf_m_tready;
-    buf_m_tdata <= fifo_1_m_tdata(31 downto 0);
-    buf_m_tuser <= fifo_1_m_tdata(63 downto 32);
+    buf_m_tdata     <= fifo_1_m_tdata(31 downto 0);
+    buf_m_tuser     <= fifo_1_m_tdata(63 downto 32);
 
-    max_inc_hs <= '1' when (cmd_tvalid = '1' and cmd_tready = '1') and not (fifo_1_m_tvalid = '1' and fifo_1_m_tready = '1') else '0';
-    max_dec_hs <= '1' when not (cmd_tvalid = '1' and cmd_tready = '1') and (fifo_1_m_tvalid = '1' and fifo_1_m_tready = '1') else '0';
+    max_inc_hs      <= '1' when (cmd_tvalid = '1' and cmd_tready = '1') else '0';
+    max_dec_hs      <= '1' when (fifo_1_m_tvalid = '1' and fifo_1_m_tready = '1') else '0';
 
-    mem_inc_hs <= '1' when (cmd_tvalid = '1' and cmd_tready = '1') and not (rd_tvalid = '1' and skip_hs_cnt = 0) else '0';
-    mem_dec_hs <= '1' when not (cmd_tvalid = '1' and cmd_tready = '1') and (rd_tvalid = '1' and skip_hs_cnt = 0) else '0';
+    mem_inc_hs      <= '1' when (cmd_tvalid = '1' and cmd_tready = '1') else '0';
+    mem_dec_hs      <= '1' when (rd_tvalid = '1') else '0';
 
-    cmd_tdata <= std_logic_vector(unsigned(cs_tdata & x"0") + unsigned(x"0" & ip_tdata(15 downto 2)));
+    cmd_tdata       <= std_logic_vector(unsigned(cs_tdata & x"0") + unsigned(x"0" & ip_tdata(15 downto 2)));
 
+    -- requesting commands from memory and requests housekeeping
     process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
+                cmd_tvalid <= '0';
                 max_hs_cnt <= 0;
                 mem_hs_cnt <= 0;
                 skip_hs_cnt <= 0;
-                cmd_tvalid <= '0';
             else
 
                 if (max_hs_cnt < 16) then
@@ -163,26 +193,24 @@ begin
                     cmd_tvalid <= '0';
                 end if;
 
-                if (req_tvalid = '1') then
-                    mem_hs_cnt <= 0;
-                elsif (mem_inc_hs = '1') then
+                if (mem_inc_hs = '1' and mem_dec_hs = '0') then
                     mem_hs_cnt <= (mem_hs_cnt + 1) mod 32;
-                elsif (mem_dec_hs = '1') then
+                elsif (mem_inc_hs = '0' and mem_dec_hs = '1') then
                     mem_hs_cnt <= (mem_hs_cnt - 1) mod 32;
                 end if;
 
                 if (req_tvalid = '1') then
                     max_hs_cnt <= 0;
-                elsif (max_inc_hs = '1') then
+                elsif (max_inc_hs = '1' and max_dec_hs = '0') then
                     max_hs_cnt <= (max_hs_cnt + 1) mod 32;
-                elsif (max_dec_hs = '1') then
+                elsif (max_inc_hs = '0' and max_dec_hs = '1') then
                     max_hs_cnt <= (max_hs_cnt - 1) mod 32;
                 end if;
 
                 if (req_tvalid = '1') then
-                    if (mem_inc_hs = '1') then
+                    if (mem_inc_hs = '1' and mem_dec_hs = '0') then
                         skip_hs_cnt <= (mem_hs_cnt + 1) mod 32;
-                    elsif (mem_dec_hs = '1') then
+                    elsif (mem_inc_hs = '0' and mem_dec_hs = '1') then
                         skip_hs_cnt <= (mem_hs_cnt - 1) mod 32;
                     else
                         skip_hs_cnt <= mem_hs_cnt;

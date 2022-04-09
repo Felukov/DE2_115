@@ -1,3 +1,29 @@
+
+-- Copyright (C) 2022, Konstantin Felukov
+-- All rights reserved.
+--
+-- Redistribution and use in source and binary forms, with or without
+-- modification, are permitted provided that the following conditions are met:
+--
+-- * Redistributions of source code must retain the above copyright notice, this
+--   list of conditions and the following disclaimer.
+--
+-- * Redistributions in binary form must reproduce the above copyright notice,
+--   this list of conditions and the following disclaimer in the documentation
+--   and/or other materials provided with the distribution.
+--
+-- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+-- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+-- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+-- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+-- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+-- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+-- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -58,33 +84,35 @@ architecture rtl of cpu86_dcache is
     signal dcache_tcache        : std_logic_vector(15 downto 0);
 begin
 
+    -- assigns
     dcache_s_tready <= '1' when dcache_tvalid = '0' or (dcache_tvalid = '1' and dcache_tready = '1') else '0';
 
     dcache_m_tvalid <= dcache_tvalid;
-    dcache_tready <= dcache_m_tready;
-    dcache_m_tcmd <= dcache_tcmd;
-    dcache_m_taddr <= dcache_taddr;
+    dcache_tready   <= dcache_m_tready;
+    dcache_m_tcmd   <= dcache_tcmd;
+    dcache_m_taddr  <= dcache_taddr;
     dcache_m_twidth <= dcache_twidth;
-    dcache_m_tdata <= dcache_tdata;
-    dcache_m_thit <= dcache_thit;
+    dcache_m_tdata  <= dcache_tdata;
+    dcache_m_thit   <= dcache_thit;
     dcache_m_tcache <= dcache_tcache;
 
-    dcache_thit <= '1' when dcache_valid = '1' and dcache_tag = m_tag and dcache_taddr(0) = '0' else '0';
+    dcache_thit     <= '1' when dcache_valid = '1' and dcache_tag = m_tag and dcache_taddr(0) = '0' else '0';
 
-    s_index <= to_integer(unsigned(dcache_s_taddr(CACHE_LINE_WIDTH downto 1)));
-    s_tag <= dcache_s_taddr(19 downto CACHE_LINE_WIDTH-1);
+    s_index         <= to_integer(unsigned(dcache_s_taddr(CACHE_LINE_WIDTH downto 1)));
+    s_tag           <= dcache_s_taddr(19 downto CACHE_LINE_WIDTH-1);
 
-    m_index <= to_integer(unsigned(dcache_taddr(CACHE_LINE_WIDTH downto 1)));
-    m_tag <= dcache_taddr(19 downto CACHE_LINE_WIDTH-1);
+    m_index         <= to_integer(unsigned(dcache_taddr(CACHE_LINE_WIDTH downto 1)));
+    m_tag           <= dcache_taddr(19 downto CACHE_LINE_WIDTH-1);
 
-    d_data_q <= d_data(s_index);
+    d_data_q        <= d_data(s_index);
 
+    -- write cache
     write_cache_proc: process (clk) begin
         if rising_edge(clk) then
+            -- resettable
             if resetn = '0' then
                 d_valid <= (others => '0');
             else
-
                 if (dcache_s_tvalid = '1' and dcache_s_tready = '1' and dcache_s_tcmd = '1') then
                     if (dcache_s_twidth = '1' and dcache_s_taddr(0) = '0') then
                         d_valid(s_index) <= '1';
@@ -92,34 +120,29 @@ begin
                         d_valid(s_index) <= '0';
                     end if;
                 end if;
-
             end if;
-
+            -- without reset
             if (dcache_s_tvalid = '1' and dcache_s_tready = '1' and dcache_s_tcmd = '1' and dcache_s_twidth = '1' and dcache_s_taddr(0) = '0') then
-
                 d_tags(s_index) <= s_tag;
                 d_data(s_index) <= dcache_s_tdata;
-
             end if;
-
         end if;
     end process;
 
+    -- read from cache
     redirect_request_proc: process (clk) begin
         if rising_edge(clk) then
-
+            -- resettable
             if resetn = '0' then
                 dcache_tvalid <= '0';
             else
-
                 if (dcache_s_tvalid = '1' and dcache_s_tready = '1') then
                     dcache_tvalid <= '1';
                 elsif (dcache_tready = '1') then
                     dcache_tvalid <= '0';
                 end if;
-
             end if;
-
+            -- without reset
             if (dcache_s_tvalid = '1' and dcache_s_tready = '1') then
                 dcache_tag <= d_tags(s_index);
                 dcache_valid <= d_valid(s_index);
@@ -132,7 +155,6 @@ begin
                 dcache_tdata <= dcache_s_tdata;
                 dcache_tcache <= d_data_q;
             end if;
-
         end if;
     end process;
 
