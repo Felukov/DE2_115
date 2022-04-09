@@ -1,10 +1,36 @@
+
+-- Copyright (C) 2022, Konstantin Felukov
+-- All rights reserved.
+--
+-- Redistribution and use in source and binary forms, with or without
+-- modification, are permitted provided that the following conditions are met:
+--
+-- * Redistributions of source code must retain the above copyright notice, this
+--   list of conditions and the following disclaimer.
+--
+-- * Redistributions in binary form must reproduce the above copyright notice,
+--   this list of conditions and the following disclaimer in the documentation
+--   and/or other materials provided with the distribution.
+--
+-- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+-- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+-- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+-- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+-- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+-- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+-- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 use work.cpu86_types.all;
 
-entity exec is
+entity cpu86_exec is
     port (
         clk                         : in std_logic;
         resetn                      : in std_logic;
@@ -39,9 +65,9 @@ entity exec is
         dbg_m_tvalid                : out std_logic;
         dbg_m_tdata                 : out std_logic_vector(14*16-1 downto 0)
     );
-end entity exec;
+end entity cpu86_exec;
 
-architecture rtl of exec is
+architecture rtl of cpu86_exec is
 
     component cpu_reg is
         generic (
@@ -348,23 +374,6 @@ architecture rtl of exec is
             lsu_rd_m_tdata          : out std_logic_vector(15 downto 0)
         );
     end component lsu;
-
-    component dcache is
-        port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
-
-            lsu_req_s_tvalid        : in std_logic;
-            lsu_req_s_tready        : in std_logic;
-            lsu_req_s_tcmd          : in std_logic;
-            lsu_req_s_taddr         : in std_logic_vector(19 downto 0);
-            lsu_req_s_twidth        : in std_logic;
-            lsu_req_s_tdata         : in std_logic_vector(15 downto 0);
-
-            dcache_m_tvalid         : out std_logic;
-            dcache_m_tdata          : out std_logic_vector(15 downto 0)
-        );
-    end component dcache;
 
     component cpu86_dcache is
         port (

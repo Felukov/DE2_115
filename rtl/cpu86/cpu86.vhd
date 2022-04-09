@@ -23,6 +23,7 @@
 -- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -50,15 +51,15 @@ entity cpu86 is
         io_rd_s_tready                  : out std_logic;
         io_rd_s_tdata                   : in std_logic_vector(15 downto 0);
 
-        interrupt_valid                 : out std_logic;
-        interrupt_data                  : out std_logic_vector(7 downto 0);
-        interrupt_ack                   : in std_logic
+        interrupt_valid                 : in std_logic;
+        interrupt_data                  : in std_logic_vector(7 downto 0);
+        interrupt_ack                   : out std_logic
     );
 end entity;
 
 architecture rtl of cpu86 is
 
-    component fetcher is
+    component cpu86_fetcher is
         port (
             clk                         : in std_logic;
             resetn                      : in std_logic;
@@ -78,9 +79,9 @@ architecture rtl of cpu86 is
             buf_m_tdata                 : out std_logic_vector(31 downto 0);
             buf_m_tuser                 : out std_logic_vector(31 downto 0)
         );
-    end component fetcher;
+    end component cpu86_fetcher;
 
-    component fetcher_buf is
+    component cpu86_fetcher_buf is
         port (
             clk                         : in std_logic;
             resetn                      : in std_logic;
@@ -95,9 +96,9 @@ architecture rtl of cpu86 is
             u8_m_tdata                  : out std_logic_vector(7 downto 0);
             u8_m_tuser                  : out std_logic_vector(31 downto 0)
         );
-    end component fetcher_buf;
+    end component cpu86_fetcher_buf;
 
-    component decoder is
+    component cpu86_decoder is
         port (
             clk                         : in std_logic;
             resetn                      : in std_logic;
@@ -112,9 +113,9 @@ architecture rtl of cpu86 is
             instr_m_tdata               : out decoded_instr_t;
             instr_m_tuser               : out user_t
         );
-    end component;
+    end component cpu86_decoder;
 
-    component exec is
+    component cpu86_exec is
         port (
             clk                         : in std_logic;
             resetn                      : in std_logic;
@@ -142,11 +143,15 @@ architecture rtl of cpu86 is
             io_rd_s_tready              : out std_logic;
             io_rd_s_tdata               : in std_logic_vector(15 downto 0);
 
+            interrupt_valid             : in std_logic;
+            interrupt_data              : in std_logic_vector(7 downto 0);
+            interrupt_ack               : out std_logic;
+
             dbg_m_tvalid                : out std_logic;
             dbg_m_tdata                 : out std_logic_vector(14*16-1 downto 0)
 
         );
-    end component exec;
+    end component cpu86_exec;
 
     component cpu86_mem_interconnect is
         port (
@@ -212,6 +217,7 @@ architecture rtl of cpu86 is
 
 begin
 
+    -- module cpu86_mem_interconnect instantiation
     cpu86_mem_interconnect_inst : cpu86_mem_interconnect port map(
         clk                     => clk,
         resetn                  => resetn,
@@ -238,7 +244,8 @@ begin
         exec_mem_res_tdata      => exec_mem_res_tdata
     );
 
-    fetcher_inst : fetcher port map(
+    -- module cpu86_fetcher instantiation
+    cpu86_fetcher_inst : cpu86_fetcher port map(
         clk                     => clk,
         resetn                  => resetn,
 
@@ -258,7 +265,8 @@ begin
         buf_m_tuser             => u32_tuser
     );
 
-    fetcher_buf_inst : fetcher_buf port map(
+    -- module cpu86_fetcher_buf instantiation
+    cpu86_fetcher_buf_inst : cpu86_fetcher_buf port map(
         clk                     => clk,
         resetn                  => front_resetn,
 
@@ -273,7 +281,8 @@ begin
         u8_m_tuser              => u8_tuser
     );
 
-    decoder_inst : decoder port map (
+    -- module cpu86_decoder instantiation
+    cpu86_decoder_inst : cpu86_decoder port map (
         clk                     => clk,
         resetn                  => front_resetn,
 
@@ -288,7 +297,8 @@ begin
         instr_m_tuser           => instr_tuser
     );
 
-    exec_inst : exec port map (
+    -- module cpu86_exec instantiation
+    cpu86_exec_inst : cpu86_exec port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -315,6 +325,10 @@ begin
         io_rd_s_tready          => io_rd_s_tready,
         io_rd_s_tdata           => io_rd_s_tdata,
 
+        interrupt_valid         => '0',
+        interrupt_data          => (others => '0'),
+        interrupt_ack           => open,
+
         dbg_m_tvalid            => open,
         dbg_m_tdata             => open
 
@@ -322,5 +336,6 @@ begin
 
     -- Assigns
     front_resetn <= '0' when resetn = '0' or jump_req_tvalid = '1' else '1';
+    interrupt_ack <= '0';
 
 end architecture;
