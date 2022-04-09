@@ -32,6 +32,10 @@ entity exec is
         io_rd_s_tready              : out std_logic;
         io_rd_s_tdata               : in std_logic_vector(15 downto 0);
 
+        interrupt_valid             : in std_logic;
+        interrupt_data              : in std_logic_vector(7 downto 0);
+        interrupt_ack               : out std_logic;
+
         dbg_m_tvalid                : out std_logic;
         dbg_m_tdata                 : out std_logic_vector(14*16-1 downto 0)
     );
@@ -195,11 +199,11 @@ architecture rtl of exec is
 
             div_intr_s_tvalid       : in std_logic;
             div_intr_s_tready       : out std_logic;
-            div_intr_s_tdata        : in div_intr_t;
+            div_intr_s_tdata        : in intr_t;
 
             bnd_intr_s_tvalid       : in std_logic;
             bnd_intr_s_tready       : out std_logic;
-            bnd_intr_s_tdata        : in div_intr_t;
+            bnd_intr_s_tdata        : in intr_t;
 
             micro_m_tvalid          : out std_logic;
             micro_m_tready          : in std_logic;
@@ -310,10 +314,10 @@ architecture rtl of exec is
             dbg_m_tdata             : out std_logic_vector(31 downto 0);
 
             div_intr_m_tvalid       : out std_logic;
-            div_intr_m_tdata        : out div_intr_t;
+            div_intr_m_tdata        : out intr_t;
 
             bnd_intr_m_tvalid       : out std_logic;
-            bnd_intr_m_tdata        : out div_intr_t
+            bnd_intr_m_tdata        : out intr_t
         );
     end component mexec;
 
@@ -362,7 +366,7 @@ architecture rtl of exec is
         );
     end component dcache;
 
-    component dcache2 is
+    component cpu86_dcache is
         port (
             clk                     : in std_logic;
             resetn                  : in std_logic;
@@ -382,7 +386,7 @@ architecture rtl of exec is
             dcache_m_thit           : out std_logic;
             dcache_m_tcache         : out std_logic_vector(15 downto 0)
         );
-    end component dcache2;
+    end component cpu86_dcache;
 
     signal exec_resetn              : std_logic;
 
@@ -573,19 +577,25 @@ architecture rtl of exec is
 
     signal div_intr_s_tvalid        : std_logic;
     signal div_intr_s_tready        : std_logic;
-    signal div_intr_s_tdata         : div_intr_t;
+    signal div_intr_s_tdata         : intr_t;
 
     signal div_intr_m_tvalid        : std_logic;
     signal div_intr_m_tready        : std_logic;
-    signal div_intr_m_tdata         : div_intr_t;
+    signal div_intr_m_tdata         : intr_t;
+
+    signal ext_intr_s_tready        : std_logic;
+    signal ext_intr_s_tdata         : std_logic_vector(3 downto 0);
+    signal ext_intr_m_tvalid        : std_logic;
+    signal ext_intr_m_tready        : std_logic;
+    signal ext_intr_m_tdata         : std_logic_vector(3 downto 0);
 
     signal bnd_intr_s_tvalid        : std_logic;
     signal bnd_intr_s_tready        : std_logic;
-    signal bnd_intr_s_tdata         : div_intr_t;
+    signal bnd_intr_s_tdata         : intr_t;
 
     signal bnd_intr_m_tvalid        : std_logic;
     signal bnd_intr_m_tready        : std_logic;
-    signal bnd_intr_m_tdata         : div_intr_t;
+    signal bnd_intr_m_tdata         : intr_t;
 
 begin
 
@@ -853,6 +863,20 @@ begin
         out_m_tdata             => div_intr_m_tdata
     );
 
+    -- external_interrupt_reg_inst : axis_reg generic map (
+    --     DATA_WIDTH              => 8
+    -- ) port map (
+    --     clk                     => clk,
+    --     resetn                  => resetn,
+
+    --     in_s_tvalid             => interrupt_valid,
+    --     in_s_tready             => ext_intr_s_tready,
+    --     in_s_tdata              => interrupt_data,
+
+    --     out_m_tvalid            => ext_intr_m_tvalid,
+    --     out_m_tready            => ext_intr_m_tready,
+    --     out_m_tdata             => ext_intr_m_tdata
+    -- );
 
     bnd_interrupt_reg_inst : axis_reg generic map (
         DATA_WIDTH              => bnd_intr_s_tdata'length
@@ -1105,7 +1129,7 @@ begin
 
     );
 
-    dcache_inst : dcache2 port map (
+    dcache_inst : cpu86_dcache port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -1186,6 +1210,8 @@ begin
 
     req_m_tvalid <= jump_tvalid;
     req_m_tdata <= jump_tdata;
+
+    interrupt_ack <= '1' when interrupt_valid = '1' and ext_intr_s_tready = '1' else '0';
 
     --cs, ip, ds, es, ss, ax, bx, dx, cx, bp, di, si, sp, Flags8
     dbg_m_tvalid <= mexec_dbg_tvalid;

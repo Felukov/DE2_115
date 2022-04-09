@@ -4,7 +4,7 @@ use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 use work.cpu86_types.all;
 
-entity dcache2 is
+entity cpu86_dcache is
     port (
         clk                     : in std_logic;
         resetn                  : in std_logic;
@@ -25,9 +25,9 @@ entity dcache2 is
         dcache_m_thit           : out std_logic;
         dcache_m_tcache         : out std_logic_vector(15 downto 0)
     );
-end entity dcache2;
+end entity cpu86_dcache;
 
-architecture rtl of dcache2 is
+architecture rtl of cpu86_dcache is
 
     constant CACHE_LINE_SIZE : natural := 512;
     constant CACHE_LINE_WIDTH : natural := 9;
