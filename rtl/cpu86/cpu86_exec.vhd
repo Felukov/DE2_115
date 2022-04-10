@@ -136,6 +136,10 @@ architecture rtl of cpu86_exec is
             instr_s_tdata           : in decoded_instr_t;
             instr_s_tuser           : in user_t;
 
+            ext_intr_s_tvalid       : in std_logic;
+            ext_intr_s_tready       : out std_logic;
+            ext_intr_s_tdata        : in std_logic_vector(7 downto 0);
+
             ds_s_tvalid             : in std_logic;
             ds_s_tdata              : in std_logic_vector(15 downto 0);
             ds_m_lock_tvalid        : out std_logic;
@@ -937,6 +941,10 @@ begin
         instr_s_tdata           => instr_m_tdata,
         instr_s_tuser           => instr_m_tuser,
 
+        ext_intr_s_tvalid       => ext_intr_m_tvalid,
+        ext_intr_s_tready       => open,
+        ext_intr_s_tdata        => ext_intr_m_tdata,
+
         ds_s_tvalid             => ds_tvalid,
         ds_s_tdata              => ds_tdata,
         ds_m_lock_tvalid        => ds_lock_tvalid,
@@ -1046,7 +1054,7 @@ begin
 
         ext_intr_s_tvalid       => ext_intr_m_tvalid,
         ext_intr_s_tready       => ext_intr_m_tready,
-        ext_intr_s_tdata        => ext_intr_m_tdata,
+        ext_intr_s_tdata        => (others => '0') ,
 
         jmp_lock_m_lock_tvalid  => jmp_lock_lock_tvalid
     );

@@ -160,7 +160,7 @@ begin
     micro_tready <= micro_m_tready;
     micro_m_tdata <= micro_tdata;
 
-    rr_tready <= '1' when div_intr_s_tvalid = '0' and bnd_intr_s_tvalid = '0' and ext_intr_s_tvalid = '0' and
+    rr_tready <= '1' when div_intr_s_tvalid = '0' and bnd_intr_s_tvalid = '0' and
         jmp_lock_s_tvalid = '1' and halt_mode = '0' and
         (micro_tvalid = '0' or (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
@@ -170,9 +170,6 @@ begin
     bnd_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and rr_tvalid = '1' and halt_mode = '0' and (micro_tvalid = '0' or
         (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
-    ext_intr_s_tready <= '1' when div_intr_s_tvalid = '0' and bnd_intr_s_tvalid = '0' and rr_tvalid = '1' and
-        jmp_lock_s_tvalid = '1' and halt_mode = '0' and
-        (micro_tvalid = '0' or (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
         ((rr_tdata.op = LOOPU) or
@@ -184,7 +181,7 @@ begin
          (rr_tdata.op = DBG) or
          (rr_tdata.op = IO) or
          (rr_tdata.op = LFP and rr_tdata.code = MISC_BOUND) or
-         (rr_tdata.op = SYS and (rr_tdata.code = SYS_INT_OP))) else '0';
+         (rr_tdata.op = SYS and (rr_tdata.code = SYS_INT_INT_OP or rr_tdata.code = SYS_EXT_INT_OP))) else '0';
 
     ea_val_plus_disp_next <= std_logic_vector(unsigned(rr_tdata.ea_val) + unsigned(rr_tdata.disp));
     ea_val_plus_disp_p_2 <= std_logic_vector(unsigned(ea_val_plus_disp) + to_unsigned(2, 16));
@@ -407,7 +404,8 @@ begin
 
             when SYS =>
                 case rr_tdata.code is
-                    when SYS_INT_OP => micro_cnt_next <= 5;
+                    when SYS_INT_INT_OP => micro_cnt_next <= 5;
+                    when SYS_EXT_INT_OP => micro_cnt_next <= 5;
                     when SYS_IRET_OP => micro_cnt_next <= 6;
                     when others => micro_cnt_next <= 0;
                 end case;
@@ -966,7 +964,7 @@ begin
             micro_tdata.jump_ip_mem <= '0';
 
             -- push FLAGS
-            mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.fl_tdata, w => rr_tdata_buf.w);
+            mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.fl_tdata, w => rr_tdata.w);
 
             sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
         end;
@@ -2079,8 +2077,7 @@ begin
             else
 
                 if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') or
-                   (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1')
+                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
                 then
                     micro_tvalid <= '1';
                 elsif (rr_tvalid = '1' and rr_tready = '1') then
@@ -2094,8 +2091,7 @@ begin
                 end if;
 
                 if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') or
-                   (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1')
+                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
                 then
                     micro_cnt <= 6;
                 elsif (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.fast_instr = '0') then
@@ -2107,8 +2103,7 @@ begin
                 end if;
 
                 if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') or
-                   (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1')
+                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
                 then
                     micro_busy <= '1';
                 elsif (rr_tvalid = '1' and rr_tready = '1') then
@@ -2135,8 +2130,6 @@ begin
                 interrupt_no <= x"0000";
             elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
                 interrupt_no <= x"0005";
-            elsif (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1') then
-                interrupt_no <= x"00" & ext_intr_s_tdata;
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_no <= rr_tdata.data;
             end if;
@@ -2147,17 +2140,12 @@ begin
             elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
                 interrupt_next_cs <= bnd_intr_s_tdata(INTR_T_CS);
                 interrupt_next_ip <= bnd_intr_s_tdata(INTR_T_IP_NEXT);
-            elsif (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1') then
-                interrupt_next_cs <= rr_tuser(USER_T_CS);
-                interrupt_next_ip <= rr_tuser(USER_T_IP);
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_next_cs <= rr_tuser(USER_T_CS);
                 interrupt_next_ip <= rr_tuser(USER_T_IP_NEXT);
             end if;
 
-            if (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1') or
-                (rr_tvalid = '1' and rr_tready = '1')
-            then
+            if (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_flags <= rr_tdata.fl_tdata;
             end if;
 
@@ -2165,15 +2153,12 @@ begin
                 interrupt_ss_seg_val <= div_intr_s_tdata(INTR_T_SS);
             elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
                 interrupt_ss_seg_val <= bnd_intr_s_tdata(INTR_T_SS);
-            elsif (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1') or
-                (rr_tvalid = '1' and rr_tready = '1')
-            then
+            elsif (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_ss_seg_val <= rr_tdata.ss_seg_val;
             end if;
 
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') or
-                (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1')
+                (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
             then
                 sp_offset <= x"FFFE";
             elsif (rr_tvalid = '1' and rr_tready = '1') then
@@ -2186,9 +2171,6 @@ begin
             elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
                 micro_op <= SYS;
                 micro_code <= SYS_BND_INT_OP;
-            elsif (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1') then
-                micro_op <= SYS;
-                micro_code <= SYS_DIV_INT_OP;
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 micro_op <= rr_tdata.op;
                 micro_code <= rr_tdata.code;
@@ -2208,8 +2190,7 @@ begin
             end if;
 
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') or
-                (ext_intr_s_tvalid = '1' and ext_intr_s_tready = '1')
+                (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
             then
                 initialize_signals;
                 do_ext_intr_0;
@@ -2262,9 +2243,10 @@ begin
                         end case;
                     when SYS =>
                         case rr_tdata.code is
-                            when SYS_INT_OP => do_sys_cmd_int_0;
-                            when SYS_IRET_OP => do_sys_cmd_iret_0;
-                            when others => null;
+                            when SYS_INT_INT_OP => do_sys_cmd_int_0;
+                            when SYS_EXT_INT_OP => do_sys_cmd_int_0;
+                            when SYS_IRET_OP    => do_sys_cmd_iret_0;
+                            when others         => null;
                         end case;
                     when others => null;
                 end case;
@@ -2308,17 +2290,36 @@ begin
                         end case;
                     when SYS =>
                         case micro_code is
-                            when SYS_INT_OP => do_sys_cmd_int_1;
-                            when SYS_IRET_OP => do_sys_cmd_iret_1;
+                            when SYS_INT_INT_OP => do_sys_cmd_int_1;
+                            when SYS_IRET_OP    => do_sys_cmd_iret_1;
+                            when SYS_EXT_INT_OP => do_sys_cmd_int_1;
                             when SYS_BND_INT_OP => do_ext_intr_1;
                             when SYS_DIV_INT_OP => do_ext_intr_1;
-                            when others => null;
+                            when others         => null;
                         end case;
 
                     when others => null;
                 end case;
             end if;
 
+        end if;
+    end process;
+
+    ack_ext_interrupt_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                ext_intr_s_tready <= '0';
+            else
+
+                if (rr_tvalid = '1' and rr_tready = '1') then
+                    if (ext_intr_s_tvalid = '1' and rr_tdata.op = SYS and rr_tdata.code = SYS_EXT_INT_OP) then
+                        ext_intr_s_tready <= '1';
+                    else
+                        ext_intr_s_tready <= '0';
+                    end if;
+                end if;
+
+            end if;
         end if;
     end process;
 

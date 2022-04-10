@@ -40,6 +40,10 @@ entity cpu86_exec_register_reader is
         instr_s_tdata           : in decoded_instr_t;
         instr_s_tuser           : in user_t;
 
+        ext_intr_s_tvalid       : in std_logic;
+        ext_intr_s_tready       : out std_logic;
+        ext_intr_s_tdata        : in std_logic_vector(7 downto 0);
+
         ds_s_tvalid             : in std_logic;
         ds_s_tdata              : in std_logic_vector(15 downto 0);
         ds_m_lock_tvalid        : out std_logic;
@@ -97,35 +101,35 @@ end entity cpu86_exec_register_reader;
 
 architecture rtl of cpu86_exec_register_reader is
 
-    signal instr_tvalid         : std_logic;
-    signal instr_tready         : std_logic;
-    signal instr_tdata          : decoded_instr_t;
-    signal instr_tuser          : user_t;
-    signal instr_hazards_resolved : std_logic;
+    signal instr_tvalid             : std_logic;
+    signal instr_tready             : std_logic;
+    signal instr_tdata              : decoded_instr_t;
+    signal instr_tuser              : user_t;
+    signal instr_hazards_resolved   : std_logic;
+    signal instr_tready_mask        : std_logic;
 
-    signal rr_tvalid            : std_logic;
-    signal rr_tready            : std_logic;
-    signal rr_tdata             : rr_instr_t;
-    signal rr_tuser             : user_t;
+    signal rr_tvalid                : std_logic;
+    signal rr_tready                : std_logic;
+    signal rr_tdata                 : rr_instr_t;
+    signal rr_tuser                 : user_t;
 
-    signal seg_tdata            : std_logic_vector(15 downto 0);
-    signal sreg_tdata           : std_logic_vector(15 downto 0);
-    signal dreg_tdata           : std_logic_vector(15 downto 0);
-    signal ea_tdata             : std_logic_vector(15 downto 0);
+    signal seg_tdata                : std_logic_vector(15 downto 0);
+    signal sreg_tdata               : std_logic_vector(15 downto 0);
+    signal dreg_tdata               : std_logic_vector(15 downto 0);
+    signal ea_tdata                 : std_logic_vector(15 downto 0);
 
-    signal intr_mask            : std_logic;
+    signal intr_mask                : std_logic;
 
-    signal seg_override_tvalid  : std_logic;
-    signal seg_override_tdata   : std_logic_vector(15 downto 0);
+    signal seg_override_tvalid      : std_logic;
+    signal seg_override_tdata       : std_logic_vector(15 downto 0);
 
-    signal skip_next            : std_logic;
+    signal skip_next                : std_logic;
 
-    signal dbg_instr_hs_cnt     : integer := 0;
+    signal dbg_instr_hs_cnt         : integer := 0;
 
-    signal wait_sreg_fl         : std_logic;
-    signal wait_dreg_fl         : std_logic;
-    signal wait_ea_fl           : std_logic;
-    signal wait_seg_fl          : std_logic;
+    signal ext_intr_tvalid          : std_logic;
+    signal ext_intr_tready          : std_logic;
+    signal ext_intr_tdata           : std_logic_vector(7 downto 0);
 
 begin
 
@@ -138,6 +142,10 @@ begin
     rr_tready <= rr_m_tready;
     rr_m_tdata <= rr_tdata;
     rr_m_tuser <= rr_tuser;
+
+    ext_intr_tvalid <= ext_intr_s_tvalid;
+    ext_intr_s_tready <= ext_intr_tready;
+    ext_intr_tdata <= ext_intr_s_tdata;
 
     process (all) begin
 
@@ -259,7 +267,32 @@ begin
         (instr_tdata.wait_ss = '0' or (instr_tdata.wait_ss = '1' and ss_s_tvalid = '1' and ss_m_lock_tvalid = '0')) and
         (instr_tdata.wait_fl = '0' or (instr_tdata.wait_fl = '1' and flags_s_tvalid = '1' and flags_m_lock_tvalid = '0')) else '0';
 
-    instr_tready <= '1' when (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) and instr_hazards_resolved = '1' else '0';
+    instr_tready <= '1' when instr_tready_mask = '0' and (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) and instr_hazards_resolved = '1' else '0';
+
+    ext_interrupt_process : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                ext_intr_tready <= '0';
+                instr_tready_mask <= '0';
+            else
+
+                if (ext_intr_tvalid = '1' and ext_intr_tready = '0') then
+                    if (skip_next = '0' and seg_override_tvalid = '0') then
+                        instr_tready_mask <= '1';
+                    end if;
+                end if;
+
+                if (ext_intr_tvalid = '1' and ext_intr_tready = '0') then
+                    if (instr_s_tvalid = '1' and skip_next = '0' and seg_override_tvalid = '0' and ss_s_tvalid = '1' and sp_s_tvalid = '1') then
+                        ext_intr_tready <= '1';
+                    end if;
+                elsif (ext_intr_tvalid = '1' and ext_intr_tready = '0') then
+                    ext_intr_tready <= '0';
+                end if;
+
+            end if;
+        end if;
+    end process;
 
     reg_lock_proc1: process (clk) begin
 
@@ -467,7 +500,7 @@ begin
 
     forming_output_proc: process (clk) begin
         if rising_edge(clk) then
-
+            -- Resettable
             if resetn = '0' then
                 rr_tvalid <= '0';
             else
@@ -480,45 +513,58 @@ begin
                     else
                         rr_tvalid <= '1';
                     end if;
+                elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+                    rr_tvalid <= '1';
                 elsif rr_tready = '1' then
                     rr_tvalid <= '0';
                 end if;
 
             end if;
-
+            -- Without reset
             if (instr_tvalid = '1' and instr_tready = '1') then
-                rr_tdata.op <= instr_tdata.op;
-                rr_tdata.w <= instr_tdata.w;
-                rr_tdata.fl <= instr_tdata.fl;
-                rr_tdata.code <= instr_tdata.code;
-                rr_tdata.dir <= instr_tdata.dir;
-                rr_tdata.ea <= instr_tdata.ea;
-                rr_tdata.dreg <= instr_tdata.dreg;
-                rr_tdata.dmask <= instr_tdata.dmask;
-                rr_tdata.sreg <= instr_tdata.sreg;
-                rr_tdata.data <= instr_tdata.data;
-                rr_tdata.disp <= instr_tdata.disp;
-                rr_tdata.level <= to_integer(unsigned(instr_tdata.imm8(4 downto 0)));
-
-                rr_tdata.sreg_val <= sreg_tdata;
-                rr_tdata.dreg_val <= dreg_tdata;
-                rr_tdata.ea_val <= ea_tdata;
-                rr_tdata.seg_val <= seg_tdata;
-                rr_tdata.ss_seg_val <= ss_s_tdata;
-                rr_tdata.es_seg_val <= es_s_tdata;
+                rr_tdata.op         <= instr_tdata.op;
+                rr_tdata.code       <= instr_tdata.code;
+                rr_tdata.data       <= instr_tdata.data;
+                rr_tdata.w          <= instr_tdata.w;
 
                 if (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
                     ((instr_tdata.op = MOVU or instr_tdata.op = XCHG) and (instr_tdata.dir = R2R or instr_tdata.dir = I2R)) or
                     (instr_tdata.op = REP) or
-                    (instr_tdata.op = FEU) then
+                    (instr_tdata.op = FEU)
+                then
                     rr_tdata.fast_instr <= '1';
                 else
                     rr_tdata.fast_instr <= '0';
                 end if;
+            elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+                rr_tdata.op         <= SYS;
+                rr_tdata.code       <= SYS_EXT_INT_OP;
+                rr_tdata.fast_instr <= '0';
+                rr_tdata.data       <= x"00" & ext_intr_tdata;
+                rr_tdata.w          <= '1';
+            end if;
+
+            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+                rr_tdata.fl         <= instr_tdata.fl;
+                rr_tdata.dir        <= instr_tdata.dir;
+                rr_tdata.ea         <= instr_tdata.ea;
+                rr_tdata.dreg       <= instr_tdata.dreg;
+                rr_tdata.dmask      <= instr_tdata.dmask;
+                rr_tdata.sreg       <= instr_tdata.sreg;
+
+                rr_tdata.disp       <= instr_tdata.disp;
+                rr_tdata.level      <= to_integer(unsigned(instr_tdata.imm8(4 downto 0)));
+
+                rr_tdata.sreg_val   <= sreg_tdata;
+                rr_tdata.dreg_val   <= dreg_tdata;
+                rr_tdata.ea_val     <= ea_tdata;
+                rr_tdata.seg_val    <= seg_tdata;
+                rr_tdata.ss_seg_val <= ss_s_tdata;
+                rr_tdata.es_seg_val <= es_s_tdata;
             end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') then
-                if (instr_tdata.op = SYS and instr_tdata.code = SYS_INT_OP) or
+                if (instr_tdata.op = SYS and instr_tdata.code = SYS_INT_INT_OP) or
                     (instr_tdata.op = STACKU and (instr_tdata.code = STACKU_PUSHR or instr_tdata.code = STACKU_PUSHM or
                         instr_tdata.code = STACKU_PUSHI or instr_tdata.code = STACKU_PUSHA or instr_tdata.code = STACKU_ENTER)) or
                     (instr_tdata.op = DIVU) or (instr_tdata.op = LFP and instr_tdata.code = MISC_BOUND) or (instr_tdata.op = JCALL)
@@ -529,13 +575,16 @@ begin
                     rr_tdata.sp_val <= sp_s_tdata;
                     rr_tdata.sp_offset <= x"0002";
                 end if;
+            elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+                rr_tdata.sp_val <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
+                rr_tdata.sp_offset <= x"FFFE";
             end if;
 
-            if (instr_tvalid = '1' and instr_tready = '1') then
+            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
                 rr_tdata.sp_val_m2 <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
             end if;
 
-            if (instr_tvalid = '1' and instr_tready = '1') then
+            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
                 rr_tdata.ax_tdata <= ax_s_tdata;
                 rr_tdata.bx_tdata <= bx_s_tdata;
                 rr_tdata.cx_tdata <= cx_s_tdata;
@@ -546,7 +595,7 @@ begin
                 rr_tdata.fl_tdata <= flags_s_tdata;
             end if;
 
-            if (instr_tvalid = '1' and instr_tready = '1') then
+            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
                 rr_tuser <= instr_tuser;
             end if;
 
@@ -571,9 +620,9 @@ begin
 
             if (instr_tvalid = '1' and instr_tready = '1') then
                 case instr_tdata.sreg is
-                    when DS => seg_override_tdata <= ds_s_tdata;
-                    when SS => seg_override_tdata <= ss_s_tdata;
-                    when ES => seg_override_tdata <= es_s_tdata;
+                    when DS     => seg_override_tdata <= ds_s_tdata;
+                    when SS     => seg_override_tdata <= ss_s_tdata;
+                    when ES     => seg_override_tdata <= es_s_tdata;
                     when others => seg_override_tdata <= instr_tuser(31 downto 16);
                 end case;
             end if;

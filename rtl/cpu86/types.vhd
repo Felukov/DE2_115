@@ -102,7 +102,8 @@ package cpu86_types is
     constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0001";
     constant SYS_DBG_OP     : std_logic_vector (3 downto 0) := "0010";
     constant SYS_IRET_OP    : std_logic_vector (3 downto 0) := "0101";
-    constant SYS_INT_OP     : std_logic_vector (3 downto 0) := "1000";
+    constant SYS_INT_INT_OP : std_logic_vector (3 downto 0) := "1000";
+    constant SYS_EXT_INT_OP : std_logic_vector (3 downto 0) := "1001";
     constant SYS_BND_INT_OP : std_logic_vector (3 downto 0) := "1110";
     constant SYS_DIV_INT_OP : std_logic_vector (3 downto 0) := "1111";
 

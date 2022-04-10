@@ -900,9 +900,9 @@ begin
                 when x"D7" => set_op(LFP, MISC_XLAT,     '0', LOCK_AX,              WAIT_DS or WAIT_AX or WAIT_BX);
 
                 -- SYS
-                when x"CC" => set_op(SYS, SYS_INT_OP,    '1', LOCK_SP,      WAIT_SS or WAIT_SP);
-                when x"CD" => set_op(SYS, SYS_INT_OP,    '1', LOCK_SP,      WAIT_SS or WAIT_SP);
-                when x"CE" => set_op(SYS, SYS_INT_OP,    '1', LOCK_SP,      WAIT_SS or WAIT_SP);
+                when x"CC" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP,      WAIT_SS or WAIT_SP);
+                when x"CD" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP,      WAIT_SS or WAIT_SP);
+                when x"CE" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP,      WAIT_SS or WAIT_SP);
                 when x"CF" => set_op(SYS, SYS_IRET_OP,   '1', LOCK_SP,      WAIT_SS or WAIT_SP);
                 when x"F4" => set_op(SYS, SYS_HLT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
 
