@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 use ieee.std_logic_unsigned.all;
 use ieee.math_real.all;
 
-entity lsu_fifo is
+entity cpu86_exec_lsu_fifo is
     generic (
         FIFO_DEPTH      : natural := 4;
         FIFO_WIDTH      : natural := 16;
@@ -29,9 +29,9 @@ entity lsu_fifo is
         fifo_m_tready   : in std_logic;
         fifo_m_tdata    : out std_logic_vector(FIFO_WIDTH-1 downto 0)
     );
-end entity lsu_fifo;
+end entity cpu86_exec_lsu_fifo;
 
-architecture rtl of lsu_fifo is
+architecture rtl of cpu86_exec_lsu_fifo is
 
     type ram_t is array (FIFO_DEPTH-1 downto 0) of std_logic_vector(FIFO_WIDTH-1 downto 0);
 

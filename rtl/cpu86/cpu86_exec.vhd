@@ -126,7 +126,7 @@ architecture rtl of cpu86_exec is
         );
     end component;
 
-    component register_reader is
+    component cpu86_exec_register_reader is
         port (
             clk                     : in std_logic;
             resetn                  : in std_logic;
@@ -189,9 +189,9 @@ architecture rtl of cpu86_exec is
             rr_m_tdata              : out rr_instr_t;
             rr_m_tuser              : out user_t
         );
-    end component register_reader;
+    end component cpu86_exec_register_reader;
 
-    component ifeu is
+    component cpu86_exec_ifeu is
         port (
             clk                     : in std_logic;
             resetn                  : in std_logic;
@@ -250,9 +250,9 @@ architecture rtl of cpu86_exec is
 
             jmp_lock_m_lock_tvalid  : out std_logic
         );
-    end component ifeu;
+    end component cpu86_exec_ifeu;
 
-    component mexec is
+    component cpu86_exec_mexec is
         port (
             clk                     : in std_logic;
             resetn                  : in std_logic;
@@ -329,9 +329,9 @@ architecture rtl of cpu86_exec is
             bnd_intr_m_tvalid       : out std_logic;
             bnd_intr_m_tdata        : out intr_t
         );
-    end component mexec;
+    end component cpu86_exec_mexec;
 
-    component lsu is
+    component cpu86_exec_lsu is
         port (
             clk                     : in std_logic;
             resetn                  : in std_logic;
@@ -357,7 +357,7 @@ architecture rtl of cpu86_exec is
             lsu_rd_m_tready         : in std_logic;
             lsu_rd_m_tdata          : out std_logic_vector(15 downto 0)
         );
-    end component lsu;
+    end component cpu86_exec_lsu;
 
     component cpu86_dcache is
         port (
@@ -839,6 +839,7 @@ begin
     );
 
 
+    -- module axis_reg instantiation
     div_interrupt_reg_inst : axis_reg generic map (
         DATA_WIDTH              => div_intr_s_tdata'length
     ) port map (
@@ -854,6 +855,7 @@ begin
         out_m_tdata             => div_intr_m_tdata
     );
 
+    -- module axis_reg instantiation
     external_interrupt_reg_inst : axis_reg generic map (
         DATA_WIDTH              => 8
     ) port map (
@@ -869,6 +871,7 @@ begin
         out_m_tdata             => ext_intr_m_tdata
     );
 
+    -- module axis_reg instantiation
     bnd_interrupt_reg_inst : axis_reg generic map (
         DATA_WIDTH              => bnd_intr_s_tdata'length
     ) port map (
@@ -886,6 +889,7 @@ begin
 
     fifo_instr_s_tdata <= decoded_instr_t_to_slv(instr_s_tdata);
 
+    -- module axis_fifo instantiation
     axis_fifo_inst_0 : axis_fifo generic map (
         FIFO_DEPTH              => 16,
         FIFO_WIDTH              => DECODED_INSTR_T_WIDTH,
@@ -903,7 +907,7 @@ begin
         fifo_m_tdata            => fifo_instr_m_tdata
     );
 
-
+    -- module axis_fifo instantiation
     axis_fifo_inst_1 : axis_fifo generic map (
         FIFO_DEPTH              => 16,
         FIFO_WIDTH              => 48,
@@ -923,7 +927,8 @@ begin
 
     instr_m_tdata <= slv_to_decoded_instr_t(fifo_instr_m_tdata);
 
-    register_reader_inst : register_reader port map (
+    -- module cpu86_exec_register_reader instantiation
+    cpu86_exec_register_reader_inst : cpu86_exec_register_reader port map (
         clk                     => clk,
         resetn                  => exec_resetn,
 
@@ -986,8 +991,8 @@ begin
         rr_m_tuser              => rr_tuser
     );
 
-
-    ifeu_inst : ifeu port map (
+    -- module cpu86_exec_ifeu instantiation
+    cpu86_exec_ifeu_inst : cpu86_exec_ifeu port map (
         clk                     => clk,
         resetn                  => exec_resetn,
 
@@ -1046,8 +1051,8 @@ begin
         jmp_lock_m_lock_tvalid  => jmp_lock_lock_tvalid
     );
 
-
-    mexec_inst : mexec port map (
+    -- module cpu86_exec_mexec instantiation
+    cpu86_exec_mexec_inst : cpu86_exec_mexec port map (
         clk                     => clk,
         resetn                  => exec_resetn,
 
@@ -1121,10 +1126,10 @@ begin
 
         bnd_intr_m_tvalid       => bnd_intr_s_tvalid,
         bnd_intr_m_tdata        => bnd_intr_s_tdata
-
     );
 
-    dcache_inst : cpu86_dcache port map (
+    -- module cpu86_dcache instantiation
+    cpu86_dcache_inst : cpu86_dcache port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -1143,10 +1148,10 @@ begin
         dcache_m_tdata          => dcache_tdata,
         dcache_m_thit           => dcache_thit,
         dcache_m_tcache         => dcache_tcache
-
     );
 
-    lsu_inst : lsu port map (
+    -- module cpu86_exec_lsu instantiation
+    cpu86_exec_lsu_inst : cpu86_exec_lsu port map (
         clk                     => clk,
         resetn                  => resetn,
 
