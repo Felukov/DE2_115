@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
-entity cpu_flags is
+entity cpu86_exec_reg is
     generic (
         DATA_WIDTH      : integer := 16
     );
@@ -21,24 +21,23 @@ entity cpu_flags is
         reg_m_tvalid    : out std_logic;
         reg_m_tdata     : out std_logic_vector(DATA_WIDTH-1 downto 0)
     );
-end entity cpu_flags;
+end entity cpu86_exec_reg;
 
-architecture rtl of cpu_flags is
+architecture rtl of cpu86_exec_reg is
 
     signal reg_tvalid   : std_logic;
     signal reg_tdata    : std_logic_vector(DATA_WIDTH-1 downto 0);
 
 begin
 
-    reg_m_tvalid <= '1' when reg_tvalid = '1' else '0';
-
+    reg_m_tvalid <= reg_tvalid;
     reg_m_tdata <= reg_tdata;
 
     update_reg_proc: process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
                 reg_tvalid <= '1';
-                reg_tdata <= x"0202";
+                reg_tdata <= (others => '0');
             else
 
                 if (wr_s_tvalid = '1' or unlk_s_tvalid = '1') then

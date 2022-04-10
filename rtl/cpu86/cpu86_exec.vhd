@@ -69,28 +69,7 @@ end entity cpu86_exec;
 
 architecture rtl of cpu86_exec is
 
-    component cpu_reg is
-        generic (
-            DATA_WIDTH              : integer := 16
-        );
-        port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
-
-            wr_s_tvalid             : in std_logic;
-            wr_s_tdata              : in std_logic_vector(DATA_WIDTH-1 downto 0);
-            wr_s_tmask              : in std_logic_vector(1 downto 0);
-            wr_s_tkeep_lock         : in std_logic;
-
-            lock_s_tvalid           : in std_logic;
-            unlk_s_tvalid           : in std_logic;
-
-            reg_m_tvalid            : out std_logic;
-            reg_m_tdata             : out std_logic_vector(DATA_WIDTH-1 downto 0)
-        );
-    end component cpu_reg;
-
-    component cpu_flags is
+    component cpu86_exec_reg is
         generic (
             DATA_WIDTH              : integer := 16
         );
@@ -108,7 +87,7 @@ architecture rtl of cpu86_exec is
             reg_m_tvalid            : out std_logic;
             reg_m_tdata             : out std_logic_vector(DATA_WIDTH-1 downto 0)
         );
-    end component cpu_flags;
+    end component cpu86_exec_reg;
 
     component axis_fifo is
         generic (
@@ -608,10 +587,8 @@ architecture rtl of cpu86_exec is
 
 begin
 
-    exec_resetn <= '0' when resetn = '0' or jump_tvalid = '1' else '1';
-
-
-    cpu_reg_jmp_lock : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_jmp_lock : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -620,7 +597,6 @@ begin
         wr_s_tvalid             => jmp_lock_wr_tvalid,
         wr_s_tdata              => (others => '0') ,
         wr_s_tmask              => "11",
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => jmp_lock_lock_tvalid,
         unlk_s_tvalid           => '0',
@@ -629,8 +605,8 @@ begin
         reg_m_tdata             => open
     );
 
-
-    cpu_reg_ds : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_ds : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -639,7 +615,6 @@ begin
         wr_s_tvalid             => ds_wr_tvalid,
         wr_s_tdata              => ds_wr_tdata,
         wr_s_tmask              => "11",
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => ds_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -648,8 +623,8 @@ begin
         reg_m_tdata             => ds_tdata
     );
 
-
-    cpu_reg_ss : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_ss : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -658,7 +633,6 @@ begin
         wr_s_tvalid             => ss_wr_tvalid,
         wr_s_tdata              => ss_wr_tdata,
         wr_s_tmask              => "11",
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => ss_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -667,8 +641,8 @@ begin
         reg_m_tdata             => ss_tdata
     );
 
-
-    cpu_reg_es : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_es : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -677,7 +651,6 @@ begin
         wr_s_tvalid             => es_wr_tvalid,
         wr_s_tdata              => es_wr_tdata,
         wr_s_tmask              => "11",
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => es_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -686,8 +659,8 @@ begin
         reg_m_tdata             => es_tdata
     );
 
-
-    cpu_reg_ax : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_ax : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -696,7 +669,6 @@ begin
         wr_s_tvalid             => ax_wr_tvalid,
         wr_s_tdata              => ax_wr_tdata,
         wr_s_tmask              => ax_wr_tmask,
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => ax_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -705,8 +677,8 @@ begin
         reg_m_tdata             => ax_tdata
     );
 
-
-    cpu_reg_bx : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_bx : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -715,7 +687,6 @@ begin
         wr_s_tvalid             => bx_wr_tvalid,
         wr_s_tdata              => bx_wr_tdata,
         wr_s_tmask              => bx_wr_tmask,
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => bx_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -724,8 +695,8 @@ begin
         reg_m_tdata             => bx_tdata
     );
 
-
-    cpu_reg_cx : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_cx : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -734,7 +705,6 @@ begin
         wr_s_tvalid             => cx_wr_tvalid,
         wr_s_tdata              => cx_wr_tdata,
         wr_s_tmask              => cx_wr_tmask,
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => cx_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -743,8 +713,8 @@ begin
         reg_m_tdata             => cx_tdata
     );
 
-
-    cpu_reg_dx : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_dx : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -753,7 +723,6 @@ begin
         wr_s_tvalid             => dx_wr_tvalid,
         wr_s_tdata              => dx_wr_tdata,
         wr_s_tmask              => dx_wr_tmask,
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => dx_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -762,8 +731,8 @@ begin
         reg_m_tdata             => dx_tdata
     );
 
-
-    cpu_reg_bp : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_bp : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -772,7 +741,6 @@ begin
         wr_s_tvalid             => bp_wr_tvalid,
         wr_s_tdata              => bp_wr_tdata,
         wr_s_tmask              => "11",
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => bp_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -781,8 +749,8 @@ begin
         reg_m_tdata             => bp_tdata
     );
 
-
-    cpu_reg_sp : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_sp : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -791,7 +759,6 @@ begin
         wr_s_tvalid             => sp_wr_tvalid,
         wr_s_tdata              => sp_wr_tdata,
         wr_s_tmask              => "11",
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => sp_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -800,8 +767,8 @@ begin
         reg_m_tdata             => sp_tdata
     );
 
-
-    cpu_reg_di : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_di : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -810,7 +777,6 @@ begin
         wr_s_tvalid             => di_wr_tvalid,
         wr_s_tdata              => di_wr_tdata,
         wr_s_tmask              => "11",
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => di_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -819,8 +785,8 @@ begin
         reg_m_tdata             => di_tdata
     );
 
-
-    cpu_reg_si : cpu_reg generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_reg_si : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -829,7 +795,6 @@ begin
         wr_s_tvalid             => si_wr_tvalid,
         wr_s_tdata              => si_wr_tdata,
         wr_s_tmask              => "11",
-        wr_s_tkeep_lock         => '0',
 
         lock_s_tvalid           => si_lock_tvalid,
         unlk_s_tvalid           => jump_tvalid,
@@ -838,8 +803,8 @@ begin
         reg_m_tdata             => si_tdata
     );
 
-
-    cpu_flags_inst : cpu_flags generic map (
+    -- module cpu86_exec_reg instantiation
+    cpu_flags_inst : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,
@@ -1185,6 +1150,9 @@ begin
         lsu_rd_m_tready         => lsu_rd_tready,
         lsu_rd_m_tdata          => lsu_rd_tdata
     );
+
+    -- assigns
+    exec_resetn <= '0' when resetn = '0' or jump_tvalid = '1' else '1';
 
     ax_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_ax_wr_tvalid = '1' or mexec_ax_wr_tvalid = '1') else '0';
     bx_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_bx_wr_tvalid = '1' or mexec_bx_wr_tvalid = '1') else '0';
