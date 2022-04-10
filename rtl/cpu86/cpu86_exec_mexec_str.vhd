@@ -1,10 +1,36 @@
+
+-- Copyright (C) 2022, Konstantin Felukov
+-- All rights reserved.
+--
+-- Redistribution and use in source and binary forms, with or without
+-- modification, are permitted provided that the following conditions are met:
+--
+-- * Redistributions of source code must retain the above copyright notice, this
+--   list of conditions and the following disclaimer.
+--
+-- * Redistributions in binary form must reproduce the above copyright notice,
+--   this list of conditions and the following disclaimer in the documentation
+--   and/or other materials provided with the distribution.
+--
+-- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+-- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+-- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+-- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+-- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+-- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+-- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 use work.cpu86_types.all;
 
-entity mexec_str is
+entity cpu86_exec_mexec_str is
     port (
         clk                     : in std_logic;
         resetn                  : in std_logic;
@@ -39,7 +65,7 @@ entity mexec_str is
     );
 end entity;
 
-architecture rtl of mexec_str is
+architecture rtl of cpu86_exec_mexec_str is
 
     component axis_fifo is
         generic (
@@ -818,9 +844,9 @@ begin
     event_scas_finish <= '1' when instr_scas = '1' and (cmp_finish_vector = "11") else '0';
     event_cmps_finish <= '1' when instr_cmps = '1' and (cmp_finish_vector = "11") else '0';
 
-    event_in_finish <= '1' when instr_in = '1' and io_rd_s_tvalid = '1' and io_rd_s_tready = '1' else '0';
-    event_ins_finish <= '1' when instr_ins = '1' and wr_req_tvalid = '1' and wr_req_tready = '1' and wr_req_tlast = '1' else '0';
-    event_out_finish <= '1' when instr_out = '1' and io_wr_req_tvalid = '1' and io_wr_req_tready = '1' else '0';
+    event_in_finish   <= '1' when instr_in = '1' and io_rd_s_tvalid = '1' and io_rd_s_tready = '1' else '0';
+    event_ins_finish  <= '1' when instr_ins = '1' and wr_req_tvalid = '1' and wr_req_tready = '1' and wr_req_tlast = '1' else '0';
+    event_out_finish  <= '1' when instr_out = '1' and io_wr_req_tvalid = '1' and io_wr_req_tready = '1' else '0';
     event_outs_finish <= '1' when instr_outs = '1' and io_wr_req_tvalid = '1' and io_wr_req_tready = '1' and io_wr_req_tlast = '1' else '0';
 
     foriming_output : process (clk) begin

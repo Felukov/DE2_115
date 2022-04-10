@@ -209,7 +209,7 @@ architecture rtl of cpu86_exec_mexec is
         );
     end component mexec_shf;
 
-    component mexec_str is
+    component cpu86_exec_mexec_str is
         port (
             clk                 : in std_logic;
             resetn              : in std_logic;
@@ -514,7 +514,7 @@ begin
         res_m_tuser             => shf16_res_tuser
     );
 
-    mexec_str_inst : mexec_str port map (
+    mexec_str_inst : cpu86_exec_mexec_str port map (
         clk                     => CLK,
         resetn                  => RESETN,
 
