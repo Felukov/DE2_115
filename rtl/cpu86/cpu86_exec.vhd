@@ -71,7 +71,8 @@ architecture rtl of cpu86_exec is
 
     component cpu86_exec_reg is
         generic (
-            DATA_WIDTH              : integer := 16
+            DATA_WIDTH              : integer := 16;
+            INIT_VALUE              : std_logic_vector(DATA_WIDTH-1 downto 0)
         );
         port (
             clk                     : in std_logic;
@@ -242,6 +243,10 @@ architecture rtl of cpu86_exec is
             ss_m_wr_tdata           : out std_logic_vector(15 downto 0);
             es_m_wr_tvalid          : out std_logic;
             es_m_wr_tdata           : out std_logic_vector(15 downto 0);
+
+            ext_intr_s_tvalid       : in std_logic;
+            ext_intr_s_tready       : out std_logic;
+            ext_intr_s_tdata        : in std_logic_vector(7 downto 0);
 
             jmp_lock_m_lock_tvalid  : out std_logic
         );
@@ -572,10 +577,9 @@ architecture rtl of cpu86_exec is
     signal div_intr_m_tdata         : intr_t;
 
     signal ext_intr_s_tready        : std_logic;
-    signal ext_intr_s_tdata         : std_logic_vector(3 downto 0);
     signal ext_intr_m_tvalid        : std_logic;
     signal ext_intr_m_tready        : std_logic;
-    signal ext_intr_m_tdata         : std_logic_vector(3 downto 0);
+    signal ext_intr_m_tdata         : std_logic_vector(7 downto 0);
 
     signal bnd_intr_s_tvalid        : std_logic;
     signal bnd_intr_s_tready        : std_logic;
@@ -589,7 +593,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_jmp_lock : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => exec_resetn,
@@ -607,7 +612,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_ds : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -625,7 +631,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_ss : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -643,7 +650,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_es : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -661,7 +669,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_ax : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -679,7 +688,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_bx : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -697,7 +707,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_cx : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -715,7 +726,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_dx : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -733,7 +745,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_bp : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -751,7 +764,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_sp : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -769,7 +783,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_di : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -787,7 +802,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_si : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0000"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -805,7 +821,8 @@ begin
 
     -- module cpu86_exec_reg instantiation
     cpu_flags_inst : cpu86_exec_reg generic map (
-        DATA_WIDTH              => 16
+        DATA_WIDTH              => 16,
+        INIT_VALUE              => x"0202"
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
@@ -837,20 +854,20 @@ begin
         out_m_tdata             => div_intr_m_tdata
     );
 
-    -- external_interrupt_reg_inst : axis_reg generic map (
-    --     DATA_WIDTH              => 8
-    -- ) port map (
-    --     clk                     => clk,
-    --     resetn                  => resetn,
+    external_interrupt_reg_inst : axis_reg generic map (
+        DATA_WIDTH              => 8
+    ) port map (
+        clk                     => clk,
+        resetn                  => resetn,
 
-    --     in_s_tvalid             => interrupt_valid,
-    --     in_s_tready             => ext_intr_s_tready,
-    --     in_s_tdata              => interrupt_data,
+        in_s_tvalid             => interrupt_valid,
+        in_s_tready             => ext_intr_s_tready,
+        in_s_tdata              => interrupt_data,
 
-    --     out_m_tvalid            => ext_intr_m_tvalid,
-    --     out_m_tready            => ext_intr_m_tready,
-    --     out_m_tdata             => ext_intr_m_tdata
-    -- );
+        out_m_tvalid            => ext_intr_m_tvalid,
+        out_m_tready            => ext_intr_m_tready,
+        out_m_tdata             => ext_intr_m_tdata
+    );
 
     bnd_interrupt_reg_inst : axis_reg generic map (
         DATA_WIDTH              => bnd_intr_s_tdata'length
@@ -1021,6 +1038,10 @@ begin
         es_m_wr_tdata           => ifeu_es_wr_tdata,
         ss_m_wr_tvalid          => ifeu_ss_wr_tvalid,
         ss_m_wr_tdata           => ifeu_ss_wr_tdata,
+
+        ext_intr_s_tvalid       => ext_intr_m_tvalid,
+        ext_intr_s_tready       => ext_intr_m_tready,
+        ext_intr_s_tdata        => ext_intr_m_tdata,
 
         jmp_lock_m_lock_tvalid  => jmp_lock_lock_tvalid
     );

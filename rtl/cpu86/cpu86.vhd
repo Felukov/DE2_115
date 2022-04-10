@@ -325,9 +325,9 @@ begin
         io_rd_s_tready          => io_rd_s_tready,
         io_rd_s_tdata           => io_rd_s_tdata,
 
-        interrupt_valid         => '0',
-        interrupt_data          => (others => '0'),
-        interrupt_ack           => open,
+        interrupt_valid         => interrupt_valid,
+        interrupt_data          => interrupt_data,
+        interrupt_ack           => interrupt_ack,
 
         dbg_m_tvalid            => open,
         dbg_m_tdata             => open
@@ -336,6 +336,5 @@ begin
 
     -- Assigns
     front_resetn <= '0' when resetn = '0' or jump_req_tvalid = '1' else '1';
-    interrupt_ack <= '0';
 
 end architecture;

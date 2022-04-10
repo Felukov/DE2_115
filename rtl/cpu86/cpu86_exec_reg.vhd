@@ -1,3 +1,29 @@
+
+-- Copyright (C) 2022, Konstantin Felukov
+-- All rights reserved.
+--
+-- Redistribution and use in source and binary forms, with or without
+-- modification, are permitted provided that the following conditions are met:
+--
+-- * Redistributions of source code must retain the above copyright notice, this
+--   list of conditions and the following disclaimer.
+--
+-- * Redistributions in binary form must reproduce the above copyright notice,
+--   this list of conditions and the following disclaimer in the documentation
+--   and/or other materials provided with the distribution.
+--
+-- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+-- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+-- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+-- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+-- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+-- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+-- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -5,7 +31,8 @@ use ieee.numeric_std.all;
 
 entity cpu86_exec_reg is
     generic (
-        DATA_WIDTH      : integer := 16
+        DATA_WIDTH      : integer := 16;
+        INIT_VALUE      : std_logic_vector(DATA_WIDTH-1 downto 0)
     );
     port (
         clk             : in std_logic;
@@ -29,7 +56,7 @@ architecture rtl of cpu86_exec_reg is
     signal reg_tdata    : std_logic_vector(DATA_WIDTH-1 downto 0);
 
 begin
-
+    -- Assigns
     reg_m_tvalid <= reg_tvalid;
     reg_m_tdata <= reg_tdata;
 
@@ -37,15 +64,15 @@ begin
         if rising_edge(clk) then
             if resetn = '0' then
                 reg_tvalid <= '1';
-                reg_tdata <= (others => '0');
+                reg_tdata <= INIT_VALUE;
             else
-
+                -- Resettable
                 if (wr_s_tvalid = '1' or unlk_s_tvalid = '1') then
                     reg_tvalid <= '1';
                 elsif (lock_s_tvalid = '1') then
                     reg_tvalid <= '0';
                 end if;
-
+                -- Without reset
                 if (wr_s_tvalid = '1') then
                     case wr_s_tmask is
                         when "11" => reg_tdata <= wr_s_tdata;
@@ -54,7 +81,6 @@ begin
                         when others => null;
                     end case;
                 end if;
-
             end if;
         end if;
     end process;

@@ -106,8 +106,8 @@ begin
     fetcher_mem_req_tready <= '1' when fifo_s_tready = '1' and exec_mem_req_tvalid = '0' and mem_req_m_tready = '1' else '0';
     exec_mem_req_tready    <= '1' when fifo_s_tready = '1' and mem_req_m_tready = '1' else '0';
 
-    fifo_s_tdata(1)         <= '1' when fetcher_mem_req_tvalid = '1' and exec_mem_req_tvalid = '0' else '0';
-    fifo_s_tdata(0)         <= '1' when exec_mem_req_tvalid = '1' else '0';
+    fifo_s_tdata(1)        <= '1' when fetcher_mem_req_tvalid = '1' and exec_mem_req_tvalid = '0' else '0';
+    fifo_s_tdata(0)        <= '1' when exec_mem_req_tvalid = '1' else '0';
 
     mem_req_m_tvalid       <= '1' when exec_mem_req_tvalid = '1' or fetcher_mem_req_tvalid = '1' else '0';
 

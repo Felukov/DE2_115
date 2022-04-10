@@ -75,10 +75,10 @@ entity mexec is
         dbg_m_tdata             : out std_logic_vector(31 downto 0);
 
         div_intr_m_tvalid       : out std_logic;
-        div_intr_m_tdata        : out div_intr_t;
+        div_intr_m_tdata        : out intr_t;
 
         bnd_intr_m_tvalid       : out std_logic;
-        bnd_intr_m_tdata        : out div_intr_t
+        bnd_intr_m_tdata        : out intr_t
     );
 end entity mexec;
 
@@ -564,10 +564,10 @@ begin
     flags_m_wr_tdata <= ((not flags_wr_be) and flags_s_tdata) or (flags_wr_be and flags_wr_vector);
 
     div_intr_m_tvalid <= '1' when div_res_tvalid = '1' and div_res_tdata.overflow = '1' else '0';
-    div_intr_m_tdata(DIV_INTR_T_SS) <= div_res_tdata.ss_val;
-    div_intr_m_tdata(DIV_INTR_T_IP) <= div_res_tdata.ip_val;
-    div_intr_m_tdata(DIV_INTR_T_CS) <= div_res_tdata.cs_val;
-    div_intr_m_tdata(DIV_INTR_T_IP_NEXT) <= div_res_tdata.ip_next_val;
+    div_intr_m_tdata(INTR_T_SS) <= div_res_tdata.ss_val;
+    div_intr_m_tdata(INTR_T_IP) <= div_res_tdata.ip_val;
+    div_intr_m_tdata(INTR_T_CS) <= div_res_tdata.cs_val;
+    div_intr_m_tdata(INTR_T_IP_NEXT) <= div_res_tdata.ip_next_val;
 
     mexec_busy_proc : process (clk) begin
         if rising_edge(clk) then
@@ -2125,10 +2125,10 @@ begin
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BND) = '1') then
-                bnd_intr_m_tdata(DIV_INTR_T_SS) <= micro_tdata.bnd_ss_val;
-                bnd_intr_m_tdata(DIV_INTR_T_CS) <= micro_tdata.bnd_cs_val;
-                bnd_intr_m_tdata(DIV_INTR_T_IP) <= micro_tdata.bnd_ip_val;
-                bnd_intr_m_tdata(DIV_INTR_T_IP_NEXT) <= micro_tdata.bnd_ip_val;
+                bnd_intr_m_tdata(INTR_T_SS) <= micro_tdata.bnd_ss_val;
+                bnd_intr_m_tdata(INTR_T_CS) <= micro_tdata.bnd_cs_val;
+                bnd_intr_m_tdata(INTR_T_IP) <= micro_tdata.bnd_ip_val;
+                bnd_intr_m_tdata(INTR_T_IP_NEXT) <= micro_tdata.bnd_ip_val;
             end if;
 
         end if;

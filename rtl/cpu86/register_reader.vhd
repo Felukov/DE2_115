@@ -506,6 +506,10 @@ begin
             end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') then
+                rr_tdata.sp_val_m2 <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
+            end if;
+
+            if (instr_tvalid = '1' and instr_tready = '1') then
                 rr_tdata.ax_tdata <= ax_s_tdata;
                 rr_tdata.bx_tdata <= bx_s_tdata;
                 rr_tdata.cx_tdata <= cx_s_tdata;

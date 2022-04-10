@@ -262,11 +262,11 @@ package cpu86_types is
     subtype USER_T_CS is natural range 31 downto 16;
     subtype USER_T_IP_NEXT is natural range 15 downto 0;
 
-    subtype div_intr_t is std_logic_vector(63 downto 0);
-    subtype DIV_INTR_T_SS is natural range 63 downto 48;
-    subtype DIV_INTR_T_IP is natural range 47 downto 32;
-    subtype DIV_INTR_T_CS is natural range 31 downto 16;
-    subtype DIV_INTR_T_IP_NEXT is natural range 15 downto 0;
+    subtype intr_t is std_logic_vector(63 downto 0);
+    subtype INTR_T_SS is natural range 63 downto 48;
+    subtype INTR_T_IP is natural range 47 downto 32;
+    subtype INTR_T_CS is natural range 31 downto 16;
+    subtype INTR_T_IP_NEXT is natural range 15 downto 0;
 
     type rr_instr_t is record
         ax_tdata    : std_logic_vector(15 downto 0);
@@ -287,6 +287,7 @@ package cpu86_types is
         sp_val      : std_logic_vector(15 downto 0);
         sp_offset   : std_logic_vector(15 downto 0);
         ea_val      : std_logic_vector(15 downto 0);
+        sp_val_m2   : std_logic_vector(15 downto 0);
 
         op          : op_t;
         code        : std_logic_vector(3 downto 0);
