@@ -894,7 +894,7 @@ begin
                 when x"AF" => set_op(STR, SCAS_OP,       '1', LOCK_DI or LOCK_FL,            WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
 
                 -- MISC
-                when x"62" => set_op(LFP, MISC_BOUND,    '1', LOCK_NO_LOCK,         WAIT_NO_WAIT);
+                when x"62" => set_op(LFP, MISC_BOUND,    '1', LOCK_NO_LOCK,         WAIT_SS or WAIT_SP);
                 when x"C4" => set_op(LFP, LFP_LES,       '1', LOCK_ES or LOCK_DREG, WAIT_ES);
                 when x"C5" => set_op(LFP, LFP_LDS,       '1', LOCK_DS or LOCK_DREG, WAIT_DS);
                 when x"D7" => set_op(LFP, MISC_XLAT,     '0', LOCK_AX,              WAIT_DS or WAIT_AX or WAIT_BX);
@@ -1180,6 +1180,8 @@ begin
             instr_tdata.code <= code;
             instr_tdata.wait_ax <= '1';
             instr_tdata.wait_dx <= w;
+            instr_tdata.wait_ss <= '1';
+            instr_tdata.wait_sp <= '1';
 
             if (w = '1') then
                 upd_lock(LOCK_AX or LOCK_DREG);

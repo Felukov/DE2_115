@@ -275,7 +275,6 @@ package cpu86_types is
         cx_tdata    : std_logic_vector(15 downto 0);
         dx_tdata    : std_logic_vector(15 downto 0);
         bp_tdata    : std_logic_vector(15 downto 0);
-        --sp_tdata    : std_logic_vector(15 downto 0);
         di_tdata    : std_logic_vector(15 downto 0);
         si_tdata    : std_logic_vector(15 downto 0);
         fl_tdata    : std_logic_vector(15 downto 0);
@@ -288,7 +287,6 @@ package cpu86_types is
         sp_val      : std_logic_vector(15 downto 0);
         sp_offset   : std_logic_vector(15 downto 0);
         ea_val      : std_logic_vector(15 downto 0);
-        sp_val_m2   : std_logic_vector(15 downto 0);
 
         op          : op_t;
         code        : std_logic_vector(3 downto 0);

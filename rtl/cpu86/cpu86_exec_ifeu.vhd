@@ -161,15 +161,14 @@ begin
     micro_m_tdata <= micro_tdata;
 
     rr_tready <= '1' when div_intr_s_tvalid = '0' and bnd_intr_s_tvalid = '0' and
-        jmp_lock_s_tvalid = '1' and halt_mode = '0' and
+        jmp_lock_s_tvalid = '1' and
         (micro_tvalid = '0' or (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
-    div_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and rr_tvalid = '1' and halt_mode = '0' and (micro_tvalid = '0' or
+    div_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and (micro_tvalid = '0' or
         (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
-    bnd_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and rr_tvalid = '1' and halt_mode = '0' and (micro_tvalid = '0' or
+    bnd_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and (micro_tvalid = '0' or
         (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
-
 
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
         ((rr_tdata.op = LOOPU) or
@@ -181,7 +180,8 @@ begin
          (rr_tdata.op = DBG) or
          (rr_tdata.op = IO) or
          (rr_tdata.op = LFP and rr_tdata.code = MISC_BOUND) or
-         (rr_tdata.op = SYS and (rr_tdata.code = SYS_INT_INT_OP or rr_tdata.code = SYS_EXT_INT_OP))) else '0';
+         (rr_tdata.op = SYS and (rr_tdata.code = SYS_INT_INT_OP or rr_tdata.code = SYS_EXT_INT_OP)))
+    else '0';
 
     ea_val_plus_disp_next <= std_logic_vector(unsigned(rr_tdata.ea_val) + unsigned(rr_tdata.disp));
     ea_val_plus_disp_p_2 <= std_logic_vector(unsigned(ea_val_plus_disp) + to_unsigned(2, 16));
@@ -1027,7 +1027,7 @@ begin
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
 
-            sp_val <= rr_tdata.sp_val_m2;
+            sp_val <= rr_tdata_buf.sp_val;
         end;
 
         procedure do_ext_intr_1 is begin
@@ -1400,7 +1400,7 @@ begin
 
         procedure do_stack_enter_0 is begin
             micro_tdata.cmd <= MICRO_NOP_OP;
-            sp_val <= rr_tdata.sp_val_m2;
+            sp_val <= rr_tdata.sp_val;
             bp_val <= rr_tdata.bp_tdata;
         end procedure;
 
@@ -1571,15 +1571,11 @@ begin
             micro_tdata.jump_imm <= '1';
 
             case (rr_tdata_buf.code(1 downto 0)) is
-                when LOOP_OP(1 downto 0) =>
-                    micro_tdata.jump_cond <= cx_ne_0;
-                when LOOP_OP_E(1 downto 0) =>
-                    micro_tdata.jump_cond <= cx_ne_0_and_zf;
-                when LOOP_OP_NE(1 downto 0) =>
-                    micro_tdata.jump_cond <= cx_ne_0_and_nzf;
-                when LOOP_JCXZ(1 downto 0) =>
-                    micro_tdata.jump_cond <= cx_eq_0;
-                when others => null;
+                when LOOP_OP(1 downto 0)    => micro_tdata.jump_cond <= cx_ne_0;
+                when LOOP_OP_E(1 downto 0)  => micro_tdata.jump_cond <= cx_ne_0_and_zf;
+                when LOOP_OP_NE(1 downto 0) => micro_tdata.jump_cond <= cx_ne_0_and_nzf;
+                when LOOP_JCXZ(1 downto 0)  => micro_tdata.jump_cond <= cx_eq_0;
+                when others                 => null;
             end case;
 
         end procedure;
@@ -2236,10 +2232,10 @@ begin
                         end case;
                     when RET =>
                         case rr_tdata.code is
-                            when RET_NEAR => do_ret_near_cmd_0;
+                            when RET_NEAR       => do_ret_near_cmd_0;
                             when RET_NEAR_IMM16 => do_ret_near_imm16_cmd_0;
-                            when RET_FAR => do_ret_far_cmd_0;
-                            when others => do_ret_far_imm16_cmd_0;
+                            when RET_FAR        => do_ret_far_cmd_0;
+                            when others         => do_ret_far_imm16_cmd_0;
                         end case;
                     when SYS =>
                         case rr_tdata.code is

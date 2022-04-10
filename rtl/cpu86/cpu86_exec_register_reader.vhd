@@ -205,35 +205,35 @@ begin
             when "01" =>
                 dreg_tdata(15 downto 8) <= (others => '0');
                 case instr_tdata.dreg is
-                    when AX => dreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
-                    when BX => dreg_tdata(7 downto 0) <= bx_s_tdata(7 downto 0);
-                    when CX => dreg_tdata(7 downto 0) <= cx_s_tdata(7 downto 0);
-                    when DX => dreg_tdata(7 downto 0) <= dx_s_tdata(7 downto 0);
-                    when FL => dreg_tdata(7 downto 0) <= flags_s_tdata(7 downto 0);
+                    when AX     => dreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
+                    when BX     => dreg_tdata(7 downto 0) <= bx_s_tdata(7 downto 0);
+                    when CX     => dreg_tdata(7 downto 0) <= cx_s_tdata(7 downto 0);
+                    when DX     => dreg_tdata(7 downto 0) <= dx_s_tdata(7 downto 0);
+                    when FL     => dreg_tdata(7 downto 0) <= flags_s_tdata(7 downto 0);
                     when others => dreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
                 end case;
 
             when "10" =>
                 dreg_tdata(15 downto 8) <= (others => '0');
                 case instr_tdata.dreg is
-                    when AX => dreg_tdata(7 downto 0) <= ax_s_tdata(15 downto 8);
-                    when BX => dreg_tdata(7 downto 0) <= bx_s_tdata(15 downto 8);
-                    when CX => dreg_tdata(7 downto 0) <= cx_s_tdata(15 downto 8);
-                    when DX => dreg_tdata(7 downto 0) <= dx_s_tdata(15 downto 8);
+                    when AX     => dreg_tdata(7 downto 0) <= ax_s_tdata(15 downto 8);
+                    when BX     => dreg_tdata(7 downto 0) <= bx_s_tdata(15 downto 8);
+                    when CX     => dreg_tdata(7 downto 0) <= cx_s_tdata(15 downto 8);
+                    when DX     => dreg_tdata(7 downto 0) <= dx_s_tdata(15 downto 8);
                     when others => dreg_tdata(7 downto 0) <= ax_s_tdata(15 downto 8);
                 end case;
 
             when others =>
                 case instr_tdata.dreg is
-                    when AX => dreg_tdata <= ax_s_tdata;
-                    when BX => dreg_tdata <= bx_s_tdata;
-                    when CX => dreg_tdata <= cx_s_tdata;
-                    when DX => dreg_tdata <= dx_s_tdata;
-                    when BP => dreg_tdata <= bp_s_tdata;
-                    when SI => dreg_tdata <= si_s_tdata;
-                    when DI => dreg_tdata <= di_s_tdata;
-                    when SP => dreg_tdata <= sp_s_tdata;
-                    when FL => dreg_tdata <= flags_s_tdata;
+                    when AX     => dreg_tdata <= ax_s_tdata;
+                    when BX     => dreg_tdata <= bx_s_tdata;
+                    when CX     => dreg_tdata <= cx_s_tdata;
+                    when DX     => dreg_tdata <= dx_s_tdata;
+                    when BP     => dreg_tdata <= bp_s_tdata;
+                    when SI     => dreg_tdata <= si_s_tdata;
+                    when DI     => dreg_tdata <= di_s_tdata;
+                    when SP     => dreg_tdata <= sp_s_tdata;
+                    when FL     => dreg_tdata <= flags_s_tdata;
                     when others => dreg_tdata <= ax_s_tdata;
                 end case;
         end case;
@@ -243,12 +243,12 @@ begin
             when BX_DI_DISP => ea_tdata <= std_logic_vector(unsigned(bx_s_tdata) + unsigned(di_s_tdata));
             when BP_SI_DISP => ea_tdata <= std_logic_vector(unsigned(bp_s_tdata) + unsigned(si_s_tdata));
             when BP_DI_DISP => ea_tdata <= std_logic_vector(unsigned(bp_s_tdata) + unsigned(di_s_tdata));
-            when XLAT => ea_tdata <= std_logic_vector(unsigned(bx_s_tdata) + unsigned(x"00" & ax_s_tdata(7 downto 0)));
-            when SI_DISP => ea_tdata <= si_s_tdata;
-            when DI_DISP => ea_tdata <= di_s_tdata;
-            when BP_DISP => ea_tdata <= bp_s_tdata;
-            when BX_DISP => ea_tdata <= bx_s_tdata;
-            when others => ea_tdata <= (others => '0');
+            when XLAT       => ea_tdata <= std_logic_vector(unsigned(bx_s_tdata) + unsigned(x"00" & ax_s_tdata(7 downto 0)));
+            when SI_DISP    => ea_tdata <= si_s_tdata;
+            when DI_DISP    => ea_tdata <= di_s_tdata;
+            when BP_DISP    => ea_tdata <= bp_s_tdata;
+            when BX_DISP    => ea_tdata <= bx_s_tdata;
+            when others     => ea_tdata <= (others => '0');
         end case;
 
     end process;
@@ -265,10 +265,12 @@ begin
         (instr_tdata.wait_ds = '0' or (instr_tdata.wait_ds = '1' and ds_s_tvalid = '1' and ds_m_lock_tvalid = '0')) and
         (instr_tdata.wait_es = '0' or (instr_tdata.wait_es = '1' and es_s_tvalid = '1' and es_m_lock_tvalid = '0')) and
         (instr_tdata.wait_ss = '0' or (instr_tdata.wait_ss = '1' and ss_s_tvalid = '1' and ss_m_lock_tvalid = '0')) and
-        (instr_tdata.wait_fl = '0' or (instr_tdata.wait_fl = '1' and flags_s_tvalid = '1' and flags_m_lock_tvalid = '0')) else '0';
+        (instr_tdata.wait_fl = '0' or (instr_tdata.wait_fl = '1' and flags_s_tvalid = '1' and flags_m_lock_tvalid = '0'))
+    else '0';
 
     instr_tready <= '1' when instr_tready_mask = '0' and (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) and instr_hazards_resolved = '1' else '0';
 
+    -- handling external interrupt process
     ext_interrupt_process : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
@@ -294,8 +296,8 @@ begin
         end if;
     end process;
 
-    reg_lock_proc1: process (clk) begin
-
+    -- locking registers to update process
+    reg_lock_proc: process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
                 ax_m_lock_tvalid <= '0';
@@ -498,6 +500,7 @@ begin
         end if;
     end process;
 
+    -- forming output
     forming_output_proc: process (clk) begin
         if rising_edge(clk) then
             -- Resettable
@@ -580,9 +583,9 @@ begin
                 rr_tdata.sp_offset <= x"FFFE";
             end if;
 
-            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
-                rr_tdata.sp_val_m2 <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
-            end if;
+            -- if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+            --     rr_tdata.sp_val_m2 <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
+            -- end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
                 rr_tdata.ax_tdata <= ax_s_tdata;
