@@ -119,7 +119,7 @@ architecture rtl of cpu86_exec_mexec is
         dval_lo                 : std_logic_vector(15 downto 0); --dest
     end record;
 
-    component mexec_alu is
+    component cpu86_exec_mexec_alu is
         port (
             clk                 : in std_logic;
             resetn              : in std_logic;
@@ -132,9 +132,9 @@ architecture rtl of cpu86_exec_mexec is
             res_m_tdata         : out alu_res_t;
             res_m_tuser         : out std_logic_vector(15 downto 0)
         );
-    end component mexec_alu;
+    end component cpu86_exec_mexec_alu;
 
-    component mexec_mul is
+    component cpu86_exec_mexec_mul is
         port (
             clk                 : in std_logic;
             resetn              : in std_logic;
@@ -146,9 +146,9 @@ architecture rtl of cpu86_exec_mexec is
             res_m_tdata         : out mul_res_t;
             res_m_tuser         : out std_logic_vector(15 downto 0)
         );
-    end component mexec_mul;
+    end component cpu86_exec_mexec_mul;
 
-    component mexec_div is
+    component cpu86_exec_mexec_div is
         port (
             clk                 : in std_logic;
             resetn              : in std_logic;
@@ -160,9 +160,9 @@ architecture rtl of cpu86_exec_mexec is
             res_m_tdata         : out div_res_t;
             res_m_tuser         : out std_logic_vector(15 downto 0)
         );
-    end component mexec_div;
+    end component cpu86_exec_mexec_div;
 
-    component mexec_one is
+    component cpu86_exec_mexec_one is
         port (
             clk                 : in std_logic;
             resetn              : in std_logic;
@@ -174,9 +174,9 @@ architecture rtl of cpu86_exec_mexec is
             res_m_tdata         : out one_res_t;
             res_m_tuser         : out std_logic_vector(15 downto 0)
         );
-    end component mexec_one;
+    end component cpu86_exec_mexec_one;
 
-    component mexec_bcd is
+    component cpu86_exec_mexec_bcd is
         port (
             clk                 : in std_logic;
             resetn              : in std_logic;
@@ -189,9 +189,9 @@ architecture rtl of cpu86_exec_mexec is
             res_m_tdata         : out bcd_res_t;
             res_m_tuser         : out std_logic_vector(15 downto 0)
         );
-    end component mexec_bcd;
+    end component cpu86_exec_mexec_bcd;
 
-    component mexec_shf is
+    component cpu86_exec_mexec_shf is
         generic (
             DATA_WIDTH          : natural := 16
         );
@@ -207,7 +207,7 @@ architecture rtl of cpu86_exec_mexec is
             res_m_tdata         : out shf_res_t;
             res_m_tuser         : out std_logic_vector(15 downto 0)
         );
-    end component mexec_shf;
+    end component cpu86_exec_mexec_shf;
 
     component cpu86_exec_mexec_str is
         port (
@@ -422,7 +422,7 @@ architecture rtl of cpu86_exec_mexec is
 
 begin
 
-    mexec_alu_inst : mexec_alu port map (
+    mexec_alu_inst : cpu86_exec_mexec_alu port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -435,7 +435,7 @@ begin
         res_m_tuser             => alu_res_tuser
     );
 
-    mexec_mul_inst : mexec_mul port map (
+    mexec_mul_inst : cpu86_exec_mexec_mul port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -447,7 +447,7 @@ begin
         res_m_tuser             => mul_res_tuser
     );
 
-    mexec_div_inst : mexec_div port map (
+    mexec_div_inst : cpu86_exec_mexec_div port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -459,7 +459,7 @@ begin
         res_m_tuser             => div_res_tuser
     );
 
-    mexec_one_inst : mexec_one port map (
+    mexec_one_inst : cpu86_exec_mexec_one port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -471,7 +471,7 @@ begin
         res_m_tuser             => one_res_tuser
     );
 
-    mexec_bcd_inst : mexec_bcd port map (
+    mexec_bcd_inst : cpu86_exec_mexec_bcd port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -484,7 +484,7 @@ begin
         res_m_tuser             => bcd_res_tuser
     );
 
-    mexec_shf8_inst : mexec_shf generic map (
+    mexec_shf8_inst : cpu86_exec_mexec_shf generic map (
         DATA_WIDTH              => 8
     ) port map (
         clk                     => clk,
@@ -499,7 +499,7 @@ begin
         res_m_tuser             => shf8_res_tuser
     );
 
-    mexec_shf16_inst : mexec_shf generic map (
+    mexec_shf16_inst : cpu86_exec_mexec_shf generic map (
         DATA_WIDTH              => 16
     ) port map (
         clk                     => clk,

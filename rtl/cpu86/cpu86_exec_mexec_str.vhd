@@ -492,7 +492,7 @@ begin
     end process;
 
     event_movs_rd_start <= '1' when req_s_tvalid = '1' and req_s_tdata.code = MOVS_OP else '0';
-    event_movs_rd_next <= '1' when instr_movs = '1' and wr_req_tvalid = '1' and
+    event_movs_rd_next  <= '1' when instr_movs = '1' and wr_req_tvalid = '1' and
         wr_req_tready = '1' and wr_req_tlast = '1' and work_done_fl = '0' else '0';
 
     event_lods_rd_start <= '1' when req_s_tvalid = '1' and req_s_tdata.code = LODS_OP else '0';
@@ -500,7 +500,7 @@ begin
     event_scas_rd_start <= '1' when req_s_tvalid = '1' and req_s_tdata.code = SCAS_OP else '0';
 
     event_cmps_rd_start <= '1' when req_s_tvalid = '1' and req_s_tdata.code = CMPS_OP else '0';
-    event_cmps_rd_next <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and lsu_rd_s_tlast = '1' and
+    event_cmps_rd_next  <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and lsu_rd_s_tlast = '1' and
         (work_done_fl = '0') and (instr_cmps = '1') else '0';
 
     mem_rd_proc: process (clk) begin
@@ -510,10 +510,10 @@ begin
                 rd_req_cnt <= 0;
             else
 
-                if event_movs_rd_start = '1' or event_movs_rd_next = '1' or
+                if (event_movs_rd_start = '1' or event_movs_rd_next = '1' or
                     event_lods_rd_start = '1' or event_scas_rd_start = '1' or
                     event_cmps_rd_start = '1' or event_cmps_rd_next = '1' or
-                    event_outs_rd_start = '1'
+                    event_outs_rd_start = '1')
                 then
                     rd_req_tvalid <= '1';
                 elsif rd_req_tvalid = '1' and rd_req_tready = '1' and
@@ -527,11 +527,11 @@ begin
                 end if;
 
                 if rd_req_tvalid = '1' and rd_req_tready = '1' then
-                    if (instr_movs = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1)) or
+                    if ((instr_movs = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1)) or
                         (instr_cmps = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1 or stop_fl = '1')) or
                         (instr_scas = '1' and (rd_req_cnt = 15 or rd_req_cnt = rep_cnt_m1 or stop_fl = '1')) or
                         (instr_lods = '1' and (rd_req_cnt = rep_cnt_m1)) or
-                        (instr_outs = '1' and (rd_req_cnt = rep_cnt_m1))
+                        (instr_outs = '1' and (rd_req_cnt = rep_cnt_m1)))
                     then
                         rd_req_cnt <= 0;
                     else
