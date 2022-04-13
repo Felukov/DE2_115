@@ -32,7 +32,7 @@ use ieee.numeric_std.all;
 entity cpu86_exec_reg is
     generic (
         DATA_WIDTH      : integer := 16;
-        INIT_VALUE      : std_logic_vector(DATA_WIDTH-1 downto 0)
+        INIT_VALUE      : std_logic_vector
     );
     port (
         clk             : in std_logic;

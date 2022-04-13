@@ -72,7 +72,7 @@ architecture rtl of cpu86_exec is
     component cpu86_exec_reg is
         generic (
             DATA_WIDTH              : integer := 16;
-            INIT_VALUE              : std_logic_vector(DATA_WIDTH-1 downto 0)
+            INIT_VALUE              : std_logic_vector(15 downto 0)
         );
         port (
             clk                     : in std_logic;
@@ -593,6 +593,8 @@ architecture rtl of cpu86_exec is
     signal bnd_intr_m_tready        : std_logic;
     signal bnd_intr_m_tdata         : intr_t;
 
+    signal masked_interrupt         : std_logic;
+
 begin
 
     -- module cpu86_exec_reg instantiation
@@ -859,6 +861,7 @@ begin
         out_m_tdata             => div_intr_m_tdata
     );
 
+
     -- module axis_reg instantiation
     external_interrupt_reg_inst : axis_reg generic map (
         DATA_WIDTH              => 8
@@ -866,7 +869,7 @@ begin
         clk                     => clk,
         resetn                  => resetn,
 
-        in_s_tvalid             => interrupt_valid,
+        in_s_tvalid             => masked_interrupt,
         in_s_tready             => ext_intr_s_tready,
         in_s_tdata              => interrupt_data,
 
@@ -1188,6 +1191,7 @@ begin
     -- assigns
     exec_resetn <= '0' when resetn = '0' or jump_tvalid = '1' else '1';
 
+
     ax_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_ax_wr_tvalid = '1' or mexec_ax_wr_tvalid = '1') else '0';
     bx_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_bx_wr_tvalid = '1' or mexec_bx_wr_tvalid = '1') else '0';
     cx_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_cx_wr_tvalid = '1' or mexec_cx_wr_tvalid = '1') else '0';
@@ -1222,7 +1226,8 @@ begin
     req_m_tvalid <= jump_tvalid;
     req_m_tdata <= jump_tdata;
 
-    interrupt_ack <= '1' when interrupt_valid = '1' and ext_intr_s_tready = '1' else '0';
+    masked_interrupt <= '1' when interrupt_valid = '1' and flags_tdata(9) = '1' else '0';
+    interrupt_ack <= '1' when masked_interrupt = '1' and ext_intr_s_tready = '1' else '0';
 
     --cs, ip, ds, es, ss, ax, bx, dx, cx, bp, di, si, sp, Flags8
     dbg_m_tvalid <= mexec_dbg_tvalid;

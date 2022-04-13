@@ -406,7 +406,7 @@ begin
                 case rr_tdata.code is
                     when SYS_INT_INT_OP => micro_cnt_next <= 5;
                     when SYS_EXT_INT_OP => micro_cnt_next <= 5;
-                    when SYS_IRET_OP => micro_cnt_next <= 6;
+                    when SYS_IRET_OP => micro_cnt_next <= 5;
                     when others => micro_cnt_next <= 0;
                 end case;
 
@@ -1085,13 +1085,14 @@ begin
         procedure do_sys_cmd_iret_0 is begin
             micro_tdata.cmd <= MICRO_MEM_OP;
 
+            -- read IP
+            mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val);
+
             -- jump
             micro_tdata.jump_cond <= j_never;
             micro_tdata.jump_imm <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
-
-            mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val);
 
             sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
         end procedure;
@@ -1099,42 +1100,56 @@ begin
         procedure do_sys_cmd_iret_1 is begin
             sp_val <= sp_val + sp_offset;
 
-            micro_tdata.mem_addr <= sp_val;
             case micro_cnt is
+                when 5 =>
+                    micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MEM_OP or MICRO_MRD_OP;
+                    -- read CS
+                    mem_read_word(seg => rr_tdata_buf.ss_seg_val, addr => sp_val);
+
+                    -- write IP
+                    micro_tdata.jump_cs_mem <= '0';
+                    micro_tdata.jump_ip_mem <= '1';
+
                 when 4 =>
-                    micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_ALU_OP;
+                    micro_tdata.cmd <= MICRO_MEM_OP or MICRO_JMP_OP or MICRO_MRD_OP or MICRO_ALU_OP;
+                    -- read FLAGS
+                    mem_read_word(seg => rr_tdata_buf.ss_seg_val, addr => sp_val);
+
+                    -- write CS
+                    micro_tdata.jump_cs_mem <= '1';
+                    micro_tdata.jump_ip_mem <= '0';
 
                     -- upd SP
                     alu_command_imm(
                         cmd => ALU_OP_ADD,
                         aval => sp_val,
-                        bval => x"0000",
+                        bval => sp_offset,
                         dreg => SP,
                         dmask => "11",
                         upd_fl => '0');
 
-                    micro_tdata.jump_ip_mem <= '1';
                 when 3 =>
-                    micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP;
-                    micro_tdata.jump_ip_mem <= '0';
-                    micro_tdata.jump_cs_mem <= '1';
-                when 2 =>
-                    micro_tdata.cmd <= MICRO_ALU_OP or MICRO_MRD_OP;
+                    micro_tdata.cmd <= MICRO_MRD_OP or MICRO_ALU_OP;
 
                     micro_tdata.jump_cs_mem <= '0';
+                    micro_tdata.jump_ip_mem <= '0';
 
+                    -- write FLAGS
                     micro_tdata.alu_code <= ALU_OP_ADD;
+                    micro_tdata.alu_upd_fl <= '0';
                     micro_tdata.alu_wb <= '1';
-                    micro_tdata.alu_upd_fl <= '1';
+
                     micro_tdata.alu_a_val <= x"0000";
                     micro_tdata.alu_b_mem <= '1';
                     micro_tdata.alu_dreg <= FL;
                     micro_tdata.alu_dmask <= "11";
-                when 1 =>
+                when 2 =>
+                    micro_tdata.cmd <= MICRO_NOP_OP;
+                    -- this is empty cycle to allow flags to write
+                when others =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
-
                     micro_tdata.jump_cond <= j_always;
-                when others => null;
+
             end case;
         end procedure;
 
@@ -2138,7 +2153,11 @@ begin
                 interrupt_next_ip <= bnd_intr_s_tdata(INTR_T_IP_NEXT);
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_next_cs <= rr_tuser(USER_T_CS);
-                interrupt_next_ip <= rr_tuser(USER_T_IP_NEXT);
+                if (rr_tdata.code = SYS_EXT_INT_OP) then
+                    interrupt_next_ip <= rr_tuser(USER_T_IP);
+                else
+                    interrupt_next_ip <= rr_tuser(USER_T_IP_NEXT);
+                end if;
             end if;
 
             if (rr_tvalid = '1' and rr_tready = '1') then

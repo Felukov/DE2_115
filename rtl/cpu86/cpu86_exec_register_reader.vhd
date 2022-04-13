@@ -284,11 +284,11 @@ begin
                     end if;
                 end if;
 
-                if (ext_intr_tvalid = '1' and ext_intr_tready = '0') then
-                    if (instr_s_tvalid = '1' and skip_next = '0' and seg_override_tvalid = '0' and ss_s_tvalid = '1' and sp_s_tvalid = '1') then
+                if (ext_intr_tvalid = '1' and instr_tready_mask = '1' and ext_intr_tready = '0') then
+                    if (instr_s_tvalid = '1' and rr_tvalid = '0' and skip_next = '0' and seg_override_tvalid = '0' and ss_s_tvalid = '1' and sp_s_tvalid = '1') then
                         ext_intr_tready <= '1';
                     end if;
-                elsif (ext_intr_tvalid = '1' and ext_intr_tready = '0') then
+                elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
                     ext_intr_tready <= '0';
                 end if;
 
@@ -582,10 +582,6 @@ begin
                 rr_tdata.sp_val <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
                 rr_tdata.sp_offset <= x"FFFE";
             end if;
-
-            -- if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
-            --     rr_tdata.sp_val_m2 <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
-            -- end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
                 rr_tdata.ax_tdata <= ax_s_tdata;
