@@ -116,11 +116,14 @@ architecture rtl of cpu86_exec_ifeu is
     signal micro_code           : std_logic_vector(3 downto 0);
     signal rr_tdata_buf         : rr_instr_t;
     signal rr_tuser_buf         : user_t;
-    signal rr_tuser_buf_ip_next : std_logic_vector(15 downto 0);
+    --signal rr_tuser_buf_ip_next : std_logic_vector(15 downto 0);
 
     signal ea_val_plus_disp_next: std_logic_vector(15 downto 0);
     signal ea_val_plus_disp     : std_logic_vector(15 downto 0);
     signal ea_val_plus_disp_p_2 : std_logic_vector(15 downto 0);
+
+    signal ip_val_plus_disp_next: std_logic_vector(15 downto 0);
+    signal ip_val_plus_disp     : std_logic_vector(15 downto 0);
 
     signal frame_pointer        : std_logic_vector(15 downto 0);
 
@@ -185,6 +188,8 @@ begin
 
     ea_val_plus_disp_next <= std_logic_vector(unsigned(rr_tdata.ea_val) + unsigned(rr_tdata.disp));
     ea_val_plus_disp_p_2 <= std_logic_vector(unsigned(ea_val_plus_disp) + to_unsigned(2, 16));
+
+    ip_val_plus_disp_next <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + unsigned(rr_tdata.disp));
 
     update_regs_proc : process (all) begin
 
@@ -1564,7 +1569,7 @@ begin
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
             micro_tdata.jump_cs <= rr_tuser(31 downto 16);
-            micro_tdata.jump_ip <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + unsigned(rr_tdata.disp));
+            micro_tdata.jump_ip <= ip_val_plus_disp_next;
             micro_tdata.jump_cx <= rr_tdata.sreg_val;
 
             if (rr_tdata.code = LOOP_OP or rr_tdata.code = LOOP_OP_E or rr_tdata.code = LOOP_OP_NE) then
@@ -1595,7 +1600,7 @@ begin
 
         end procedure;
 
-        procedure do_bra_cmd is begin
+        procedure do_bra_cmd_0 is begin
             micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
 
             -- configure jump
@@ -1623,7 +1628,7 @@ begin
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
             micro_tdata.jump_cs <= rr_tuser(31 downto 16);
-            micro_tdata.jump_ip <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + unsigned(rr_tdata.disp));
+            micro_tdata.jump_ip <= ip_val_plus_disp_next;
         end procedure;
 
         procedure do_jmp_0 is begin
@@ -1660,7 +1665,7 @@ begin
                     micro_tdata.jump_ip <= rr_tdata.sreg_val;
                 when others =>
                     micro_tdata.jump_cs <= rr_tuser(31 downto 16);
-                    micro_tdata.jump_ip <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + unsigned(rr_tdata.disp));
+                    micro_tdata.jump_ip <= ip_val_plus_disp_next;
             end case;
 
         end procedure;
@@ -1766,7 +1771,7 @@ begin
             micro_tdata.jump_cond <= j_always;
             micro_tdata.jump_imm <= '1';
             micro_tdata.jump_cs <= rr_tuser_buf(31 downto 16);
-            micro_tdata.jump_ip <= std_logic_vector(unsigned(rr_tuser_buf(15 downto 0)) + unsigned(rr_tdata_buf.disp));
+            micro_tdata.jump_ip <= ip_val_plus_disp; --std_logic_vector(unsigned(rr_tuser_buf(15 downto 0)) + unsigned(rr_tdata_buf.disp));
 
             case micro_cnt is
                 when 2 => micro_tdata.cmd <= MICRO_NOP_OP;
@@ -2181,14 +2186,14 @@ begin
             end if;
 
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
-                micro_op <= SYS;
-                micro_code <= SYS_DIV_INT_OP;
+                micro_op    <= SYS;
+                micro_code  <= SYS_DIV_INT_OP;
             elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
-                micro_op <= SYS;
-                micro_code <= SYS_BND_INT_OP;
+                micro_op    <= SYS;
+                micro_code  <= SYS_BND_INT_OP;
             elsif (rr_tvalid = '1' and rr_tready = '1') then
-                micro_op <= rr_tdata.op;
-                micro_code <= rr_tdata.code;
+                micro_op    <= rr_tdata.op;
+                micro_code  <= rr_tdata.code;
             end if;
 
             if (rr_tvalid = '1' and rr_tready = '1') then
@@ -2200,8 +2205,12 @@ begin
             end if;
 
             if (rr_tvalid = '1' and rr_tready = '1') then
-                rr_tuser_buf_ip_next <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + to_unsigned(1, 16));
+                --rr_tuser_buf_ip_next <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + to_unsigned(1, 16));
                 ea_val_plus_disp <= ea_val_plus_disp_next;
+            end if;
+
+            if (rr_tvalid = '1' and rr_tready = '1') then
+                ip_val_plus_disp <= ip_val_plus_disp_next;
             end if;
 
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
@@ -2215,39 +2224,39 @@ begin
                 micro_tdata.dbg_ip <= rr_tuser(15 downto 0);
 
                 case (rr_tdata.op) is
-                    when ALU => do_alu_cmd_0;
-                    when ONEU => do_one_cmd_0;
-                    when MULU => do_mul_cmd_0;
-                    when DIVU => do_div_cmd_0;
-                    when BCDU => do_bcd_cmd;
-                    when SHFU => do_shf_cmd_0;
-                    when XCHG => do_xchg_cmd_0;
-                    when MOVU => do_movu_cmd_0;
-                    when DBG => do_dbg_cmd_0;
-                    when STR => do_str_cmd;
-                    when IO => do_io_cmd;
-                    when SET_FLAG => do_set_flg_cmd_0;
-                    when LOOPU => do_loop_cmd_0;
-                    when JMPU => do_jmp_0;
-                    when BRANCH => do_bra_cmd;
+                    when ALU        => do_alu_cmd_0;
+                    when ONEU       => do_one_cmd_0;
+                    when MULU       => do_mul_cmd_0;
+                    when DIVU       => do_div_cmd_0;
+                    when BCDU       => do_bcd_cmd;
+                    when SHFU       => do_shf_cmd_0;
+                    when XCHG       => do_xchg_cmd_0;
+                    when MOVU       => do_movu_cmd_0;
+                    when DBG        => do_dbg_cmd_0;
+                    when STR        => do_str_cmd;
+                    when IO         => do_io_cmd;
+                    when SET_FLAG   => do_set_flg_cmd_0;
+                    when LOOPU      => do_loop_cmd_0;
+                    when JMPU       => do_jmp_0;
+                    when BRANCH     => do_bra_cmd_0;
                     when LFP =>
                         case rr_tdata.code is
-                            when MISC_BOUND => do_misc_bound_0;
-                            when MISC_XLAT => do_xlat_0;
-                            when others => do_lfp_cmd_0;
+                            when MISC_BOUND     => do_misc_bound_0;
+                            when MISC_XLAT      => do_xlat_0;
+                            when others         => do_lfp_cmd_0;
                         end case;
                     when STACKU =>
                         case rr_tdata.code is
-                            when STACKU_ENTER => do_stack_enter_0;
-                            when STACKU_LEAVE => do_stack_leave_0;
-                            when others => do_stack_cmd_0;
+                            when STACKU_ENTER   => do_stack_enter_0;
+                            when STACKU_LEAVE   => do_stack_leave_0;
+                            when others         => do_stack_cmd_0;
                         end case;
                     when JCALL =>
                         case rr_tdata.code is
-                            when CALL_REL16 => do_call_rel16_cmd_0;
-                            when CALL_RM16 => do_call_rm16_cmd_0;
-                            when CALL_PTR16_16 => do_call_ptr16_16_cmd_0;
-                            when others => do_call_mem16_16_0;
+                            when CALL_REL16     => do_call_rel16_cmd_0;
+                            when CALL_RM16      => do_call_rm16_cmd_0;
+                            when CALL_PTR16_16  => do_call_ptr16_16_cmd_0;
+                            when others         => do_call_mem16_16_0;
                         end case;
                     when RET =>
                         case rr_tdata.code is
@@ -2268,40 +2277,40 @@ begin
 
             elsif (micro_tvalid = '1' and micro_tready = '1') then
                 case micro_op is
-                    when ALU => do_alu_cmd_1;
-                    when ONEU => do_one_cmd_1;
-                    when MULU => do_mul_cmd_1;
-                    when DIVU => do_div_cmd_1;
-                    when SHFU => do_shf_cmd_1;
-                    when XCHG => do_xchg_cmd_1;
-                    when MOVU => do_movu_cmd_1;
-                    when LOOPU => do_loop_cmd_1;
-                    when JMPU => do_jmp_1;
+                    when ALU    => do_alu_cmd_1;
+                    when ONEU   => do_one_cmd_1;
+                    when MULU   => do_mul_cmd_1;
+                    when DIVU   => do_div_cmd_1;
+                    when SHFU   => do_shf_cmd_1;
+                    when XCHG   => do_xchg_cmd_1;
+                    when MOVU   => do_movu_cmd_1;
+                    when LOOPU  => do_loop_cmd_1;
+                    when JMPU   => do_jmp_1;
                     when LFP =>
                         case micro_code is
-                            when MISC_BOUND => do_misc_bound_1;
-                            when MISC_XLAT => do_xlat_1;
-                            when others => do_lfp_cmd_1;
+                            when MISC_BOUND     => do_misc_bound_1;
+                            when MISC_XLAT      => do_xlat_1;
+                            when others         => do_lfp_cmd_1;
                         end case;
                     when STACKU =>
                         case micro_code is
-                            when STACKU_ENTER => do_stack_enter_1;
-                            when STACKU_LEAVE => do_stack_leave_1;
-                            when others => do_stack_cmd_1;
+                            when STACKU_ENTER   => do_stack_enter_1;
+                            when STACKU_LEAVE   => do_stack_leave_1;
+                            when others         => do_stack_cmd_1;
                         end case;
                     when JCALL =>
                         case micro_code is
-                            when CALL_REL16 => do_call_rel16_cmd_1;
-                            when CALL_RM16 => do_call_rm16_cmd_1;
-                            when CALL_PTR16_16 => do_call_ptr16_16_cmd_1;
-                            when others => do_call_mem16_16_1;
+                            when CALL_REL16     => do_call_rel16_cmd_1;
+                            when CALL_RM16      => do_call_rm16_cmd_1;
+                            when CALL_PTR16_16  => do_call_ptr16_16_cmd_1;
+                            when others         => do_call_mem16_16_1;
                         end case;
                     when RET =>
                         case micro_code is
-                            when RET_NEAR => do_ret_near_cmd_1;
+                            when RET_NEAR       => do_ret_near_cmd_1;
                             when RET_NEAR_IMM16 => do_ret_near_imm16_cmd_1;
-                            when RET_FAR => do_ret_far_cmd_1;
-                            when others => do_ret_far_imm16_cmd_1;
+                            when RET_FAR        => do_ret_far_cmd_1;
+                            when others         => do_ret_far_imm16_cmd_1;
                         end case;
                     when SYS =>
                         case micro_code is
