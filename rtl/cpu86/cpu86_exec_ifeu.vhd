@@ -472,19 +472,14 @@ begin
 
             when STACKU =>
                 case rr_tdata.code is
-                    when STACKU_ENTER =>
-                        if (rr_tdata.level = 0) then
-                            micro_cnt_next <= 4;
-                        else
-                            micro_cnt_next <= rr_tdata.level + 3;
-                        end if;
+                    when STACKU_ENTER => micro_cnt_next <= rr_tdata.level + 2;
                     when STACKU_LEAVE => micro_cnt_next <= 1;
                     when STACKU_PUSHA => micro_cnt_next <= 7;
                     when STACKU_PUSHM => micro_cnt_next <= 1;
-                    when STACKU_POPA => micro_cnt_next <= 15;
-                    when STACKU_POPR => micro_cnt_next <= 1;
-                    when STACKU_POPM => micro_cnt_next <= 1;
-                    when others => micro_cnt_next <= 0;
+                    when STACKU_POPA  => micro_cnt_next <= 15;
+                    when STACKU_POPR  => micro_cnt_next <= 1;
+                    when STACKU_POPM  => micro_cnt_next <= 1;
+                    when others       => micro_cnt_next <= 0;
                 end case;
 
             when MOVU =>
@@ -1419,58 +1414,70 @@ begin
         end procedure;
 
         procedure do_stack_enter_0 is begin
-            micro_tdata.cmd <= MICRO_NOP_OP;
-            sp_val <= rr_tdata.sp_val;
-            bp_val <= rr_tdata.bp_tdata;
+            micro_tdata.cmd <= MICRO_MEM_OP;
+            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
+
+            -- bp_next = bp - 2
+            bp_val <= std_logic_vector(unsigned(rr_tdata.bp_tdata) - to_unsigned(2, 16));
+
+            -- push bp
+            mem_write_imm(
+                seg  => rr_tdata.ss_seg_val,
+                addr => rr_tdata.sp_val,
+                val  => rr_tdata.bp_tdata,
+                w    => rr_tdata.w);
+
         end procedure;
 
         procedure do_stack_enter_1 is begin
+            sp_val <= sp_val + sp_offset;
 
             case micro_cnt is
                 when 3 =>
-                    -- push frame pointer
-                    if (rr_tdata_buf.level > 0) then
-                        -- push frame_pointer
-                        micro_tdata.cmd <= MICRO_MEM_OP;
-                        mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => frame_pointer, w => rr_tdata_buf.w);
-                    else
-                        micro_tdata.cmd <= MICRO_NOP_OP;
-                    end if;
+                    micro_tdata.cmd <= MICRO_MEM_OP;
+
+                    -- push frame_pointer
+                    mem_write_imm(
+                        seg     => rr_tdata_buf.ss_seg_val,
+                        addr    => sp_val,
+                        val     => frame_pointer,
+                        w       => rr_tdata_buf.w);
 
                 when 2 =>
                     micro_tdata.cmd <= MICRO_ALU_OP;
                     -- BP = frame_pointer
-                    alu_command_imm(cmd => ALU_OP_ADD,
-                        aval => frame_pointer,
-                        bval => x"0000",
-                        dreg => BP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    alu_command_imm(
+                        cmd     => ALU_OP_ADD,
+                        aval    => frame_pointer,
+                        bval    => x"0000",
+                        dreg    => BP,
+                        dmask   => "11",
+                        upd_fl  => '0');
 
                 when 1 =>
-                    -- SP = SP - bytes
                     micro_tdata.cmd <= MICRO_ALU_OP;
-                    alu_command_imm(cmd => ALU_OP_SUB,
-                        aval => sp_val,
-                        bval => rr_tdata_buf.data,
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    -- SP = SP - bytes
+                    alu_command_imm(
+                        cmd     => ALU_OP_SUB,
+                        aval    => frame_pointer,
+                        bval    => rr_tdata_buf.data,
+                        dreg    => SP,
+                        dmask   => "11",
+                        upd_fl  => '0');
 
                 when others =>
-                    -- push BP
                     micro_tdata.cmd <= MICRO_MEM_OP;
-                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => bp_val, w => rr_tdata_buf.w);
+                    -- bp_next = bp - 2
+                    bp_val <= std_logic_vector(unsigned(bp_val) - to_unsigned(2, 16));
 
-                    if not (micro_cnt = 4 and rr_tdata_buf.level = 0) then
-                        sp_val <= sp_val + sp_offset;
-                    end if;
+                    -- push BP
+                    mem_write_imm(
+                        seg     => rr_tdata_buf.ss_seg_val,
+                        addr    => sp_val,
+                        val     => bp_val,
+                        w       => rr_tdata_buf.w);
 
-                    -- BP = BP - 2
-                    if micro_cnt /= 4 then
-                        bp_val <= std_logic_vector(unsigned(bp_val) - to_unsigned(2, 16));
-                    end if;
-                end case;
+            end case;
 
         end procedure;
 
@@ -1714,12 +1721,12 @@ begin
 
             -- upd SP
             alu_command_imm(
-                cmd => ALU_OP_ADD,
-                aval => rr_tdata.sp_val,
-                bval => rr_tdata.sp_offset,
-                dreg => SP,
-                dmask => "11",
-                upd_fl => '0');
+                cmd     => ALU_OP_ADD,
+                aval    => rr_tdata.sp_val,
+                bval    => rr_tdata.sp_offset,
+                dreg    => SP,
+                dmask   => "11",
+                upd_fl  => '0');
 
             -- jump cmd
             micro_tdata.jump_cond <= j_never;
@@ -1846,8 +1853,8 @@ begin
             mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tuser(31 downto 16), w => rr_tdata.w);
 
             -- jump cmd
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
+            micro_tdata.jump_cond   <= j_never;
+            micro_tdata.jump_imm    <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
         end procedure;
@@ -2158,7 +2165,7 @@ begin
                 interrupt_next_ip <= bnd_intr_s_tdata(INTR_T_IP_NEXT);
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_next_cs <= rr_tuser(USER_T_CS);
-                if (rr_tdata.code = SYS_EXT_INT_OP) then
+                if (rr_tdata.op = SYS and rr_tdata.code = SYS_EXT_INT_OP) then
                     interrupt_next_ip <= rr_tuser(USER_T_IP);
                 else
                     interrupt_next_ip <= rr_tuser(USER_T_IP_NEXT);
@@ -2177,11 +2184,7 @@ begin
                 interrupt_ss_seg_val <= rr_tdata.ss_seg_val;
             end if;
 
-            if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
-            then
-                sp_offset <= x"FFFE";
-            elsif (rr_tvalid = '1' and rr_tready = '1') then
+            if (rr_tvalid = '1' and rr_tready = '1') then
                 sp_offset <= rr_tdata.sp_offset;
             end if;
 
@@ -2205,7 +2208,6 @@ begin
             end if;
 
             if (rr_tvalid = '1' and rr_tready = '1') then
-                --rr_tuser_buf_ip_next <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + to_unsigned(1, 16));
                 ea_val_plus_disp <= ea_val_plus_disp_next;
             end if;
 
