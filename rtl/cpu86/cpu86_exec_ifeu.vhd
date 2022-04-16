@@ -958,19 +958,18 @@ begin
 
         procedure do_sys_cmd_int_0 is begin
             micro_tdata.cmd <= MICRO_MEM_OP;
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
+
+            micro_tdata.jump_cond   <= j_never;
+            micro_tdata.jump_imm    <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
 
             -- push FLAGS
             mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.fl_tdata, w => rr_tdata.w);
 
-            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
         end;
 
         procedure do_sys_cmd_int_1 is begin
-            sp_val <= sp_val + sp_offset;
 
             case micro_cnt is
                 --when 6 =>
@@ -1026,13 +1025,9 @@ begin
             micro_tdata.jump_imm <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
-
-            sp_val <= rr_tdata_buf.sp_val;
         end;
 
         procedure do_ext_intr_1 is begin
-            sp_val <= sp_val + sp_offset;
-
             case micro_cnt is
                 when 6 =>
                     -- push FLAGS
@@ -1094,12 +1089,9 @@ begin
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
 
-            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
         end procedure;
 
         procedure do_sys_cmd_iret_1 is begin
-            sp_val <= sp_val + sp_offset;
-
             case micro_cnt is
                 when 5 =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MEM_OP or MICRO_MRD_OP;
@@ -1201,8 +1193,6 @@ begin
         end procedure;
 
         procedure do_stack_cmd_0 is begin
-            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
-
             case rr_tdata.code is
                 when STACKU_POPR =>
                     micro_tdata.cmd <= MICRO_MEM_OP or MICRO_ALU_OP;
@@ -1290,8 +1280,6 @@ begin
         end procedure;
 
         procedure do_stack_cmd_1 is begin
-            sp_val <= sp_val + sp_offset;
-
             case rr_tdata_buf.code is
                 when STACKU_PUSHM =>
                     micro_tdata.cmd <= MICRO_MEM_OP or MICRO_MRD_OP or MICRO_ALU_OP;
@@ -1415,10 +1403,6 @@ begin
 
         procedure do_stack_enter_0 is begin
             micro_tdata.cmd <= MICRO_MEM_OP;
-            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
-
-            -- bp_next = bp - 2
-            bp_val <= std_logic_vector(unsigned(rr_tdata.bp_tdata) - to_unsigned(2, 16));
 
             -- push bp
             mem_write_imm(
@@ -1430,8 +1414,6 @@ begin
         end procedure;
 
         procedure do_stack_enter_1 is begin
-            sp_val <= sp_val + sp_offset;
-
             case micro_cnt is
                 when 3 =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
@@ -1467,8 +1449,6 @@ begin
 
                 when others =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
-                    -- bp_next = bp - 2
-                    bp_val <= std_logic_vector(unsigned(bp_val) - to_unsigned(2, 16));
 
                     -- push BP
                     mem_write_imm(
@@ -1713,7 +1693,6 @@ begin
         end procedure;
 
         procedure do_call_ptr16_16_cmd_0 is begin
-            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
             micro_tdata.cmd <= MICRO_MEM_OP or MICRO_ALU_OP;
 
             -- push CS
@@ -1846,7 +1825,6 @@ begin
         end procedure;
 
         procedure do_call_mem16_16_0 is begin
-            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
             micro_tdata.cmd <= MICRO_MEM_OP;
 
             -- push CS
@@ -1929,7 +1907,6 @@ begin
         end procedure;
 
         procedure do_ret_near_imm16_cmd_0 is begin
-            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
             micro_tdata.cmd <= MICRO_NOP_OP;
 
             -- jump cmd
@@ -1970,7 +1947,6 @@ begin
 
         procedure do_ret_far_cmd_0 is begin
             micro_tdata.cmd <= MICRO_MEM_OP;
-            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
 
             -- pop IP
             mem_read(seg => rr_tdata.seg_val, addr => rr_tdata.sp_val, w => rr_tdata.w);
@@ -2016,7 +1992,6 @@ begin
 
         procedure do_ret_far_imm16_cmd_0 is begin
             micro_tdata.cmd <= MICRO_MEM_OP;
-            sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
 
             -- pop IP
             mem_read(seg => rr_tdata.seg_val, addr => rr_tdata.sp_val, w => rr_tdata.w);
@@ -2029,8 +2004,6 @@ begin
         end procedure;
 
         procedure do_ret_far_imm16_cmd_1 is begin
-            sp_val <= sp_val + sp_offset;
-
             case micro_cnt is
                 when 3 =>
                     micro_tdata.cmd <= MICRO_MEM_OP or MICRO_MRD_OP or MICRO_JMP_OP;
@@ -2149,6 +2122,26 @@ begin
                 frame_pointer <= rr_tdata.sp_val;
             end if;
 
+            if (rr_tvalid = '1' and rr_tready = '1') then
+                sp_offset <= rr_tdata.sp_offset;
+            end if;
+
+            if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
+                (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
+            then
+                sp_val <= rr_tdata_buf.sp_val;
+            elsif (rr_tvalid = '1' and rr_tready = '1') then
+                sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
+            elsif (micro_tvalid = '1' and micro_tready = '1') then
+                sp_val <= sp_val + sp_offset;
+            end if;
+
+            if (rr_tvalid = '1' and rr_tready = '1') then
+                bp_val <= std_logic_vector(unsigned(rr_tdata.bp_tdata) - to_unsigned(2, 16));
+            elsif (micro_tvalid = '1' and micro_tready = '1') then
+                bp_val <= std_logic_vector(unsigned(bp_val) - to_unsigned(2, 16));
+            end if;
+
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
                 interrupt_no <= x"0000";
             elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
@@ -2182,10 +2175,6 @@ begin
                 interrupt_ss_seg_val <= bnd_intr_s_tdata(INTR_T_SS);
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_ss_seg_val <= rr_tdata.ss_seg_val;
-            end if;
-
-            if (rr_tvalid = '1' and rr_tready = '1') then
-                sp_offset <= rr_tdata.sp_offset;
             end if;
 
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
