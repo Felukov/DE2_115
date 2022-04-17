@@ -420,6 +420,9 @@ architecture rtl of cpu86_exec_mexec is
 
     signal lsu_req_a_selector   : std_logic_vector(1 downto 0);
 
+    signal op_cnt               : natural range 0 to 3;
+    signal op_inc_hs            : std_logic;
+    signal op_dec_hs            : std_logic;
 begin
 
     mexec_alu_inst : cpu86_exec_mexec_alu port map (
@@ -595,6 +598,9 @@ begin
     div_intr_m_tdata(INTR_T_CS) <= div_res_tdata.cs_val;
     div_intr_m_tdata(INTR_T_IP_NEXT) <= div_res_tdata.ip_next_val;
 
+    op_inc_hs <= alu_req_tvalid or one_req_tvalid or div_req_tvalid or mul_req_tvalid or bcd_req_tvalid or shf8_req_tvalid or shf16_req_tvalid or str_req_tvalid;
+    op_dec_hs <= alu_res_tvalid or one_res_tvalid or div_res_tvalid or mul_res_tvalid or bcd_res_tvalid or shf8_res_tvalid or shf16_res_tvalid or str_res_tvalid;
+
     mexec_busy_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
@@ -674,6 +680,22 @@ begin
                     mexec_wait_str <= '0';
                 end if;
 
+            end if;
+        end if;
+    end process;
+
+    op_cnt_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                op_cnt <= 0;
+            else
+                if (op_inc_hs = '1' and op_dec_hs = '1') then
+                    op_cnt <= op_cnt;
+                elsif (op_inc_hs = '1') then
+                    op_cnt <= op_cnt + 1;
+                elsif (op_dec_hs = '1') then
+                    op_cnt <= op_cnt - 1;
+                end if;
             end if;
         end if;
     end process;
@@ -1785,18 +1807,18 @@ begin
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1' and
                     (micro_tdata.jump_cs_mem = '1' or micro_tdata.jump_ip_mem = '1' or
                      micro_tdata.jump_cond = cx_ne_0 or micro_tdata.jump_cond = cx_ne_0_and_zf or
-                     micro_tdata.jump_cond = cx_ne_0_and_nzf))
+                     micro_tdata.jump_cond = cx_ne_0_and_nzf or op_cnt /= 0 or op_inc_hs = '1'))
                 then
                     jmp_busy <= '1';
                 elsif (jmp_busy = '1') then
-                    if not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
-                        not (jmp_wait_alu = '1' xor alu_res_tvalid = '1')
+                    if (not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
+                        not (jmp_wait_alu = '1' xor alu_res_tvalid = '1') and (op_cnt = 0))
                     then
                         jmp_busy <= '0';
                     end if;
                 end if;
 
-                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1' and op_cnt = 0 and op_inc_hs = '0') then
                     case micro_tdata.jump_cond is
                         when j_always =>
                             if (micro_tdata.jump_cs_mem = '0' and micro_tdata.jump_ip_mem = '0') then
@@ -1817,8 +1839,8 @@ begin
                     end case;
 
                 elsif (jmp_busy = '1') then
-                    if not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
-                        not (jmp_wait_alu = '1' xor alu_res_tvalid = '1')
+                    if (not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
+                        not (jmp_wait_alu = '1' xor alu_res_tvalid = '1') and (op_cnt = 0))
                     then
                         jmp_tvalid <= '1';
                     else
@@ -1955,9 +1977,13 @@ begin
                     end case;
 
                 elsif (jmp_busy = '1') then
-                    if not ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') xor lsu_rd_s_tvalid = '1') and
-                        not (jmp_wait_alu = '1' xor alu_res_tvalid = '1')
-                    then
+                    if ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') and lsu_rd_s_tvalid = '1') then
+                        if (jmp_cond = j_always) then
+                            jmp_tdata <= '1';
+                        else
+                            jmp_tdata <= '0';
+                        end if;
+                    elsif (jmp_wait_alu = '1' and alu_res_tvalid = '1') then
                         case jmp_cond is
                             when j_always =>
                                 jmp_tdata <= '1';

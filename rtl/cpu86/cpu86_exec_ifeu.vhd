@@ -116,7 +116,6 @@ architecture rtl of cpu86_exec_ifeu is
     signal micro_code           : std_logic_vector(3 downto 0);
     signal rr_tdata_buf         : rr_instr_t;
     signal rr_tuser_buf         : user_t;
-    --signal rr_tuser_buf_ip_next : std_logic_vector(15 downto 0);
 
     signal ea_val_plus_disp_next: std_logic_vector(15 downto 0);
     signal ea_val_plus_disp     : std_logic_vector(15 downto 0);
@@ -403,102 +402,98 @@ begin
         case (rr_tdata.op) is
             when LFP =>
                 case rr_tdata.code is
-                    when MISC_XLAT => micro_cnt_next <= 1;
-                    when others => micro_cnt_next <= 2;
+                    when MISC_XLAT      => micro_cnt_next <= 1;
+                    when others         => micro_cnt_next <= 2;
                 end case;
 
             when SYS =>
                 case rr_tdata.code is
                     when SYS_INT_INT_OP => micro_cnt_next <= 5;
                     when SYS_EXT_INT_OP => micro_cnt_next <= 5;
-                    when SYS_IRET_OP => micro_cnt_next <= 5;
-                    when others => micro_cnt_next <= 0;
+                    when SYS_IRET_OP    => micro_cnt_next <= 5;
+                    when others         => micro_cnt_next <= 0;
                 end case;
-
-            when XCHG =>
-                micro_cnt_next <= 1;
 
             when ONEU =>
                 case rr_tdata.dir is
-                    when M2M => micro_cnt_next <= 1;
-                    when others => micro_cnt_next <= 0;
+                    when M2M            => micro_cnt_next <= 1;
+                    when others         => micro_cnt_next <= 0;
                 end case;
 
             when SHFU =>
                 case rr_tdata.dir is
-                    when I2M => micro_cnt_next <= 1;
-                    when R2M => micro_cnt_next <= 1;
-                    when others => micro_cnt_next <= 0;
+                    when I2M            => micro_cnt_next <= 1;
+                    when R2M            => micro_cnt_next <= 1;
+                    when others         => micro_cnt_next <= 0;
                 end case;
 
             when MULU =>
                 case rr_tdata.dir is
-                    when M2R => micro_cnt_next <= 1;
-                    when others => micro_cnt_next <= 0;
+                    when M2R            => micro_cnt_next <= 1;
+                    when others         => micro_cnt_next <= 0;
                 end case;
 
             when DIVU =>
                 case rr_tdata.dir is
-                    when M2R => micro_cnt_next <= 1;
-                    when others => micro_cnt_next <= 0;
+                    when M2R            => micro_cnt_next <= 1;
+                    when others         => micro_cnt_next <= 0;
                 end case;
-
-            when LOOPU =>
-                micro_cnt_next <= 1;
 
             when JMPU =>
                 case rr_tdata.code is
-                    when JMP_RM16 => micro_cnt_next <= 1;
-                    when JMP_M16_16 => micro_cnt_next <= 2;
-                    when others => micro_cnt_next <= 0;
+                    when JMP_RM16       => micro_cnt_next <= 1;
+                    when JMP_M16_16     => micro_cnt_next <= 2;
+                    when others         => micro_cnt_next <= 0;
                 end case;
 
             when JCALL =>
                 case rr_tdata.code is
-                    when CALL_REL16 => micro_cnt_next <= 2;
-                    when CALL_RM16 => micro_cnt_next <= 2;
-                    when CALL_PTR16_16 => micro_cnt_next <= 2;
-                    when others => micro_cnt_next <= 4;
+                    when CALL_REL16     => micro_cnt_next <= 1;
+                    when CALL_RM16      => micro_cnt_next <= 2;
+                    when CALL_PTR16_16  => micro_cnt_next <= 2;
+                    when others         => micro_cnt_next <= 4;
                 end case;
 
             when RET =>
                 case rr_tdata.code is
-                    when RET_NEAR => micro_cnt_next <= 1;
+                    when RET_NEAR       => micro_cnt_next <= 1;
                     when RET_NEAR_IMM16 => micro_cnt_next <= 2;
-                    when RET_FAR => micro_cnt_next <= 2;
-                    when RET_FAR_IMM16 => micro_cnt_next <= 3;
-                    when others => micro_cnt_next <= 1;
+                    when RET_FAR        => micro_cnt_next <= 2;
+                    when RET_FAR_IMM16  => micro_cnt_next <= 3;
+                    when others         => micro_cnt_next <= 1;
                 end case;
 
             when STACKU =>
                 case rr_tdata.code is
-                    when STACKU_ENTER => micro_cnt_next <= rr_tdata.level + 2;
-                    when STACKU_LEAVE => micro_cnt_next <= 1;
-                    when STACKU_PUSHA => micro_cnt_next <= 7;
-                    when STACKU_PUSHM => micro_cnt_next <= 1;
-                    when STACKU_POPA  => micro_cnt_next <= 15;
-                    when STACKU_POPR  => micro_cnt_next <= 1;
-                    when STACKU_POPM  => micro_cnt_next <= 1;
-                    when others       => micro_cnt_next <= 0;
+                    when STACKU_ENTER   => micro_cnt_next <= rr_tdata.level;
+                    when STACKU_LEAVE   => micro_cnt_next <= 1;
+                    when STACKU_PUSHA   => micro_cnt_next <= 7;
+                    when STACKU_PUSHM   => micro_cnt_next <= 1;
+                    when STACKU_POPA    => micro_cnt_next <= 15;
+                    when STACKU_POPR    => micro_cnt_next <= 1;
+                    when STACKU_POPM    => micro_cnt_next <= 1;
+                    when others         => micro_cnt_next <= 0;
                 end case;
 
             when MOVU =>
                 case rr_tdata.dir is
-                    when M2R => micro_cnt_next <= 1;
-                    when others => micro_cnt_next <= 0;
+                    when M2R            => micro_cnt_next <= 1;
+                    when others         => micro_cnt_next <= 0;
                 end case;
 
             when ALU =>
                 case rr_tdata.dir is
-                    when M2R => micro_cnt_next <= 1;
-                    when R2M => micro_cnt_next <= 1;
-                    when M2M => micro_cnt_next <= 1;
-                    when I2M => micro_cnt_next <= 1;
-                    when others => micro_cnt_next <= 0;
+                    when M2R            => micro_cnt_next <= 1;
+                    when R2M            => micro_cnt_next <= 1;
+                    when M2M            => micro_cnt_next <= 1;
+                    when I2M            => micro_cnt_next <= 1;
+                    when others         => micro_cnt_next <= 0;
                 end case;
 
-            when others =>
-                micro_cnt_next <= 0;
+            when LOOPU                  => micro_cnt_next <= 1;
+            when XCHG                   => micro_cnt_next <= 1;
+            when others                 => micro_cnt_next <= 0;
+
         end case;
     end process;
 
@@ -506,7 +501,7 @@ begin
 
         procedure flag_update (flag : std_logic_vector; val : fl_action_t) is begin
             micro_tdata.flg_no <= flag;
-            micro_tdata.fl <= val;
+            micro_tdata.fl     <= val;
         end procedure;
 
         procedure flag_update (flag : natural; val : fl_action_t) is begin
@@ -514,12 +509,12 @@ begin
         end procedure;
 
         procedure alu_command_imm(cmd, aval, bval: std_logic_vector; dreg : reg_t; dmask : std_logic_vector; upd_fl : std_logic) is begin
-            micro_tdata.alu_code <= cmd;
-            micro_tdata.alu_a_val <= aval;
-            micro_tdata.alu_b_val <= bval;
-            micro_tdata.alu_dreg <= dreg;
-            micro_tdata.alu_dmask <= dmask;
-            micro_tdata.alu_wb <= '1';
+            micro_tdata.alu_code   <= cmd;
+            micro_tdata.alu_a_val  <= aval;
+            micro_tdata.alu_b_val  <= bval;
+            micro_tdata.alu_dreg   <= dreg;
+            micro_tdata.alu_dmask  <= dmask;
+            micro_tdata.alu_wb     <= '1';
             micro_tdata.alu_upd_fl <= upd_fl;
         end procedure;
 
@@ -532,89 +527,89 @@ begin
         end procedure;
 
         procedure mem_read_word(seg, addr : std_logic_vector) is begin
-            micro_tdata.mem_cmd <= '0';
-            micro_tdata.mem_width <= '1';
-            micro_tdata.mem_seg <= seg;
-            micro_tdata.mem_addr <= addr;
+            micro_tdata.mem_cmd      <= '0';
+            micro_tdata.mem_width    <= '1';
+            micro_tdata.mem_seg      <= seg;
+            micro_tdata.mem_addr     <= addr;
         end procedure;
 
         procedure mem_read(seg, addr : std_logic_vector; w : std_logic) is begin
-            micro_tdata.mem_cmd <= '0';
-            micro_tdata.mem_width <= w;
-            micro_tdata.mem_seg <= seg;
-            micro_tdata.mem_addr <= addr;
+            micro_tdata.mem_cmd      <= '0';
+            micro_tdata.mem_width    <= w;
+            micro_tdata.mem_seg      <= seg;
+            micro_tdata.mem_addr     <= addr;
         end procedure;
 
         procedure mem_write_alu(seg, addr : std_logic_vector; w : std_logic) is begin
-            micro_tdata.mem_cmd <= '1';
-            micro_tdata.mem_width <= w;
-            micro_tdata.mem_seg <= seg;
-            micro_tdata.mem_addr <= addr;
+            micro_tdata.mem_cmd      <= '1';
+            micro_tdata.mem_width    <= w;
+            micro_tdata.mem_seg      <= seg;
+            micro_tdata.mem_addr     <= addr;
             micro_tdata.mem_data_src <= MEM_DATA_SRC_ALU;
         end procedure;
 
         procedure mem_write_one(seg, addr : std_logic_vector; w : std_logic) is begin
-            micro_tdata.mem_cmd <= '1';
-            micro_tdata.mem_width <= w;
-            micro_tdata.mem_seg <= seg;
-            micro_tdata.mem_addr <= addr;
+            micro_tdata.mem_cmd      <= '1';
+            micro_tdata.mem_width    <= w;
+            micro_tdata.mem_seg      <= seg;
+            micro_tdata.mem_addr     <= addr;
             micro_tdata.mem_data_src <= MEM_DATA_SRC_ONE;
         end procedure;
 
         procedure mem_write_shf(seg, addr : std_logic_vector; w : std_logic) is begin
-            micro_tdata.mem_cmd <= '1';
-            micro_tdata.mem_width <= w;
-            micro_tdata.mem_seg <= seg;
-            micro_tdata.mem_addr <= addr;
+            micro_tdata.mem_cmd      <= '1';
+            micro_tdata.mem_width    <= w;
+            micro_tdata.mem_seg      <= seg;
+            micro_tdata.mem_addr     <= addr;
             micro_tdata.mem_data_src <= MEM_DATA_SRC_SHF;
         end procedure;
 
         procedure mem_write_imm(seg, addr, val : std_logic_vector; w : std_logic) is begin
-            micro_tdata.mem_cmd <= '1';
-            micro_tdata.mem_width <= w;
-            micro_tdata.mem_seg <= seg;
-            micro_tdata.mem_addr <= addr;
+            micro_tdata.mem_cmd      <= '1';
+            micro_tdata.mem_width    <= w;
+            micro_tdata.mem_seg      <= seg;
+            micro_tdata.mem_addr     <= addr;
             micro_tdata.mem_data_src <= MEM_DATA_SRC_IMM;
-            micro_tdata.mem_data <= val;
+            micro_tdata.mem_data     <= val;
         end procedure;
 
         procedure do_io_cmd is begin
             micro_tdata.cmd <= MICRO_STR_OP or MICRO_UNLK_OP;
 
             case rr_tdata.code is
-                when IO_IN_IMM => micro_tdata.str_code <= IN_OP;
-                when IO_IN_DX =>  micro_tdata.str_code <= IN_OP;
-                when IO_INS_IMM => micro_tdata.str_code <= INS_OP;
-                when IO_INS_DX => micro_tdata.str_code <= INS_OP;
-                when IO_OUT_IMM => micro_tdata.str_code <= OUT_OP;
-                when IO_OUT_DX => micro_tdata.str_code <= OUT_OP;
+                when IO_IN_IMM   => micro_tdata.str_code <= IN_OP;
+                when IO_IN_DX    => micro_tdata.str_code <= IN_OP;
+                when IO_INS_IMM  => micro_tdata.str_code <= INS_OP;
+                when IO_INS_DX   => micro_tdata.str_code <= INS_OP;
+                when IO_OUT_IMM  => micro_tdata.str_code <= OUT_OP;
+                when IO_OUT_DX   => micro_tdata.str_code <= OUT_OP;
                 when IO_OUTS_IMM => micro_tdata.str_code <= OUTS_OP;
-                when IO_OUTS_DX => micro_tdata.str_code <= OUTS_OP;
-                when others => null;
+                when IO_OUTS_DX  => micro_tdata.str_code <= OUTS_OP;
+                when others      => null;
             end case;
 
             case rr_tdata.code is
-                when IO_IN_IMM => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
-                when IO_IN_DX =>  micro_tdata.str_port <= rr_tdata.dx_tdata;
-                when IO_INS_IMM => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
-                when IO_INS_DX => micro_tdata.str_port <= rr_tdata.dx_tdata;
-                when IO_OUT_IMM => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
-                when IO_OUT_DX => micro_tdata.str_port <= rr_tdata.dx_tdata;
+                when IO_IN_IMM   => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
+                when IO_IN_DX    => micro_tdata.str_port <= rr_tdata.dx_tdata;
+                when IO_INS_IMM  => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
+                when IO_INS_DX   => micro_tdata.str_port <= rr_tdata.dx_tdata;
+                when IO_OUT_IMM  => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
+                when IO_OUT_DX   => micro_tdata.str_port <= rr_tdata.dx_tdata;
                 when IO_OUTS_IMM => micro_tdata.str_port <= x"00" & rr_tdata.data(7 downto 0);
-                when IO_OUTS_DX => micro_tdata.str_port <= rr_tdata.dx_tdata;
-                when others => null;
+                when IO_OUTS_DX  => micro_tdata.str_port <= rr_tdata.dx_tdata;
+                when others      => null;
             end case;
 
-            micro_tdata.str_rep <= rep_mode;
-            micro_tdata.str_rep_nz <= rep_nz;
+            micro_tdata.str_rep       <= rep_mode;
+            micro_tdata.str_rep_nz    <= rep_nz;
             micro_tdata.str_direction <= rr_tdata.fl_tdata(FLAG_DF);
-            micro_tdata.str_w <= rr_tdata.w;
-            micro_tdata.str_ax_val <= rr_tdata.sreg_val;
-            micro_tdata.str_cx_val <= rep_cx_cnt;
-            micro_tdata.str_es_val <= rr_tdata.es_seg_val;
-            micro_tdata.str_di_val <= rr_tdata.di_tdata;
-            micro_tdata.str_ds_val <= rr_tdata.seg_val;
-            micro_tdata.str_si_val <= rr_tdata.si_tdata;
+            micro_tdata.str_w         <= rr_tdata.w;
+            micro_tdata.str_ax_val    <= rr_tdata.sreg_val;
+            micro_tdata.str_cx_val    <= rep_cx_cnt;
+            micro_tdata.str_es_val    <= rr_tdata.es_seg_val;
+            micro_tdata.str_di_val    <= rr_tdata.di_tdata;
+            micro_tdata.str_ds_val    <= rr_tdata.seg_val;
+            micro_tdata.str_si_val    <= rr_tdata.si_tdata;
         end procedure;
 
         procedure do_mul_cmd_0 is begin
@@ -1753,16 +1748,13 @@ begin
         end procedure;
 
         procedure do_call_rel16_cmd_1 is begin
+            micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
+
             -- jump cmd
             micro_tdata.jump_cond <= j_always;
             micro_tdata.jump_imm <= '1';
             micro_tdata.jump_cs <= rr_tuser_buf(31 downto 16);
-            micro_tdata.jump_ip <= ip_val_plus_disp; --std_logic_vector(unsigned(rr_tuser_buf(15 downto 0)) + unsigned(rr_tdata_buf.disp));
-
-            case micro_cnt is
-                when 2 => micro_tdata.cmd <= MICRO_NOP_OP;
-                when others => micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
-            end case;
+            micro_tdata.jump_ip <= ip_val_plus_disp;
 
         end procedure;
 

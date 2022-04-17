@@ -556,7 +556,7 @@ begin
                 rr_tdata.sreg       <= instr_tdata.sreg;
 
                 rr_tdata.disp       <= instr_tdata.disp;
-                rr_tdata.level      <= to_integer(unsigned(instr_tdata.imm8(4 downto 0)));
+                rr_tdata.level      <= to_integer(unsigned(instr_tdata.imm8(4 downto 0))) + 2;
 
                 rr_tdata.sreg_val   <= sreg_tdata;
                 rr_tdata.dreg_val   <= dreg_tdata;
