@@ -70,7 +70,6 @@ begin
                     wr_data_tready <= '0';
                 end if;
             end if;
-
         end if;
     end process;
 
@@ -98,6 +97,7 @@ begin
 
     write_proc: process (clk) begin
         if rising_edge(clk) then
+
             if resetn = '0' then
                 wr_addr <= 0;
             else
@@ -132,16 +132,15 @@ begin
     register_output_gen : if (REGISTER_OUTPUT = '1') generate
         register_output_proc: process (clk) begin
             if rising_edge(clk) then
+
                 if resetn = '0' then
                     out_tvalid <= '0';
                 else
-
                     if data_tvalid = '1' and data_tready = '1' then
                         out_tvalid <= '1';
                     elsif out_tready = '1' then
                         out_tvalid <= '0';
                     end if;
-
                 end if;
 
                 if data_tready = '1' then
