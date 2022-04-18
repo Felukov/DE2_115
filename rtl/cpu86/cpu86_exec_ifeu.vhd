@@ -410,7 +410,7 @@ begin
                 case rr_tdata.code is
                     when SYS_INT_INT_OP => micro_cnt_next <= 5;
                     when SYS_EXT_INT_OP => micro_cnt_next <= 5;
-                    when SYS_IRET_OP    => micro_cnt_next <= 5;
+                    when SYS_IRET_OP    => micro_cnt_next <= 4;
                     when others         => micro_cnt_next <= 0;
                 end case;
 
@@ -982,11 +982,11 @@ begin
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => interrupt_next_ip, w => rr_tdata_buf.w);
                     -- upd SP
                     alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => sp_val,
-                        bval => x"0000",
-                        dreg => SP,
-                        dmask => "11",
+                        cmd    => ALU_OP_ADD,
+                        aval   => sp_val,
+                        bval   => x"0000",
+                        dreg   => SP,
+                        dmask  => "11",
                         upd_fl => '0');
 
                 when 3 =>
@@ -1088,7 +1088,7 @@ begin
 
         procedure do_sys_cmd_iret_1 is begin
             case micro_cnt is
-                when 5 =>
+                when 4 =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MEM_OP or MICRO_MRD_OP;
                     -- read CS
                     mem_read_word(seg => rr_tdata_buf.ss_seg_val, addr => sp_val);
@@ -1097,7 +1097,7 @@ begin
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '1';
 
-                when 4 =>
+                when 3 =>
                     micro_tdata.cmd <= MICRO_MEM_OP or MICRO_JMP_OP or MICRO_MRD_OP or MICRO_ALU_OP;
                     -- read FLAGS
                     mem_read_word(seg => rr_tdata_buf.ss_seg_val, addr => sp_val);
@@ -1115,7 +1115,7 @@ begin
                         dmask => "11",
                         upd_fl => '0');
 
-                when 3 =>
+                when 2 =>
                     micro_tdata.cmd <= MICRO_MRD_OP or MICRO_ALU_OP;
 
                     micro_tdata.jump_cs_mem <= '0';
@@ -1130,9 +1130,7 @@ begin
                     micro_tdata.alu_b_mem <= '1';
                     micro_tdata.alu_dreg <= FL;
                     micro_tdata.alu_dmask <= "11";
-                when 2 =>
-                    micro_tdata.cmd <= MICRO_NOP_OP;
-                    -- this is empty cycle to allow flags to write
+
                 when others =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
                     micro_tdata.jump_cond <= j_always;
@@ -1900,6 +1898,7 @@ begin
 
         procedure do_ret_near_imm16_cmd_0 is begin
             micro_tdata.cmd <= MICRO_NOP_OP;
+            -- empty command to catch sp_val - 2
 
             -- jump cmd
             micro_tdata.jump_cond <= j_never;

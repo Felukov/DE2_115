@@ -285,7 +285,8 @@ begin
                 end if;
 
                 if (ext_intr_tvalid = '1' and instr_tready_mask = '1' and ext_intr_tready = '0') then
-                    if (instr_s_tvalid = '1' and rr_tvalid = '0' and skip_next = '0' and seg_override_tvalid = '0' and ss_s_tvalid = '1' and sp_s_tvalid = '1') then
+                    if (instr_s_tvalid = '1' and rr_tvalid = '0' and skip_next = '0' and seg_override_tvalid = '0' and
+                        ss_s_tvalid = '1' and sp_s_tvalid = '1' and flags_s_tvalid = '1') then
                         ext_intr_tready <= '1';
                     end if;
                 elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
