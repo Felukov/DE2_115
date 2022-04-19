@@ -131,15 +131,6 @@ package cpu86_types is
     constant IO_OUTS_IMM    : std_logic_vector (3 downto 0) := "1100";
     constant IO_OUTS_DX     : std_logic_vector (3 downto 0) := "1101";
 
-    -- JMP bits encoding
-    -- 3          - '0' : fast instruction, '1' : slow instruction
-    -- 2 downto 0 - instruction code
-    constant JMP_REL8       : std_logic_vector (3 downto 0) := "0001";
-    constant JMP_REL16      : std_logic_vector (3 downto 0) := "0010";
-    constant JMP_PTR16_16   : std_logic_vector (3 downto 0) := "0100";
-    constant JMP_RM16       : std_logic_vector (3 downto 0) := "1000";
-    constant JMP_M16_16     : std_logic_vector (3 downto 0) := "1001";
-
     constant BRA_JO         : std_logic_vector (3 downto 0) := x"0";
     constant BRA_JNO        : std_logic_vector (3 downto 0) := x"1";
     constant BRA_JB         : std_logic_vector (3 downto 0) := x"2";
@@ -157,10 +148,23 @@ package cpu86_types is
     constant BRA_JLE        : std_logic_vector (3 downto 0) := x"E";
     constant BRA_JG         : std_logic_vector (3 downto 0) := x"F";
 
-    constant CALL_REL16     : std_logic_vector (3 downto 0) := x"0";
-    constant CALL_RM16      : std_logic_vector (3 downto 0) := x"1";
-    constant CALL_PTR16_16  : std_logic_vector (3 downto 0) := x"2";
-    constant CALL_M16_16    : std_logic_vector (3 downto 0) := x"3";
+    -- JMP bits encoding
+    -- 3          - '0' : fast instruction, '1' : slow instruction
+    -- 2 downto 0 - instruction code
+    constant JMP_REL8       : std_logic_vector (3 downto 0) := "0001";
+    constant JMP_REL16      : std_logic_vector (3 downto 0) := "0010";
+    constant JMP_PTR16_16   : std_logic_vector (3 downto 0) := "0100";
+    constant JMP_RM16       : std_logic_vector (3 downto 0) := "1000";
+    constant JMP_M16_16     : std_logic_vector (3 downto 0) := "1001";
+
+    -- CALL bits encoding
+    -- 3          - '0' : fast instruction, '1' : slow instruction
+    -- 2 downto 0 - instruction code
+    constant CALL_REL16     : std_logic_vector (3 downto 0) := "0000";
+    constant CALL_PTR16_16  : std_logic_vector (3 downto 0) := "0100";
+    constant CALL_RM16      : std_logic_vector (3 downto 0) := "1010";
+    constant CALL_M16_16    : std_logic_vector (3 downto 0) := "1100";
+
     constant RET_NEAR       : std_logic_vector (3 downto 0) := x"0";
     constant RET_FAR        : std_logic_vector (3 downto 0) := x"1";
     constant RET_NEAR_IMM16 : std_logic_vector (3 downto 0) := x"2";

@@ -175,7 +175,7 @@ begin
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
         ((rr_tdata.op = LOOPU) or
          (rr_tdata.op = BRANCH) or
-         (rr_tdata.op = JCALL) or
+         (rr_tdata.op = JCALL and rr_tdata.code(3) = '1') or
          (rr_tdata.op = RET) or
          (rr_tdata.op = DIVU) or
          (rr_tdata.op = DBG) or
@@ -448,9 +448,9 @@ begin
 
             when JCALL =>
                 case rr_tdata.code is
-                    when CALL_REL16     => micro_cnt_next <= 1;
+                    when CALL_REL16     => micro_cnt_next <= 0;
+                    when CALL_PTR16_16  => micro_cnt_next <= 1;
                     when CALL_RM16      => micro_cnt_next <= 2;
-                    when CALL_PTR16_16  => micro_cnt_next <= 2;
                     when others         => micro_cnt_next <= 4;
                 end case;
 
@@ -1690,27 +1690,14 @@ begin
                 dmask   => "11",
                 upd_fl  => '0');
 
-            -- jump cmd
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
-            micro_tdata.jump_cs_mem <= '0';
-            micro_tdata.jump_ip_mem <= '0';
         end procedure;
 
         procedure do_call_ptr16_16_cmd_1 is begin
-            case micro_cnt is
-                when 2 =>
-                    micro_tdata.cmd <= MICRO_MEM_OP;
-                    -- push IP
-                    mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => rr_tuser_buf(15 downto 0), w => rr_tdata_buf.w);
 
-                when others =>
-                    micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
-                    micro_tdata.jump_cond <= j_always;
-                    micro_tdata.jump_imm <= '1';
-                    micro_tdata.jump_cs <= rr_tdata_buf.data;
-                    micro_tdata.jump_ip <= rr_tdata_buf.disp;
-            end case;
+                micro_tdata.cmd <= MICRO_MEM_OP;
+                -- push IP
+                mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => rr_tuser_buf(15 downto 0), w => rr_tdata_buf.w);
+
         end procedure;
 
         procedure do_call_rel16_cmd_0 is begin
@@ -1727,23 +1714,6 @@ begin
                 dreg => SP,
                 dmask => "11",
                 upd_fl => '0');
-
-            -- jump cmd
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
-            micro_tdata.jump_cs_mem <= '0';
-            micro_tdata.jump_ip_mem <= '0';
-        end procedure;
-
-        procedure do_call_rel16_cmd_1 is begin
-            micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
-
-            -- jump cmd
-            micro_tdata.jump_cond <= j_always;
-            -- micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '1';
-            micro_tdata.jump_cs <= rr_tuser_buf(31 downto 16);
-            micro_tdata.jump_ip <= ip_val_plus_disp;
 
         end procedure;
 
@@ -1872,7 +1842,7 @@ begin
 
             -- jump cmd
             micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
+            micro_tdata.jump_imm <= '1';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
             micro_tdata.jump_cs <= rr_tuser(31 downto 16);
@@ -2273,7 +2243,6 @@ begin
                         end case;
                     when JCALL =>
                         case micro_code is
-                            when CALL_REL16     => do_call_rel16_cmd_1;
                             when CALL_RM16      => do_call_rm16_cmd_1;
                             when CALL_PTR16_16  => do_call_ptr16_16_cmd_1;
                             when others         => do_call_mem16_16_1;

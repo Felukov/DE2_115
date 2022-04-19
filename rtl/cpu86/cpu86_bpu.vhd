@@ -55,6 +55,15 @@ end entity cpu86_bpu;
 
 architecture rtl of cpu86_bpu is
 
+    type bpu_item_t is record
+        inst_op             : op_t;
+        inst_code           : std_logic_vector(3 downto 0);
+        inst_cs             : std_logic_vector(15 downto 0);
+        inst_ip             : std_logic_vector(15 downto 0);
+        jump_cs             : std_logic_vector(15 downto 0);
+        jump_ip             : std_logic_vector(15 downto 0);
+    end record;
+
 begin
 
     instr_s_tready <= '1' when jump_s_tvalid = '0' and jump_m_tvalid = '0' and (instr_m_tvalid = '0' or (instr_m_tvalid = '1' and instr_m_tready = '1')) else '0';
@@ -88,18 +97,19 @@ begin
                 jump_m_tvalid <= '0';
             else
                 if ((jump_s_tvalid = '1') or
-                    (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JMPU and instr_s_tdata.code(3) = '0'))
+                    (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JMPU  and instr_s_tdata.code(3) = '0') or
+                    (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JCALL and instr_s_tdata.code(3) = '0'))
                 then
                     jump_m_tvalid <= '1';
-                elsif (instr_m_tready = '1') then
+                else
                     jump_m_tvalid <= '0';
                 end if;
             end if;
             -- without reset
             if (jump_s_tvalid = '1') then
                 jump_m_tdata <= jump_s_tdata;
-            elsif (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JMPU) then
-                if (instr_s_tdata.code = JMP_PTR16_16) then
+            elsif (instr_s_tvalid = '1' and instr_s_tready = '1' and (instr_s_tdata.op = JMPU or instr_s_tdata.op = JCALL)) then
+                if (instr_s_tdata.code = JMP_PTR16_16 or instr_s_tdata.code = CALL_PTR16_16) then
                     jump_m_tdata(31 downto 16) <= instr_s_tdata.data;
                     jump_m_tdata(15 downto 0)  <= instr_s_tdata.disp;
                 else
