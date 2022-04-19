@@ -1226,7 +1226,7 @@ begin
     req_m_tvalid <= jump_tvalid;
     req_m_tdata <= jump_tdata;
 
-    masked_interrupt <= '1' when interrupt_valid = '1' and flags_tdata(9) = '1' else '0';
+    masked_interrupt <= '1' when interrupt_valid = '1' and flags_tdata(FLAG_IF) = '1' else '0';
     interrupt_ack <= '1' when masked_interrupt = '1' and ext_intr_s_tready = '1' else '0';
 
     --cs, ip, ds, es, ss, ax, bx, dx, cx, bp, di, si, sp, Flags8

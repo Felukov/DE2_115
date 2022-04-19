@@ -115,6 +115,29 @@ architecture rtl of cpu86 is
         );
     end component cpu86_decoder;
 
+    component cpu86_bpu is
+        port (
+            clk                         : in std_logic;
+            resetn                      : in std_logic;
+
+            instr_s_tvalid              : in std_logic;
+            instr_s_tready              : out std_logic;
+            instr_s_tdata               : in decoded_instr_t;
+            instr_s_tuser               : in user_t;
+
+            instr_m_tvalid              : out std_logic;
+            instr_m_tready              : in std_logic;
+            instr_m_tdata               : out decoded_instr_t;
+            instr_m_tuser               : out user_t;
+
+            jump_s_tvalid               : in std_logic;
+            jump_s_tdata                : in std_logic_vector(31 downto 0);
+
+            jump_m_tvalid               : out std_logic;
+            jump_m_tdata                : out std_logic_vector(31 downto 0)
+        );
+    end component cpu86_bpu;
+
     component cpu86_exec is
         port (
             clk                         : in std_logic;
@@ -213,6 +236,14 @@ architecture rtl of cpu86 is
     signal instr_tdata                  : decoded_instr_t;
     signal instr_tuser                  : user_t;
 
+    signal bpu_tvalid                   : std_logic;
+    signal bpu_tready                   : std_logic;
+    signal bpu_tdata                    : decoded_instr_t;
+    signal bpu_tuser                    : user_t;
+
+    signal bpu_req_tvalid               : std_logic;
+    signal bpu_req_tdata                : std_logic_vector(31 downto 0);
+
     signal front_resetn                 : std_logic;
 
 begin
@@ -249,8 +280,8 @@ begin
         clk                     => clk,
         resetn                  => resetn,
 
-        req_s_tvalid            => jump_req_tvalid,
-        req_s_tdata             => jump_req_tdata,
+        req_s_tvalid            => bpu_req_tvalid,
+        req_s_tdata             => bpu_req_tdata,
 
         rd_s_tvalid             => fetcher_mem_res_tvalid,
         rd_s_tdata              => fetcher_mem_res_tdata,
@@ -297,8 +328,8 @@ begin
         instr_m_tuser           => instr_tuser
     );
 
-    -- module cpu86_exec instantiation
-    cpu86_exec_inst : cpu86_exec port map (
+    -- module cpu86_bpu instantiation
+    cpu86_bpu_inst : cpu86_bpu port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -306,6 +337,28 @@ begin
         instr_s_tready          => instr_tready,
         instr_s_tdata           => instr_tdata,
         instr_s_tuser           => instr_tuser,
+
+        instr_m_tvalid          => bpu_tvalid,
+        instr_m_tready          => bpu_tready,
+        instr_m_tdata           => bpu_tdata,
+        instr_m_tuser           => bpu_tuser,
+
+        jump_s_tvalid           => jump_req_tvalid,
+        jump_s_tdata            => jump_req_tdata,
+
+        jump_m_tvalid           => bpu_req_tvalid,
+        jump_m_tdata            => bpu_req_tdata
+    );
+
+    -- module cpu86_exec instantiation
+    cpu86_exec_inst : cpu86_exec port map (
+        clk                     => clk,
+        resetn                  => resetn,
+
+        instr_s_tvalid          => bpu_tvalid,
+        instr_s_tready          => bpu_tready,
+        instr_s_tdata           => bpu_tdata,
+        instr_s_tuser           => bpu_tuser,
 
         req_m_tvalid            => jump_req_tvalid,
         req_m_tdata             => jump_req_tdata,
@@ -335,6 +388,6 @@ begin
     );
 
     -- Assigns
-    front_resetn <= '0' when resetn = '0' or jump_req_tvalid = '1' else '1';
+    front_resetn <= '0' when resetn = '0' or bpu_req_tvalid = '1' else '1';
 
 end architecture;

@@ -131,11 +131,14 @@ package cpu86_types is
     constant IO_OUTS_IMM    : std_logic_vector (3 downto 0) := "1100";
     constant IO_OUTS_DX     : std_logic_vector (3 downto 0) := "1101";
 
-    constant JMP_REL16      : std_logic_vector (3 downto 0) := "0000";
-    constant JMP_PTR16_16   : std_logic_vector (3 downto 0) := "0001";
-    constant JMP_REL8       : std_logic_vector (3 downto 0) := "0010";
-    constant JMP_RM16       : std_logic_vector (3 downto 0) := "0011";
-    constant JMP_M16_16     : std_logic_vector (3 downto 0) := "0100";
+    -- JMP bits encoding
+    -- 3          - '0' : fast instruction, '1' : slow instruction
+    -- 2 downto 0 - instruction code
+    constant JMP_REL8       : std_logic_vector (3 downto 0) := "0001";
+    constant JMP_REL16      : std_logic_vector (3 downto 0) := "0010";
+    constant JMP_PTR16_16   : std_logic_vector (3 downto 0) := "0100";
+    constant JMP_RM16       : std_logic_vector (3 downto 0) := "1000";
+    constant JMP_M16_16     : std_logic_vector (3 downto 0) := "1001";
 
     constant BRA_JO         : std_logic_vector (3 downto 0) := x"0";
     constant BRA_JNO        : std_logic_vector (3 downto 0) := x"1";
@@ -299,7 +302,7 @@ package cpu86_types is
         sreg        : reg_t;
         data        : std_logic_vector(15 downto 0);
         disp        : std_logic_vector(15 downto 0);
-        level       : natural range 0 to 31;
+        level       : natural range 0 to 63;
         fast_instr  : std_logic;
     end record;
 

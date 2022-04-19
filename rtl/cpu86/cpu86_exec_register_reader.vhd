@@ -268,7 +268,7 @@ begin
         (instr_tdata.wait_fl = '0' or (instr_tdata.wait_fl = '1' and flags_s_tvalid = '1' and flags_m_lock_tvalid = '0'))
     else '0';
 
-    instr_tready <= '1' when instr_tready_mask = '0' and (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) and instr_hazards_resolved = '1' else '0';
+    instr_tready <= '1' when instr_tready_mask = '0' and (instr_tvalid = '0' or (instr_tvalid = '1' and (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) and instr_hazards_resolved = '1')) else '0';
 
     -- handling external interrupt process
     ext_interrupt_process : process (clk) begin
@@ -533,6 +533,7 @@ begin
 
                 if (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
                     ((instr_tdata.op = MOVU or instr_tdata.op = XCHG) and (instr_tdata.dir = R2R or instr_tdata.dir = I2R)) or
+                    (instr_tdata.op = JMPU and instr_tdata.code(3) = '0') or
                     (instr_tdata.op = REP) or
                     (instr_tdata.op = FEU)
                 then

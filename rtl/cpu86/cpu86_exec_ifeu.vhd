@@ -174,13 +174,13 @@ begin
 
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
         ((rr_tdata.op = LOOPU) or
-         (rr_tdata.op = JMPU) or
          (rr_tdata.op = BRANCH) or
          (rr_tdata.op = JCALL) or
          (rr_tdata.op = RET) or
          (rr_tdata.op = DIVU) or
          (rr_tdata.op = DBG) or
          (rr_tdata.op = IO) or
+         (rr_tdata.op = JMPU and rr_tdata.code(3) = '1') or
          (rr_tdata.op = LFP and rr_tdata.code = MISC_BOUND) or
          (rr_tdata.op = SYS and (rr_tdata.code = SYS_INT_INT_OP or rr_tdata.code = SYS_EXT_INT_OP)))
     else '0';
@@ -1614,40 +1614,29 @@ begin
         procedure do_jmp_0 is begin
             case rr_tdata.dir is
                 when M2M =>
+                    -- JMP_RM16 (memory) or JMP_M16_16
                     micro_tdata.cmd <= MICRO_MEM_OP;
 
                     -- configure mem cmd
                     mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
 
                     -- configure jump
-                    micro_tdata.jump_cond <= j_never;
-                    micro_tdata.jump_imm <= '0';
+                    micro_tdata.jump_cond   <= j_never;
+                    micro_tdata.jump_imm    <= '0';
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '0';
 
                 when others =>
-                    micro_tdata.cmd <= MICRO_JMP_OP or MICRO_UNLK_OP;
-
-                    -- configure jump
-                    micro_tdata.jump_cond <= j_always;
-                    micro_tdata.jump_imm <= '1';
+                    -- JMP_RM16 (register)
+                    micro_tdata.cmd         <= MICRO_JMP_OP or MICRO_UNLK_OP;
+                    micro_tdata.jump_imm    <= '1';
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '0';
+                    micro_tdata.jump_cond   <= j_always;
+                    micro_tdata.jump_cs     <= rr_tuser(31 downto 16);
+                    micro_tdata.jump_ip     <= rr_tdata.sreg_val;
 
             end case;
-
-            case rr_tdata.code is
-                when JMP_PTR16_16 =>
-                    micro_tdata.jump_cs <= rr_tdata.data;
-                    micro_tdata.jump_ip <= rr_tdata.disp;
-                when JMP_RM16 =>
-                    micro_tdata.jump_cs <= rr_tuser(31 downto 16);
-                    micro_tdata.jump_ip <= rr_tdata.sreg_val;
-                when others =>
-                    micro_tdata.jump_cs <= rr_tuser(31 downto 16);
-                    micro_tdata.jump_ip <= ip_val_plus_disp_next;
-            end case;
-
         end procedure;
 
         procedure do_jmp_1 is begin
@@ -1662,6 +1651,7 @@ begin
                     micro_tdata.jump_cond <= j_always;
 
                 when others =>
+                    -- JMP_M16_16
                     case micro_cnt is
                         when 2 =>
                             micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_MEM_OP;
@@ -1750,6 +1740,7 @@ begin
 
             -- jump cmd
             micro_tdata.jump_cond <= j_always;
+            -- micro_tdata.jump_cond <= j_never;
             micro_tdata.jump_imm <= '1';
             micro_tdata.jump_cs <= rr_tuser_buf(31 downto 16);
             micro_tdata.jump_ip <= ip_val_plus_disp;
