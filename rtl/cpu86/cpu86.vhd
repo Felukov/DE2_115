@@ -120,21 +120,21 @@ architecture rtl of cpu86 is
             clk                         : in std_logic;
             resetn                      : in std_logic;
 
-            instr_s_tvalid              : in std_logic;
-            instr_s_tready              : out std_logic;
-            instr_s_tdata               : in decoded_instr_t;
-            instr_s_tuser               : in user_t;
+            s_axis_instr_tvalid         : in std_logic;
+            s_axis_instr_tready         : out std_logic;
+            s_axis_instr_tdata          : in decoded_instr_t;
+            s_axis_instr_tuser          : in user_t;
 
-            instr_m_tvalid              : out std_logic;
-            instr_m_tready              : in std_logic;
-            instr_m_tdata               : out decoded_instr_t;
-            instr_m_tuser               : out user_t;
+            m_axis_instr_tvalid         : out std_logic;
+            m_axis_instr_tready         : in std_logic;
+            m_axis_instr_tdata          : out decoded_instr_t;
+            m_axis_instr_tuser          : out user_t;
 
-            jump_s_tvalid               : in std_logic;
-            jump_s_tdata                : in std_logic_vector(31 downto 0);
+            s_axis_jump_tvalid          : in std_logic;
+            s_axis_jump_tdata           : in cpu86_jump_t;
 
-            jump_m_tvalid               : out std_logic;
-            jump_m_tdata                : out std_logic_vector(31 downto 0)
+            m_axis_jump_tvalid          : out std_logic;
+            m_axis_jump_tdata           : out std_logic_vector(31 downto 0)
         );
     end component cpu86_bpu;
 
@@ -149,7 +149,7 @@ architecture rtl of cpu86 is
             instr_s_tuser               : in user_t;
 
             req_m_tvalid                : out std_logic;
-            req_m_tdata                 : out std_logic_vector(31 downto 0);
+            req_m_tdata                 : out cpu86_jump_t;
 
             mem_req_m_tvalid            : out std_logic;
             mem_req_m_tready            : in std_logic;
@@ -205,7 +205,7 @@ architecture rtl of cpu86 is
     end component cpu86_mem_interconnect;
 
     signal jump_req_tvalid              : std_logic;
-    signal jump_req_tdata               : std_logic_vector(31 downto 0);
+    signal jump_req_tdata               : cpu86_jump_t;
 
     signal fetcher_mem_req_tvalid       : std_logic;
     signal fetcher_mem_req_tready       : std_logic;
@@ -333,21 +333,21 @@ begin
         clk                     => clk,
         resetn                  => resetn,
 
-        instr_s_tvalid          => instr_tvalid,
-        instr_s_tready          => instr_tready,
-        instr_s_tdata           => instr_tdata,
-        instr_s_tuser           => instr_tuser,
+        s_axis_instr_tvalid     => instr_tvalid,
+        s_axis_instr_tready     => instr_tready,
+        s_axis_instr_tdata      => instr_tdata,
+        s_axis_instr_tuser      => instr_tuser,
 
-        instr_m_tvalid          => bpu_tvalid,
-        instr_m_tready          => bpu_tready,
-        instr_m_tdata           => bpu_tdata,
-        instr_m_tuser           => bpu_tuser,
+        m_axis_instr_tvalid     => bpu_tvalid,
+        m_axis_instr_tready     => bpu_tready,
+        m_axis_instr_tdata      => bpu_tdata,
+        m_axis_instr_tuser      => bpu_tuser,
 
-        jump_s_tvalid           => jump_req_tvalid,
-        jump_s_tdata            => jump_req_tdata,
+        s_axis_jump_tvalid      => jump_req_tvalid,
+        s_axis_jump_tdata       => jump_req_tdata,
 
-        jump_m_tvalid           => bpu_req_tvalid,
-        jump_m_tdata            => bpu_req_tdata
+        m_axis_jump_tvalid      => bpu_req_tvalid,
+        m_axis_jump_tdata       => bpu_req_tdata
     );
 
     -- module cpu86_exec instantiation
@@ -384,7 +384,6 @@ begin
 
         dbg_m_tvalid            => open,
         dbg_m_tdata             => open
-
     );
 
     -- Assigns

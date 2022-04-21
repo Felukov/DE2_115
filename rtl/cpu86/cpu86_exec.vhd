@@ -41,7 +41,7 @@ entity cpu86_exec is
         instr_s_tuser               : in user_t;
 
         req_m_tvalid                : out std_logic;
-        req_m_tdata                 : out std_logic_vector(31 downto 0);
+        req_m_tdata                 : out cpu86_jump_t;
 
         mem_req_m_tvalid            : out std_logic;
         mem_req_m_tready            : in std_logic;
@@ -304,10 +304,10 @@ architecture rtl of cpu86_exec is
             flags_m_wr_tvalid       : out std_logic;
             flags_m_wr_tdata        : out std_logic_vector(15 downto 0);
 
-            jump_m_tvalid           : out std_logic;
-            jump_m_tdata            : out std_logic_vector(31 downto 0);
-
             jmp_lock_m_wr_tvalid    : out std_logic;
+
+            m_axis_jump_tvalid      : out std_logic;
+            m_axis_jump_tdata       : out cpu86_jump_t;
 
             lsu_req_m_tvalid        : out std_logic;
             lsu_req_m_tready        : in std_logic;
@@ -331,7 +331,9 @@ architecture rtl of cpu86_exec is
             div_intr_m_tdata        : out intr_t;
 
             bnd_intr_m_tvalid       : out std_logic;
-            bnd_intr_m_tdata        : out intr_t
+            bnd_intr_m_tdata        : out intr_t;
+
+            event_jump              : out std_logic
         );
     end component cpu86_exec_mexec;
 
@@ -539,7 +541,7 @@ architecture rtl of cpu86_exec is
     signal mexec_ss_wr_tdata        : std_logic_vector(15 downto 0);
 
     signal jump_tvalid              : std_logic;
-    signal jump_tdata               : std_logic_vector(31 downto 0);
+    signal jump_tdata               : cpu86_jump_t;
 
     signal lsu_req_tvalid           : std_logic;
     signal lsu_req_tready           : std_logic;
@@ -595,6 +597,8 @@ architecture rtl of cpu86_exec is
 
     signal masked_interrupt         : std_logic;
 
+    signal event_jump               : std_logic;
+
 begin
 
     -- module cpu86_exec_reg instantiation
@@ -629,7 +633,7 @@ begin
         wr_s_tmask              => "11",
 
         lock_s_tvalid           => ds_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => ds_tvalid,
         reg_m_tdata             => ds_tdata
@@ -648,7 +652,7 @@ begin
         wr_s_tmask              => "11",
 
         lock_s_tvalid           => ss_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => ss_tvalid,
         reg_m_tdata             => ss_tdata
@@ -667,7 +671,7 @@ begin
         wr_s_tmask              => "11",
 
         lock_s_tvalid           => es_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => es_tvalid,
         reg_m_tdata             => es_tdata
@@ -686,7 +690,7 @@ begin
         wr_s_tmask              => ax_wr_tmask,
 
         lock_s_tvalid           => ax_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => ax_tvalid,
         reg_m_tdata             => ax_tdata
@@ -705,7 +709,7 @@ begin
         wr_s_tmask              => bx_wr_tmask,
 
         lock_s_tvalid           => bx_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => bx_tvalid,
         reg_m_tdata             => bx_tdata
@@ -724,7 +728,7 @@ begin
         wr_s_tmask              => cx_wr_tmask,
 
         lock_s_tvalid           => cx_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => cx_tvalid,
         reg_m_tdata             => cx_tdata
@@ -743,7 +747,7 @@ begin
         wr_s_tmask              => dx_wr_tmask,
 
         lock_s_tvalid           => dx_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => dx_tvalid,
         reg_m_tdata             => dx_tdata
@@ -762,7 +766,7 @@ begin
         wr_s_tmask              => "11",
 
         lock_s_tvalid           => bp_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => bp_tvalid,
         reg_m_tdata             => bp_tdata
@@ -781,7 +785,7 @@ begin
         wr_s_tmask              => "11",
 
         lock_s_tvalid           => sp_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => sp_tvalid,
         reg_m_tdata             => sp_tdata
@@ -800,7 +804,7 @@ begin
         wr_s_tmask              => "11",
 
         lock_s_tvalid           => di_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => di_tvalid,
         reg_m_tdata             => di_tdata
@@ -819,7 +823,7 @@ begin
         wr_s_tmask              => "11",
 
         lock_s_tvalid           => si_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => si_tvalid,
         reg_m_tdata             => si_tdata
@@ -838,7 +842,7 @@ begin
         wr_s_tmask              => "11",
 
         lock_s_tvalid           => flags_lock_tvalid,
-        unlk_s_tvalid           => jump_tvalid,
+        unlk_s_tvalid           => event_jump,
 
         reg_m_tvalid            => flags_tvalid,
         reg_m_tdata             => flags_tdata
@@ -1106,8 +1110,8 @@ begin
         ss_m_wr_tvalid          => mexec_ss_wr_tvalid,
         ss_m_wr_tdata           => mexec_ss_wr_tdata,
 
-        jump_m_tvalid           => jump_tvalid,
-        jump_m_tdata            => jump_tdata,
+        m_axis_jump_tvalid      => jump_tvalid,
+        m_axis_jump_tdata       => jump_tdata,
 
         jmp_lock_m_wr_tvalid    => jmp_lock_wr_tvalid,
 
@@ -1136,7 +1140,9 @@ begin
         div_intr_m_tdata        => div_intr_s_tdata,
 
         bnd_intr_m_tvalid       => bnd_intr_s_tvalid,
-        bnd_intr_m_tdata        => bnd_intr_s_tdata
+        bnd_intr_m_tdata        => bnd_intr_s_tdata,
+
+        event_jump              => event_jump
     );
 
     -- module cpu86_dcache instantiation
@@ -1189,21 +1195,20 @@ begin
     );
 
     -- assigns
-    exec_resetn <= '0' when resetn = '0' or jump_tvalid = '1' else '1';
+    exec_resetn <= '0' when resetn = '0' or (event_jump = '1') else '1';
 
+    ax_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_ax_wr_tvalid = '1' or mexec_ax_wr_tvalid = '1') else '0';
+    bx_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_bx_wr_tvalid = '1' or mexec_bx_wr_tvalid = '1') else '0';
+    cx_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_cx_wr_tvalid = '1' or mexec_cx_wr_tvalid = '1') else '0';
+    dx_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_dx_wr_tvalid = '1' or mexec_dx_wr_tvalid = '1') else '0';
+    bp_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_bp_wr_tvalid = '1' or mexec_bp_wr_tvalid = '1') else '0';
+    sp_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_sp_wr_tvalid = '1' or mexec_sp_wr_tvalid = '1') else '0';
+    di_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_di_wr_tvalid = '1' or mexec_di_wr_tvalid = '1') else '0';
+    si_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_si_wr_tvalid = '1' or mexec_si_wr_tvalid = '1') else '0';
 
-    ax_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_ax_wr_tvalid = '1' or mexec_ax_wr_tvalid = '1') else '0';
-    bx_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_bx_wr_tvalid = '1' or mexec_bx_wr_tvalid = '1') else '0';
-    cx_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_cx_wr_tvalid = '1' or mexec_cx_wr_tvalid = '1') else '0';
-    dx_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_dx_wr_tvalid = '1' or mexec_dx_wr_tvalid = '1') else '0';
-    bp_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_bp_wr_tvalid = '1' or mexec_bp_wr_tvalid = '1') else '0';
-    sp_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_sp_wr_tvalid = '1' or mexec_sp_wr_tvalid = '1') else '0';
-    di_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_di_wr_tvalid = '1' or mexec_di_wr_tvalid = '1') else '0';
-    si_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_si_wr_tvalid = '1' or mexec_si_wr_tvalid = '1') else '0';
-
-    ds_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_ds_wr_tvalid = '1' or mexec_ds_wr_tvalid = '1') else '0';
-    ss_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_ss_wr_tvalid = '1' or mexec_ss_wr_tvalid = '1') else '0';
-    es_wr_tvalid <= '1' when jump_tvalid = '0' and (ifeu_es_wr_tvalid = '1' or mexec_es_wr_tvalid = '1') else '0';
+    ds_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_ds_wr_tvalid = '1' or mexec_ds_wr_tvalid = '1') else '0';
+    ss_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_ss_wr_tvalid = '1' or mexec_ss_wr_tvalid = '1') else '0';
+    es_wr_tvalid <= '1' when (event_jump = '0') and (ifeu_es_wr_tvalid = '1' or mexec_es_wr_tvalid = '1') else '0';
 
     ax_wr_tdata <= mexec_ax_wr_tdata when mexec_ax_wr_tvalid = '1' else ifeu_ax_wr_tdata;
     bx_wr_tdata <= mexec_bx_wr_tdata when mexec_bx_wr_tvalid = '1' else ifeu_bx_wr_tdata;

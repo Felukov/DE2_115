@@ -77,8 +77,8 @@ entity cpu86_exec_mexec is
         flags_m_wr_tvalid       : out std_logic;
         flags_m_wr_tdata        : out std_logic_vector(15 downto 0);
 
-        jump_m_tvalid           : out std_logic;
-        jump_m_tdata            : out std_logic_vector(31 downto 0);
+        m_axis_jump_tvalid      : out std_logic;
+        m_axis_jump_tdata       : out cpu86_jump_t;
 
         jmp_lock_m_wr_tvalid    : out std_logic;
 
@@ -104,7 +104,9 @@ entity cpu86_exec_mexec is
         div_intr_m_tdata        : out intr_t;
 
         bnd_intr_m_tvalid       : out std_logic;
-        bnd_intr_m_tdata        : out intr_t
+        bnd_intr_m_tdata        : out intr_t;
+
+        event_jump              : out std_logic
     );
 end entity cpu86_exec_mexec;
 
@@ -407,7 +409,16 @@ architecture rtl of cpu86_exec_mexec is
     signal jmp_cond             : micro_op_jmp_cond_t;
 
     signal jmp_tvalid           : std_logic;
-    signal jmp_tdata            : std_logic;
+    signal jmp_inst_cs          : std_logic_vector(15 downto 0);
+    signal jmp_inst_ip          : std_logic_vector(15 downto 0);
+    signal jmp_jump_cs          : std_logic_vector(15 downto 0);
+    signal jmp_jump_ip          : std_logic_vector(15 downto 0);
+    signal jmp_take             : std_logic;
+    signal jmp_bpu_first        : std_logic;
+    signal jmp_bpu_taken        : std_logic;
+
+    signal jmp_dout_tvalid      : std_logic;
+    signal jmp_dout_tdata       : cpu86_jump_t;
 
     signal dbg_0_tvalid         : std_logic;
     signal dbg_1_tvalid         : std_logic;
@@ -424,6 +435,10 @@ architecture rtl of cpu86_exec_mexec is
     signal op_inc_hs            : std_logic;
     signal op_dec_hs            : std_logic;
 begin
+
+    -- i/o assigns
+    m_axis_jump_tvalid <= jmp_dout_tvalid;
+    m_axis_jump_tdata  <= jmp_dout_tdata;
 
     mexec_alu_inst : cpu86_exec_mexec_alu port map (
         clk                     => clk,
@@ -1766,18 +1781,24 @@ begin
         if rising_edge(clk) then
 
             if resetn = '0' then
-                jmp_tvalid <= '0';
-                jmp_tdata <= '0';
-                jmp_wait_alu <= '0';
-                jmp_busy <= '0';
+                jmp_cond <= j_never;
                 jmp_wait_mem_cs <= '0';
                 jmp_wait_mem_ip <= '0';
-                jmp_cond <= j_never;
-                jump_m_tvalid <= '0';
+                jmp_bpu_first <= '0';
+                jmp_bpu_taken <= '0';
+                jmp_tvalid <= '0';
+                jmp_take <= '0';
+                jmp_wait_alu <= '0';
+                jmp_busy <= '0';
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
                     jmp_cond <= micro_tdata.jump_cond;
+                end if;
+
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
+                    jmp_bpu_first <= micro_tdata.bpu_first;
+                    jmp_bpu_taken <= micro_tdata.bpu_taken;
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
@@ -1853,180 +1874,234 @@ begin
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
                     case micro_tdata.jump_cond is
                         when j_always =>
-                            jmp_tdata <= '1';
+                            jmp_take <= '1';
 
                         when j_ja =>
                             if (flags_s_tdata(FLAG_ZF) = '0' and flags_s_tdata(FLAG_CF) = '0') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jae =>
                             if (flags_s_tdata(FLAG_CF) = '0') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jb =>
                             if (flags_s_tdata(FLAG_CF) = '1') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jbe =>
                             if (flags_s_tdata(FLAG_ZF) = '1' or flags_s_tdata(FLAG_CF) = '1') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_je =>
                             if (flags_s_tdata(FLAG_ZF) = '1') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jne =>
                             if (flags_s_tdata(FLAG_ZF) = '0') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jg =>
                             if (flags_s_tdata(FLAG_ZF) = '0' and flags_s_tdata(FLAG_SF) = flags_s_tdata(FLAG_OF)) then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jge =>
                             if (flags_s_tdata(FLAG_SF) = flags_s_tdata(FLAG_OF)) then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jl =>
                             if (flags_s_tdata(FLAG_SF) /= flags_s_tdata(FLAG_OF)) then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jle =>
                             if (flags_s_tdata(FLAG_ZF) = '1' or flags_s_tdata(FLAG_SF) /= flags_s_tdata(FLAG_OF)) then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jno =>
                             if (flags_s_tdata(FLAG_OF) = '0') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jo =>
                             if (flags_s_tdata(FLAG_OF) = '1') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jnp =>
                             if (flags_s_tdata(FLAG_PF) = '0') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jp =>
                             if (flags_s_tdata(FLAG_PF) = '1') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_jns =>
                             if (flags_s_tdata(FLAG_SF) = '0') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
 
                         when j_js =>
                             if (flags_s_tdata(FLAG_SF) = '1') then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
                         when cx_eq_0 =>
                             if micro_tdata.jump_cx = x"0000" then
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             else
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                             end if;
                         when others =>
-                            jmp_tdata <= '0';
+                            jmp_take <= '0';
                     end case;
 
                 elsif (jmp_busy = '1') then
                     if ((jmp_wait_mem_cs = '1' or jmp_wait_mem_ip = '1') and lsu_rd_s_tvalid = '1') then
                         if (jmp_cond = j_always) then
-                            jmp_tdata <= '1';
+                            jmp_take <= '1';
                         else
-                            jmp_tdata <= '0';
+                            jmp_take <= '0';
                         end if;
                     elsif (jmp_wait_alu = '1' and alu_res_tvalid = '1') then
                         case jmp_cond is
                             when j_always =>
-                                jmp_tdata <= '1';
+                                jmp_take <= '1';
                             when cx_ne_0 =>
                                 if alu_res_tdata.dval(15 downto 0) /= x"0000" then
-                                    jmp_tdata <= '1';
+                                    jmp_take <= '1';
                                 else
-                                    jmp_tdata <= '0';
+                                    jmp_take <= '0';
                                 end if;
                             when cx_ne_0_and_zf =>
                                 if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_s_tdata(FLAG_ZF) = '1' then
-                                    jmp_tdata <= '1';
+                                    jmp_take <= '1';
                                 else
-                                    jmp_tdata <= '0';
+                                    jmp_take <= '0';
                                 end if;
                             when cx_ne_0_and_nzf =>
                                 if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_s_tdata(FLAG_ZF) = '0' then
-                                    jmp_tdata <= '1';
+                                    jmp_take <= '1';
                                 else
-                                    jmp_tdata <= '0';
+                                    jmp_take <= '0';
                                 end if;
                             when others =>
-                                jmp_tdata <= '0';
+                                jmp_take <= '0';
                         end case;
                     end if;
                 end if;
 
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.jump_imm = '1') then
+                jmp_jump_cs <= micro_tdata.jump_cs;
+            elsif (jmp_wait_mem_cs = '1' and lsu_rd_s_tvalid = '1') then
+                jmp_jump_cs <= lsu_rd_s_tdata;
+            end if;
+
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.jump_imm = '1') then
+                jmp_jump_ip <= micro_tdata.jump_ip;
+            elsif (jmp_wait_mem_ip = '1' and lsu_rd_s_tvalid = '1') then
+                jmp_jump_ip <= lsu_rd_s_tdata;
+            end if;
+
+        end if;
+    end process;
+
+    jump_dout_forming_proc : process (clk) begin
+        if rising_edge(clk) then
+            -- resettable
+            if resetn = '0' then
+                jmp_dout_tvalid <= '0';
+                jmp_dout_tdata.first <= '0';
+                jmp_dout_tdata.mismatch <= '0';
+                jmp_dout_tdata.taken <= '0';
+                jmp_dout_tdata.bypass <= '1';
+                event_jump <= '0';
+            else
+                jmp_dout_tvalid <= jmp_tvalid;
+
                 if (jmp_tvalid = '1') then
-                    jump_m_tvalid <= jmp_tdata;
+                    jmp_dout_tdata.first <= jmp_bpu_first;
+                    jmp_dout_tdata.taken <= jmp_take;
                 end if;
 
+                if (jmp_tvalid = '1') then
+                    if (jmp_bpu_taken /= jmp_take) then
+                    --if (jmp_bpu_taken = '0' and jmp_take = '1') then
+                        jmp_dout_tdata.mismatch <= '1';
+                    else
+                        jmp_dout_tdata.mismatch <= '0';
+                    end if;
+                end if;
+
+                if (jmp_tvalid = '1') then
+                    --if (jmp_bpu_taken = '0' and jmp_take = '1') then
+                    if (jmp_bpu_taken /= jmp_take) then
+                        event_jump <= '1';
+                    else
+                        event_jump <= '0';
+                    end if;
+                end if;
             end if;
 
-            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.jump_imm = '1') then
-                jump_m_tdata(31 downto 16) <= micro_tdata.jump_cs;
-            elsif (jmp_wait_mem_cs = '1' and lsu_rd_s_tvalid = '1') then
-                jump_m_tdata(31 downto 16) <= lsu_rd_s_tdata;
+            -- without reset
+            if (jmp_tvalid = '1') then
+                if jmp_bpu_taken = '1' and jmp_take = '0' then
+                    jmp_dout_tdata.jump_cs <= micro_tdata.inst_cs;
+                    jmp_dout_tdata.jump_ip <= micro_tdata.inst_ip_next;
+                else
+                    jmp_dout_tdata.jump_cs <= jmp_jump_cs;
+                    jmp_dout_tdata.jump_ip <= jmp_jump_ip;
+                end if;
             end if;
 
-            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.jump_imm = '1') then
-                jump_m_tdata(15 downto 0) <= micro_tdata.jump_ip;
-            elsif (jmp_wait_mem_ip = '1' and lsu_rd_s_tvalid = '1') then
-                jump_m_tdata(15 downto 0) <= lsu_rd_s_tdata;
+            if (micro_tvalid = '1' and micro_tready = '1') then
+                jmp_dout_tdata.bypass <= micro_tdata.bpu_bypass;
+
+                jmp_dout_tdata.inst_cs <= micro_tdata.inst_cs;
+                jmp_dout_tdata.inst_ip <= micro_tdata.inst_ip;
             end if;
 
         end if;
@@ -2204,7 +2279,7 @@ begin
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1') then
-                dbg_m_tdata <= micro_tdata.dbg_cs & micro_tdata.dbg_ip;
+                dbg_m_tdata <= micro_tdata.inst_cs & micro_tdata.inst_ip;
             end if;
 
         end if;

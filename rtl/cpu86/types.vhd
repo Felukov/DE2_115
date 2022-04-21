@@ -187,48 +187,62 @@ package cpu86_types is
     constant FLAG_01        : natural := 1;
     constant FLAG_CF        : natural := 0;
 
-    constant DECODED_INSTR_T_WIDTH : integer := 94;
+    constant DECODED_INSTR_T_WIDTH : integer := 96;
 
-    type packed_decoded_instr_t is record
-        imm8        : std_logic_vector(93 downto 86);
-        wait_ax     : std_logic_vector(85 downto 85);
-        wait_bx     : std_logic_vector(84 downto 84);
-        wait_cx     : std_logic_vector(83 downto 83);
-        wait_dx     : std_logic_vector(82 downto 82);
-        wait_bp     : std_logic_vector(81 downto 81);
-        wait_si     : std_logic_vector(80 downto 80);
-        wait_di     : std_logic_vector(79 downto 79);
-        wait_sp     : std_logic_vector(78 downto 78);
-        wait_ds     : std_logic_vector(77 downto 77);
-        wait_es     : std_logic_vector(76 downto 76);
-        wait_ss     : std_logic_vector(75 downto 75);
-        wait_fl     : std_logic_vector(74 downto 74);
-        lock_fl     : std_logic_vector(73 downto 73);
-        lock_sp     : std_logic_vector(72 downto 72);
-        lock_sreg   : std_logic_vector(71 downto 71);
-        lock_dreg   : std_logic_vector(70 downto 70);
-        lock_ax     : std_logic_vector(69 downto 69);
-        lock_si     : std_logic_vector(68 downto 68);
-        lock_di     : std_logic_vector(67 downto 67);
-        lock_ds     : std_logic_vector(66 downto 66);
-        lock_es     : std_logic_vector(65 downto 65);
-        lock_all    : std_logic_vector(64 downto 64);
-        fl          : std_logic_vector(63 downto 62);
-        op          : std_logic_vector(61 downto 57);
-        code        : std_logic_vector(56 downto 53);
-        w           : std_logic_vector(52 downto 52);
-        dir         : std_logic_vector(51 downto 48);
-        ea          : std_logic_vector(47 downto 44);
-        dreg        : std_logic_vector(43 downto 40);
-        dmask       : std_logic_vector(39 downto 38);
-        sreg        : std_logic_vector(37 downto 34);
-        smask       : std_logic_vector(33 downto 32);
-        data        : std_logic_vector(31 downto 16);
-        disp        : std_logic_vector(15 downto 0);
-    end record;
+    -- type packed_decoded_instr_t is record
+    --     imm8        : std_logic_vector(93 downto 86);
+    --     wait_ax     : std_logic_vector(85 downto 85);
+    --     wait_bx     : std_logic_vector(84 downto 84);
+    --     wait_cx     : std_logic_vector(83 downto 83);
+    --     wait_dx     : std_logic_vector(82 downto 82);
+    --     wait_bp     : std_logic_vector(81 downto 81);
+    --     wait_si     : std_logic_vector(80 downto 80);
+    --     wait_di     : std_logic_vector(79 downto 79);
+    --     wait_sp     : std_logic_vector(78 downto 78);
+    --     wait_ds     : std_logic_vector(77 downto 77);
+    --     wait_es     : std_logic_vector(76 downto 76);
+    --     wait_ss     : std_logic_vector(75 downto 75);
+    --     wait_fl     : std_logic_vector(74 downto 74);
+    --     lock_fl     : std_logic_vector(73 downto 73);
+    --     lock_sp     : std_logic_vector(72 downto 72);
+    --     lock_sreg   : std_logic_vector(71 downto 71);
+    --     lock_dreg   : std_logic_vector(70 downto 70);
+    --     lock_ax     : std_logic_vector(69 downto 69);
+    --     lock_si     : std_logic_vector(68 downto 68);
+    --     lock_di     : std_logic_vector(67 downto 67);
+    --     lock_ds     : std_logic_vector(66 downto 66);
+    --     lock_es     : std_logic_vector(65 downto 65);
+    --     lock_all    : std_logic_vector(64 downto 64);
+    --     fl          : std_logic_vector(63 downto 62);
+    --     op          : std_logic_vector(61 downto 57);
+    --     code        : std_logic_vector(56 downto 53);
+    --     w           : std_logic_vector(52 downto 52);
+    --     dir         : std_logic_vector(51 downto 48);
+    --     ea          : std_logic_vector(47 downto 44);
+    --     dreg        : std_logic_vector(43 downto 40);
+    --     dmask       : std_logic_vector(39 downto 38);
+    --     sreg        : std_logic_vector(37 downto 34);
+    --     smask       : std_logic_vector(33 downto 32);
+    --     data        : std_logic_vector(31 downto 16);
+    --     disp        : std_logic_vector(15 downto 0);
+    -- end record;
 
     type decoded_instr_t is record
+        op          : op_t;
+        code        : std_logic_vector(3 downto 0);
+        w           : std_logic;
+        dir         : direction_t;
+        ea          : ea_t;
+        dreg        : reg_t;
+        dmask       : std_logic_vector(1 downto 0);
+        sreg        : reg_t;
+        smask       : std_logic_vector(1 downto 0);
+        data        : std_logic_vector(15 downto 0);
+        disp        : std_logic_vector(15 downto 0);
+        fl          : fl_action_t;
         imm8        : std_logic_vector(7 downto 0);
+        bpu_taken   : std_logic;
+        bpu_first   : std_logic;
         wait_ax     : std_logic;
         wait_bx     : std_logic;
         wait_cx     : std_logic;
@@ -251,32 +265,38 @@ package cpu86_types is
         lock_ds     : std_logic;
         lock_es     : std_logic;
         lock_all    : std_logic;
-        fl          : fl_action_t;
+    end record;
+
+    subtype user_t         is std_logic_vector(47 downto 0);
+    subtype USER_T_IP      is natural range 47 downto 32;
+    subtype USER_T_CS      is natural range 31 downto 16;
+    subtype USER_T_IP_NEXT is natural range 15 downto 0;
+
+    subtype intr_t         is std_logic_vector(63 downto 0);
+    subtype INTR_T_SS      is natural range 63 downto 48;
+    subtype INTR_T_IP      is natural range 47 downto 32;
+    subtype INTR_T_CS      is natural range 31 downto 16;
+    subtype INTR_T_IP_NEXT is natural range 15 downto 0;
+
+    type rr_instr_t is record
         op          : op_t;
         code        : std_logic_vector(3 downto 0);
         w           : std_logic;
+        fl          : fl_action_t;
         dir         : direction_t;
         ea          : ea_t;
         dreg        : reg_t;
         dmask       : std_logic_vector(1 downto 0);
         sreg        : reg_t;
-        smask       : std_logic_vector(1 downto 0);
         data        : std_logic_vector(15 downto 0);
         disp        : std_logic_vector(15 downto 0);
-    end record;
+        level       : natural range 0 to 63;
+        fast_instr  : std_logic;
 
-    subtype user_t is std_logic_vector(47 downto 0);
-    subtype USER_T_IP is natural range 47 downto 32;
-    subtype USER_T_CS is natural range 31 downto 16;
-    subtype USER_T_IP_NEXT is natural range 15 downto 0;
+        bpu_first   : std_logic;
+        bpu_taken   : std_logic;
+        bpu_bypass  : std_logic;
 
-    subtype intr_t is std_logic_vector(63 downto 0);
-    subtype INTR_T_SS is natural range 63 downto 48;
-    subtype INTR_T_IP is natural range 47 downto 32;
-    subtype INTR_T_CS is natural range 31 downto 16;
-    subtype INTR_T_IP_NEXT is natural range 15 downto 0;
-
-    type rr_instr_t is record
         ax_tdata    : std_logic_vector(15 downto 0);
         bx_tdata    : std_logic_vector(15 downto 0);
         cx_tdata    : std_logic_vector(15 downto 0);
@@ -294,20 +314,6 @@ package cpu86_types is
         sp_val      : std_logic_vector(15 downto 0);
         sp_offset   : std_logic_vector(15 downto 0);
         ea_val      : std_logic_vector(15 downto 0);
-
-        op          : op_t;
-        code        : std_logic_vector(3 downto 0);
-        w           : std_logic;
-        fl          : fl_action_t;
-        dir         : direction_t;
-        ea          : ea_t;
-        dreg        : reg_t;
-        dmask       : std_logic_vector(1 downto 0);
-        sreg        : reg_t;
-        data        : std_logic_vector(15 downto 0);
-        disp        : std_logic_vector(15 downto 0);
-        level       : natural range 0 to 63;
-        fast_instr  : std_logic;
     end record;
 
     constant MICRO_OP_CMD_WIDTH : natural := 14;
@@ -457,10 +463,13 @@ package cpu86_types is
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
 
-        --bp_inc          : std_logic;
+        inst_cs         : std_logic_vector(15 downto 0);
+        inst_ip         : std_logic_vector(15 downto 0);
+        inst_ip_next    : std_logic_vector(15 downto 0);
 
-        dbg_cs          : std_logic_vector(15 downto 0);
-        dbg_ip          : std_logic_vector(15 downto 0);
+        bpu_first       : std_logic;
+        bpu_taken       : std_logic;
+        bpu_bypass      : std_logic;
     end record;
 
     type str_req_t is record
@@ -616,59 +625,148 @@ package cpu86_types is
         dval            : std_logic_vector(15 downto 0);
     end record;
 
-    function decoded_instr_t_to_slv (decoded_instr : decoded_instr_t) return std_logic_vector;
+    type cpu86_jump_t is record
+        first               : std_logic;
+        mismatch            : std_logic;
+        taken               : std_logic;
+        bypass              : std_logic;
+        inst_cs             : std_logic_vector(15 downto 0);
+        inst_ip             : std_logic_vector(15 downto 0);
+        jump_cs             : std_logic_vector(15 downto 0);
+        jump_ip             : std_logic_vector(15 downto 0);
+    end record;
+
+    function decoded_instr_t_to_slv (d : decoded_instr_t) return std_logic_vector;
     function slv_to_decoded_instr_t (v : std_logic_vector) return decoded_instr_t;
 
 end package;
 
 package body cpu86_types is
 
-    function decoded_instr_t_to_slv (decoded_instr : decoded_instr_t) return std_logic_vector is
-        variable p : packed_decoded_instr_t;
+    constant DECODED_INSTR_T_BPU_TAKEN  :  natural := 95;
+    constant DECODED_INSTR_T_BPU_FIRST  :  natural := 94;
+    subtype  DECODED_INSTR_T_IMM8       is natural range 93 downto 86;
+    constant DECODED_INSTR_T_WAIT_AX    :  natural := 85;
+    constant DECODED_INSTR_T_WAIT_BX    :  natural := 84;
+    constant DECODED_INSTR_T_WAIT_CX    :  natural := 83;
+    constant DECODED_INSTR_T_WAIT_DX    :  natural := 82;
+    constant DECODED_INSTR_T_WAIT_BP    :  natural := 81;
+    constant DECODED_INSTR_T_WAIT_SI    :  natural := 80;
+    constant DECODED_INSTR_T_WAIT_DI    :  natural := 79;
+    constant DECODED_INSTR_T_WAIT_SP    :  natural := 78;
+    constant DECODED_INSTR_T_WAIT_DS    :  natural := 77;
+    constant DECODED_INSTR_T_WAIT_ES    :  natural := 76;
+    constant DECODED_INSTR_T_WAIT_SS    :  natural := 75;
+    constant DECODED_INSTR_T_WAIT_FL    :  natural := 74;
+    constant DECODED_INSTR_T_LOCK_FL    :  natural := 73;
+    constant DECODED_INSTR_T_LOCK_SP    :  natural := 72;
+    constant DECODED_INSTR_T_LOCK_SREG  :  natural := 71;
+    constant DECODED_INSTR_T_LOCK_DREG  :  natural := 70;
+    constant DECODED_INSTR_T_LOCK_AX    :  natural := 69;
+    constant DECODED_INSTR_T_LOCK_SI    :  natural := 68;
+    constant DECODED_INSTR_T_LOCK_DI    :  natural := 67;
+    constant DECODED_INSTR_T_LOCK_DS    :  natural := 66;
+    constant DECODED_INSTR_T_LOCK_ES    :  natural := 65;
+    constant DECODED_INSTR_T_LOCK_ALL   :  natural := 64;
+    subtype  DECODED_INSTR_T_FL         is natural range 63 downto 62;
+    subtype  DECODED_INSTR_T_OP         is natural range 61 downto 57;
+    subtype  DECODED_INSTR_T_CODE       is natural range 56 downto 53;
+    constant DECODED_INSTR_T_W          : natural  := 52;
+    subtype  DECODED_INSTR_T_DIR        is natural range 51 downto 48;
+    subtype  DECODED_INSTR_T_EA         is natural range 47 downto 44;
+    subtype  DECODED_INSTR_T_DREG       is natural range 43 downto 40;
+    subtype  DECODED_INSTR_T_DMASK      is natural range 39 downto 38;
+    subtype  DECODED_INSTR_T_SREG       is natural range 37 downto 34;
+    subtype  DECODED_INSTR_T_SMASK      is natural range 33 downto 32;
+    subtype  DECODED_INSTR_T_DATA       is natural range 31 downto 16;
+    subtype  DECODED_INSTR_T_DISP       is natural range 15 downto 0;
+
+    function decoded_instr_t_to_slv (d : decoded_instr_t) return std_logic_vector is
         variable v : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
     begin
 
-        p.imm8      := decoded_instr.imm8;
+        v(DECODED_INSTR_T_BPU_TAKEN) := d.bpu_taken;
+        v(DECODED_INSTR_T_BPU_FIRST) := d.bpu_first;
 
-        p.wait_ax   := (85 => decoded_instr.wait_ax);
-        p.wait_bx   := (84 => decoded_instr.wait_bx);
-        p.wait_cx   := (83 => decoded_instr.wait_cx);
-        p.wait_dx   := (82 => decoded_instr.wait_dx);
-        p.wait_bp   := (81 => decoded_instr.wait_bp);
-        p.wait_si   := (80 => decoded_instr.wait_si);
-        p.wait_di   := (79 => decoded_instr.wait_di);
-        p.wait_sp   := (78 => decoded_instr.wait_sp);
-        p.wait_ds   := (77 => decoded_instr.wait_ds);
-        p.wait_es   := (76 => decoded_instr.wait_es);
-        p.wait_ss   := (75 => decoded_instr.wait_ss);
-        p.wait_fl   := (74 => decoded_instr.wait_fl);
+        v(DECODED_INSTR_T_IMM8)      := d.imm8;
+        v(DECODED_INSTR_T_WAIT_AX)   := d.wait_ax;
+        v(DECODED_INSTR_T_WAIT_BX)   := d.wait_bx;
+        v(DECODED_INSTR_T_WAIT_CX)   := d.wait_cx;
+        v(DECODED_INSTR_T_WAIT_DX)   := d.wait_dx;
+        v(DECODED_INSTR_T_WAIT_BP)   := d.wait_bp;
+        v(DECODED_INSTR_T_WAIT_SI)   := d.wait_si;
+        v(DECODED_INSTR_T_WAIT_DI)   := d.wait_di;
+        v(DECODED_INSTR_T_WAIT_SP)   := d.wait_sp;
+        v(DECODED_INSTR_T_WAIT_DS)   := d.wait_ds;
+        v(DECODED_INSTR_T_WAIT_ES)   := d.wait_es;
+        v(DECODED_INSTR_T_WAIT_SS)   := d.wait_ss;
+        v(DECODED_INSTR_T_WAIT_FL)   := d.wait_fl;
 
-        p.lock_fl   := (73 => decoded_instr.lock_fl);
-        p.lock_sp   := (72 => decoded_instr.lock_sp);
-        p.lock_sreg := (71 => decoded_instr.lock_sreg);
-        p.lock_dreg := (70 => decoded_instr.lock_dreg);
-        p.lock_ax   := (69 => decoded_instr.lock_ax);
-        p.lock_si   := (68 => decoded_instr.lock_si);
-        p.lock_di   := (67 => decoded_instr.lock_di);
-        p.lock_ds   := (66 => decoded_instr.lock_ds);
-        p.lock_es   := (65 => decoded_instr.lock_es);
-        p.lock_all  := (64 => decoded_instr.lock_all);
-        p.fl        := std_logic_vector(to_unsigned(fl_action_t'pos(decoded_instr.fl), p.fl'length));
-        p.op        := std_logic_vector(to_unsigned(op_t'pos(decoded_instr.op), p.op'length));
-        p.code      := decoded_instr.code;
-        p.w         := (52 => decoded_instr.w);
-        p.dir       := std_logic_vector(to_unsigned(direction_t'pos(decoded_instr.dir), p.dir'length));
-        p.ea        := std_logic_vector(to_unsigned(ea_t'pos(decoded_instr.ea), p.ea'length));
-        p.dreg      := std_logic_vector(to_unsigned(reg_t'pos(decoded_instr.dreg), p.dreg'length));
-        p.dmask     := decoded_instr.dmask;
-        p.sreg      := std_logic_vector(to_unsigned(reg_t'pos(decoded_instr.sreg), p.sreg'length));
-        p.smask     := decoded_instr.smask;
-        p.data      := decoded_instr.data;
-        p.disp      := decoded_instr.disp;
+        v(DECODED_INSTR_T_LOCK_FL)   := d.lock_fl;
+        v(DECODED_INSTR_T_LOCK_SP)   := d.lock_sp;
+        v(DECODED_INSTR_T_LOCK_SREG) := d.lock_sreg;
+        v(DECODED_INSTR_T_LOCK_DREG) := d.lock_dreg;
+        v(DECODED_INSTR_T_LOCK_AX)   := d.lock_ax;
+        v(DECODED_INSTR_T_LOCK_SI)   := d.lock_si;
+        v(DECODED_INSTR_T_LOCK_DI)   := d.lock_di;
+        v(DECODED_INSTR_T_LOCK_DS)   := d.lock_ds;
+        v(DECODED_INSTR_T_LOCK_ES)   := d.lock_es;
+        v(DECODED_INSTR_T_LOCK_ALL)  := d.lock_all;
 
-        v := p.imm8 & p.wait_ax & p.wait_bx & p.wait_cx & p.wait_dx & p.wait_bp & p.wait_si & p.wait_di & p.wait_sp & p.wait_ds & p.wait_es & p.wait_ss & p.wait_fl &
-            p.lock_fl & p.lock_sp & p.lock_sreg & p.lock_dreg & p.lock_ax & p.lock_si & p.lock_di & p.lock_ds & p.lock_es & p.lock_all &
-            p.fl & p.op & p.code & p.w & p.dir & p.ea & p.dreg & p.dmask & p.sreg & p.smask & p.data & p.disp;
+        v(DECODED_INSTR_T_FL)        := std_logic_vector(to_unsigned(fl_action_t'pos(d.fl), 2));
+        v(DECODED_INSTR_T_OP)        := std_logic_vector(to_unsigned(op_t'pos(d.op), 5));
+        v(DECODED_INSTR_T_CODE)      := d.code;
+        v(DECODED_INSTR_T_W)         := d.w;
+        v(DECODED_INSTR_T_DIR)       := std_logic_vector(to_unsigned(direction_t'pos(d.dir), 4));
+        v(DECODED_INSTR_T_EA)        := std_logic_vector(to_unsigned(ea_t'pos(d.ea), 4));
+        v(DECODED_INSTR_T_DREG)      := std_logic_vector(to_unsigned(reg_t'pos(d.dreg), 4));
+        v(DECODED_INSTR_T_DMASK)     := d.dmask;
+        v(DECODED_INSTR_T_SREG)      := std_logic_vector(to_unsigned(reg_t'pos(d.sreg), 4));
+        v(DECODED_INSTR_T_SMASK)     := d.smask;
+        v(DECODED_INSTR_T_DATA)      := d.data;
+        v(DECODED_INSTR_T_DISP)      := d.disp;
+
+        -- p.imm8      := decoded_instr.imm8;
+
+        -- p.wait_ax   := (85 => decoded_instr.wait_ax);
+        -- p.wait_bx   := (84 => decoded_instr.wait_bx);
+        -- p.wait_cx   := (83 => decoded_instr.wait_cx);
+        -- p.wait_dx   := (82 => decoded_instr.wait_dx);
+        -- p.wait_bp   := (81 => decoded_instr.wait_bp);
+        -- p.wait_si   := (80 => decoded_instr.wait_si);
+        -- p.wait_di   := (79 => decoded_instr.wait_di);
+        -- p.wait_sp   := (78 => decoded_instr.wait_sp);
+        -- p.wait_ds   := (77 => decoded_instr.wait_ds);
+        -- p.wait_es   := (76 => decoded_instr.wait_es);
+        -- p.wait_ss   := (75 => decoded_instr.wait_ss);
+        -- p.wait_fl   := (74 => decoded_instr.wait_fl);
+
+        -- p.lock_fl   := (73 => decoded_instr.lock_fl);
+        -- p.lock_sp   := (72 => decoded_instr.lock_sp);
+        -- p.lock_sreg := (71 => decoded_instr.lock_sreg);
+        -- p.lock_dreg := (70 => decoded_instr.lock_dreg);
+        -- p.lock_ax   := (69 => decoded_instr.lock_ax);
+        -- p.lock_si   := (68 => decoded_instr.lock_si);
+        -- p.lock_di   := (67 => decoded_instr.lock_di);
+        -- p.lock_ds   := (66 => decoded_instr.lock_ds);
+        -- p.lock_es   := (65 => decoded_instr.lock_es);
+        -- p.lock_all  := (64 => decoded_instr.lock_all);
+        -- p.fl        := std_logic_vector(to_unsigned(fl_action_t'pos(decoded_instr.fl), p.fl'length));
+        -- p.op        := std_logic_vector(to_unsigned(op_t'pos(decoded_instr.op), p.op'length));
+        -- p.code      := decoded_instr.code;
+        -- p.w         := (52 => decoded_instr.w);
+        -- p.dir       := std_logic_vector(to_unsigned(direction_t'pos(decoded_instr.dir), p.dir'length));
+        -- p.ea        := std_logic_vector(to_unsigned(ea_t'pos(decoded_instr.ea), p.ea'length));
+        -- p.dreg      := std_logic_vector(to_unsigned(reg_t'pos(decoded_instr.dreg), p.dreg'length));
+        -- p.dmask     := decoded_instr.dmask;
+        -- p.sreg      := std_logic_vector(to_unsigned(reg_t'pos(decoded_instr.sreg), p.sreg'length));
+        -- p.smask     := decoded_instr.smask;
+        -- p.data      := decoded_instr.data;
+        -- p.disp      := decoded_instr.disp;
+
+        -- v := p.imm8 & p.wait_ax & p.wait_bx & p.wait_cx & p.wait_dx & p.wait_bp & p.wait_si & p.wait_di & p.wait_sp & p.wait_ds & p.wait_es & p.wait_ss & p.wait_fl &
+        --     p.lock_fl & p.lock_sp & p.lock_sreg & p.lock_dreg & p.lock_ax & p.lock_si & p.lock_di & p.lock_ds & p.lock_es & p.lock_all &
+        --     p.fl & p.op & p.code & p.w & p.dir & p.ea & p.dreg & p.dmask & p.sreg & p.smask & p.data & p.disp;
 
         return v;
 
@@ -676,86 +774,127 @@ package body cpu86_types is
 
     function slv_to_decoded_instr_t (v : std_logic_vector) return decoded_instr_t is
         variable t : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
-        variable p : packed_decoded_instr_t;
         variable d : decoded_instr_t;
     begin
         t := v;
+
+        d.bpu_taken := t(DECODED_INSTR_T_BPU_TAKEN);
+        d.bpu_first := t(DECODED_INSTR_T_BPU_FIRST);
+
+        d.imm8      := t(DECODED_INSTR_T_IMM8);
+        d.wait_ax   := t(DECODED_INSTR_T_WAIT_AX);
+        d.wait_bx   := t(DECODED_INSTR_T_WAIT_BX);
+        d.wait_cx   := t(DECODED_INSTR_T_WAIT_CX);
+        d.wait_dx   := t(DECODED_INSTR_T_WAIT_DX);
+        d.wait_bp   := t(DECODED_INSTR_T_WAIT_BP);
+        d.wait_si   := t(DECODED_INSTR_T_WAIT_SI);
+        d.wait_di   := t(DECODED_INSTR_T_WAIT_DI);
+        d.wait_sp   := t(DECODED_INSTR_T_WAIT_SP);
+        d.wait_ds   := t(DECODED_INSTR_T_WAIT_DS);
+        d.wait_es   := t(DECODED_INSTR_T_WAIT_ES);
+        d.wait_ss   := t(DECODED_INSTR_T_WAIT_SS);
+        d.wait_fl   := t(DECODED_INSTR_T_WAIT_FL);
+
+        d.lock_fl   := t(DECODED_INSTR_T_LOCK_FL);
+        d.lock_sp   := t(DECODED_INSTR_T_LOCK_SP);
+        d.lock_sreg := t(DECODED_INSTR_T_LOCK_SREG);
+        d.lock_dreg := t(DECODED_INSTR_T_LOCK_DREG);
+        d.lock_ax   := t(DECODED_INSTR_T_LOCK_AX);
+        d.lock_si   := t(DECODED_INSTR_T_LOCK_SI);
+        d.lock_di   := t(DECODED_INSTR_T_LOCK_DI);
+        d.lock_ds   := t(DECODED_INSTR_T_LOCK_DS);
+        d.lock_es   := t(DECODED_INSTR_T_LOCK_ES);
+        d.lock_all  := t(DECODED_INSTR_T_LOCK_ALL);
+
+        d.fl        := fl_action_t'val(to_integer(unsigned(t(DECODED_INSTR_T_FL))));
+        d.op        := op_t'val(to_integer(unsigned(t(DECODED_INSTR_T_OP))));
+        d.code      := t(DECODED_INSTR_T_CODE);
+        d.w         := t(DECODED_INSTR_T_W);
+        d.dir       := direction_t'val(to_integer(unsigned(t(DECODED_INSTR_T_DIR))));
+        d.ea        := ea_t'val(to_integer(unsigned(t(DECODED_INSTR_T_EA))));
+        d.dreg      := reg_t'val(to_integer(unsigned(t(DECODED_INSTR_T_DREG))));
+        d.dmask     := t(DECODED_INSTR_T_DMASK);
+        d.sreg      := reg_t'val(to_integer(unsigned(t(DECODED_INSTR_T_SREG))));
+        d.smask     := t(DECODED_INSTR_T_SMASK);
+        d.data      := t(DECODED_INSTR_T_DATA);
+        d.disp      := t(DECODED_INSTR_T_DISP);
+
         --(p.op,  p.code, p.w, p.dir, p.ea, p.dreg, p.dmask, p.sreg, p.smask, p.data, p.disp) := v;
-        p.imm8      := t(p.imm8'range);
+        -- p.imm8      := t(p.imm8'range);
 
-        p.wait_ax   := t(p.wait_ax'range);
-        p.wait_bx   := t(p.wait_bx'range);
-        p.wait_cx   := t(p.wait_cx'range);
-        p.wait_dx   := t(p.wait_dx'range);
-        p.wait_bp   := t(p.wait_bp'range);
-        p.wait_si   := t(p.wait_si'range);
-        p.wait_di   := t(p.wait_di'range);
-        p.wait_sp   := t(p.wait_sp'range);
-        p.wait_ds   := t(p.wait_ds'range);
-        p.wait_es   := t(p.wait_es'range);
-        p.wait_ss   := t(p.wait_ss'range);
-        p.wait_fl   := t(p.wait_fl'range);
+        -- p.wait_ax   := t(p.wait_ax'range);
+        -- p.wait_bx   := t(p.wait_bx'range);
+        -- p.wait_cx   := t(p.wait_cx'range);
+        -- p.wait_dx   := t(p.wait_dx'range);
+        -- p.wait_bp   := t(p.wait_bp'range);
+        -- p.wait_si   := t(p.wait_si'range);
+        -- p.wait_di   := t(p.wait_di'range);
+        -- p.wait_sp   := t(p.wait_sp'range);
+        -- p.wait_ds   := t(p.wait_ds'range);
+        -- p.wait_es   := t(p.wait_es'range);
+        -- p.wait_ss   := t(p.wait_ss'range);
+        -- p.wait_fl   := t(p.wait_fl'range);
 
-        p.lock_fl   := t(p.lock_fl'range);
-        p.lock_sp   := t(p.lock_sp'range);
-        p.lock_sreg := t(p.lock_sreg'range);
-        p.lock_dreg := t(p.lock_dreg'range);
-        p.lock_ax   := t(p.lock_ax'range);
-        p.lock_si   := t(p.lock_si'range);
-        p.lock_di   := t(p.lock_di'range);
-        p.lock_ds   := t(p.lock_ds'range);
-        p.lock_es   := t(p.lock_es'range);
-        p.lock_all  := t(p.lock_all'range);
-        p.fl        := t(p.fl'range);
-        p.op        := t(p.op'range);
-        p.code      := t(p.code'range);
-        p.w         := t(p.w'range);
-        p.dir       := t(p.dir'range);
-        p.ea        := t(p.ea'range);
-        p.dreg      := t(p.dreg'range);
-        p.dmask     := t(p.dmask'range);
-        p.sreg      := t(p.sreg'range);
-        p.smask     := t(p.smask'range);
-        p.data      := t(p.data'range);
-        p.disp      := t(p.disp'range);
+        -- p.lock_fl   := t(p.lock_fl'range);
+        -- p.lock_sp   := t(p.lock_sp'range);
+        -- p.lock_sreg := t(p.lock_sreg'range);
+        -- p.lock_dreg := t(p.lock_dreg'range);
+        -- p.lock_ax   := t(p.lock_ax'range);
+        -- p.lock_si   := t(p.lock_si'range);
+        -- p.lock_di   := t(p.lock_di'range);
+        -- p.lock_ds   := t(p.lock_ds'range);
+        -- p.lock_es   := t(p.lock_es'range);
+        -- p.lock_all  := t(p.lock_all'range);
+        -- p.fl        := t(p.fl'range);
+        -- p.op        := t(p.op'range);
+        -- p.code      := t(p.code'range);
+        -- p.w         := t(p.w'range);
+        -- p.dir       := t(p.dir'range);
+        -- p.ea        := t(p.ea'range);
+        -- p.dreg      := t(p.dreg'range);
+        -- p.dmask     := t(p.dmask'range);
+        -- p.sreg      := t(p.sreg'range);
+        -- p.smask     := t(p.smask'range);
+        -- p.data      := t(p.data'range);
+        -- p.disp      := t(p.disp'range);
 
-        d.imm8      := p.imm8;
+        -- d.imm8      := p.imm8;
 
-        d.wait_ax   := p.wait_ax(85);
-        d.wait_bx   := p.wait_bx(84);
-        d.wait_cx   := p.wait_cx(83);
-        d.wait_dx   := p.wait_dx(82);
-        d.wait_bp   := p.wait_bp(81);
-        d.wait_si   := p.wait_si(80);
-        d.wait_di   := p.wait_di(79);
-        d.wait_sp   := p.wait_sp(78);
-        d.wait_ds   := p.wait_ds(77);
-        d.wait_es   := p.wait_es(76);
-        d.wait_ss   := p.wait_ss(75);
-        d.wait_fl   := p.wait_fl(74);
+        -- d.wait_ax   := p.wait_ax(85);
+        -- d.wait_bx   := p.wait_bx(84);
+        -- d.wait_cx   := p.wait_cx(83);
+        -- d.wait_dx   := p.wait_dx(82);
+        -- d.wait_bp   := p.wait_bp(81);
+        -- d.wait_si   := p.wait_si(80);
+        -- d.wait_di   := p.wait_di(79);
+        -- d.wait_sp   := p.wait_sp(78);
+        -- d.wait_ds   := p.wait_ds(77);
+        -- d.wait_es   := p.wait_es(76);
+        -- d.wait_ss   := p.wait_ss(75);
+        -- d.wait_fl   := p.wait_fl(74);
 
-        d.lock_fl   := p.lock_fl(73);
-        d.lock_sp   := p.lock_sp(72);
-        d.lock_sreg := p.lock_sreg(71);
-        d.lock_dreg := p.lock_dreg(70);
-        d.lock_ax   := p.lock_ax(69);
-        d.lock_si   := p.lock_si(68);
-        d.lock_di   := p.lock_di(67);
-        d.lock_ds   := p.lock_ds(66);
-        d.lock_es   := p.lock_es(65);
-        d.lock_all  := p.lock_all(64);
-        d.fl        := fl_action_t'val(to_integer(unsigned(p.fl)));
-        d.op        := op_t'val(to_integer(unsigned(p.op)));
-        d.code      := p.code;
-        d.w         := p.w(52);
-        d.dir       := direction_t'val(to_integer(unsigned(p.dir)));
-        d.ea        := ea_t'val(to_integer(unsigned(p.ea)));
-        d.dreg      := reg_t'val(to_integer(unsigned(p.dreg)));
-        d.dmask     := p.dmask;
-        d.sreg      := reg_t'val(to_integer(unsigned(p.sreg)));
-        d.smask     := p.smask;
-        d.data      := p.data;
-        d.disp      := p.disp;
+        -- d.lock_fl   := p.lock_fl(73);
+        -- d.lock_sp   := p.lock_sp(72);
+        -- d.lock_sreg := p.lock_sreg(71);
+        -- d.lock_dreg := p.lock_dreg(70);
+        -- d.lock_ax   := p.lock_ax(69);
+        -- d.lock_si   := p.lock_si(68);
+        -- d.lock_di   := p.lock_di(67);
+        -- d.lock_ds   := p.lock_ds(66);
+        -- d.lock_es   := p.lock_es(65);
+        -- d.lock_all  := p.lock_all(64);
+        -- d.fl        := fl_action_t'val(to_integer(unsigned(p.fl)));
+        -- d.op        := op_t'val(to_integer(unsigned(p.op)));
+        -- d.code      := p.code;
+        -- d.w         := p.w(52);
+        -- d.dir       := direction_t'val(to_integer(unsigned(p.dir)));
+        -- d.ea        := ea_t'val(to_integer(unsigned(p.ea)));
+        -- d.dreg      := reg_t'val(to_integer(unsigned(p.dreg)));
+        -- d.dmask     := p.dmask;
+        -- d.sreg      := reg_t'val(to_integer(unsigned(p.sreg)));
+        -- d.smask     := p.smask;
+        -- d.data      := p.data;
+        -- d.disp      := p.disp;
 
         return d;
 

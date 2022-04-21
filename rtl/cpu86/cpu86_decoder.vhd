@@ -2267,8 +2267,10 @@ begin
                 instr_tdata.imm8 <= u8_tdata;
             end if;
 
-        end if;
+            instr_tdata.bpu_taken <= '0';
+            instr_tdata.bpu_first <= '0';
 
+        end if;
     end process;
 
     dbg_instr_hs_cnt_proc : process (clk) begin

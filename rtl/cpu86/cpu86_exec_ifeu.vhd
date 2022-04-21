@@ -29,6 +29,7 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 use work.cpu86_types.all;
+use std.textio.all;
 
 entity cpu86_exec_ifeu is
     port (
@@ -1852,6 +1853,7 @@ begin
             micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
 
             -- update jump cmd
+            micro_tdata.jump_imm <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '1';
             micro_tdata.jump_cond <= j_always;
@@ -2156,15 +2158,31 @@ begin
                 ip_val_plus_disp <= ip_val_plus_disp_next;
             end if;
 
+            if (rr_tvalid = '1' and rr_tready = '1') then
+                micro_tdata.inst_cs      <= rr_tuser(USER_T_CS);
+                micro_tdata.inst_ip      <= rr_tuser(USER_T_IP);
+                micro_tdata.inst_ip_next <= rr_tuser(USER_T_IP_NEXT);
+            end if;
+
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
                 (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
             then
                 initialize_signals;
                 do_ext_intr_0;
+
+                micro_tdata.bpu_first <= '1';
+                micro_tdata.bpu_taken <= '0';
+                micro_tdata.bpu_bypass <= '1';
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 initialize_signals;
-                micro_tdata.dbg_cs <= rr_tuser(31 downto 16);
-                micro_tdata.dbg_ip <= rr_tuser(15 downto 0);
+
+                micro_tdata.bpu_first <= rr_tdata.bpu_first;
+                micro_tdata.bpu_taken <= rr_tdata.bpu_taken;
+                if rr_tdata.op = SYS then
+                    micro_tdata.bpu_bypass <= '1';
+                else
+                    micro_tdata.bpu_bypass <= rr_tdata.bpu_bypass;
+                end if;
 
                 case (rr_tdata.op) is
                     when ALU        => do_alu_cmd_0;
@@ -2288,5 +2306,38 @@ begin
             end if;
         end if;
     end process;
+
+    -- debug : process (clk)
+    -- begin
+    --     if rising_edge(clk) then
+    --         if (rr_s_tvalid = '1' and rr_s_tready = '1') then
+    --             report to_hstring(rr_s_tuser) & " - " & to_hstring(rr_s_tdata.sp_val);
+    --             -- "Test: " & to_string(active_test_id) & "; HS: " & to_string(memw_hs_cnt) &
+    --             --             "; Incorrect memory address. Expected: " & to_hstring(tb_req_taddr) & " / " & to_hstring(tb_req_data) &
+    --             --             ". Recieved: " & to_hstring(hw_req_taddr) & " / " & to_hstring(hw_req_tdata) & "|" & to_string(hw_req_tmask) severity error;
+    --         end if;
+
+
+    --     end if;
+    -- end process;
+
+---procedure WRITE(L : inout LINE; VALUE : in integer; JUSTIFIED: in SIDE := right; FIELD: in WIDTH := 0);
+	-- RTL_SYNTHESIS OFF
+    -- p_dump  : process(clk)
+    --     file test_vector      : text open write_mode is "output_file.txt";
+    --     variable row          : line;
+    -- begin
+    --     if(resetn = '0') then
+    --     ------------------------------------
+    --     elsif(rising_edge(clk)) then
+
+    --         if (rr_s_tvalid = '1' and rr_s_tready = '1') then
+    --             hwrite(row, rr_s_tuser, right, 64);
+    --             hwrite(row, rr_s_tdata.sp_val, right, 15);
+    --             writeline(test_vector, row);
+    --         end if;
+    --     end if;
+    -- end process p_dump;
+	-- RTL_SYNTHESIS ON
 
 end architecture;

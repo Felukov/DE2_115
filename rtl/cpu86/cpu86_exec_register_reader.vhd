@@ -268,7 +268,9 @@ begin
         (instr_tdata.wait_fl = '0' or (instr_tdata.wait_fl = '1' and flags_s_tvalid = '1' and flags_m_lock_tvalid = '0'))
     else '0';
 
-    instr_tready <= '1' when instr_tready_mask = '0' and (instr_tvalid = '0' or (instr_tvalid = '1' and (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) and instr_hazards_resolved = '1')) else '0';
+    instr_tready <= '1' when instr_tready_mask = '0' and
+        (instr_tvalid = '0' or (instr_tvalid = '1' and instr_hazards_resolved = '1')) and
+        (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) else '0';
 
     -- handling external interrupt process
     ext_interrupt_process : process (clk) begin
@@ -508,7 +510,6 @@ begin
             if resetn = '0' then
                 rr_tvalid <= '0';
             else
-
                 if (instr_tvalid = '1' and instr_tready = '1') then
                     if instr_tdata.op = SET_SEG or skip_next = '1' or
                         (instr_tdata.op = REP and cx_s_tdata = x"0000")
@@ -522,8 +523,8 @@ begin
                 elsif rr_tready = '1' then
                     rr_tvalid <= '0';
                 end if;
-
             end if;
+
             -- Without reset
             if (instr_tvalid = '1' and instr_tready = '1') then
                 rr_tdata.op         <= instr_tdata.op;
@@ -531,11 +532,10 @@ begin
                 rr_tdata.data       <= instr_tdata.data;
                 rr_tdata.w          <= instr_tdata.w;
 
-                if (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
+                if ((instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
                     ((instr_tdata.op = MOVU or instr_tdata.op = XCHG) and (instr_tdata.dir = R2R or instr_tdata.dir = I2R)) or
                     (instr_tdata.op = JMPU and instr_tdata.code(3) = '0') or
-                    (instr_tdata.op = REP) or
-                    (instr_tdata.op = FEU)
+                    (instr_tdata.op = REP) or (instr_tdata.op = FEU))
                 then
                     rr_tdata.fast_instr <= '1';
                 else
@@ -547,6 +547,16 @@ begin
                 rr_tdata.fast_instr <= '0';
                 rr_tdata.data       <= x"00" & ext_intr_tdata;
                 rr_tdata.w          <= '1';
+            end if;
+
+            if (instr_tvalid = '1' and instr_tready = '1') then
+                rr_tdata.bpu_first <= instr_tdata.bpu_first;
+                rr_tdata.bpu_taken <= instr_tdata.bpu_taken;
+                rr_tdata.bpu_bypass <= '0';
+            elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+                rr_tdata.bpu_first <= '1';
+                rr_tdata.bpu_taken <= '0';
+                rr_tdata.bpu_bypass <= '1';
             end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
