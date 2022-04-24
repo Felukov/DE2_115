@@ -416,6 +416,8 @@ architecture rtl of cpu86_exec_mexec is
     signal jmp_take             : std_logic;
     signal jmp_bpu_first        : std_logic;
     signal jmp_bpu_taken        : std_logic;
+    signal jmp_bpu_taken_cs     : std_logic_vector(15 downto 0);
+    signal jmp_bpu_taken_ip     : std_logic_vector(15 downto 0);
 
     signal jmp_dout_tvalid      : std_logic;
     signal jmp_dout_tdata       : cpu86_jump_t;
@@ -2046,6 +2048,11 @@ begin
                 jmp_jump_ip <= lsu_rd_s_tdata;
             end if;
 
+            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
+                jmp_bpu_taken_cs <= micro_tdata.bpu_taken_cs;
+                jmp_bpu_taken_ip <= micro_tdata.bpu_taken_ip;
+            end if;
+
         end if;
     end process;
 
@@ -2068,8 +2075,9 @@ begin
                 end if;
 
                 if (jmp_tvalid = '1') then
-                    if (jmp_bpu_taken /= jmp_take) then
-                    --if (jmp_bpu_taken = '0' and jmp_take = '1') then
+                    if (jmp_bpu_taken /= jmp_take) or
+                       (jmp_bpu_taken = '1' and jmp_take = '1' and (jmp_jump_cs /= jmp_bpu_taken_cs or jmp_jump_ip /= jmp_bpu_taken_ip))
+                    then
                         jmp_dout_tdata.mismatch <= '1';
                     else
                         jmp_dout_tdata.mismatch <= '0';
@@ -2077,8 +2085,9 @@ begin
                 end if;
 
                 if (jmp_tvalid = '1') then
-                    --if (jmp_bpu_taken = '0' and jmp_take = '1') then
-                    if (jmp_bpu_taken /= jmp_take) then
+                    if (jmp_bpu_taken /= jmp_take) or
+                       (jmp_bpu_taken = '1' and jmp_take = '1' and (jmp_jump_cs /= jmp_bpu_taken_cs or jmp_jump_ip /= jmp_bpu_taken_ip))
+                    then
                         event_jump <= '1';
                     else
                         event_jump <= '0';

@@ -559,6 +559,11 @@ begin
                 rr_tdata.bpu_bypass <= '1';
             end if;
 
+            if (instr_tvalid = '1' and instr_tready = '1') then
+                rr_tdata.bpu_taken_cs <= instr_tdata.bpu_taken_cs;
+                rr_tdata.bpu_taken_ip <= instr_tdata.bpu_taken_ip;
+            end if;
+
             if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
                 rr_tdata.fl         <= instr_tdata.fl;
                 rr_tdata.dir        <= instr_tdata.dir;

@@ -2164,6 +2164,11 @@ begin
                 micro_tdata.inst_ip_next <= rr_tuser(USER_T_IP_NEXT);
             end if;
 
+            if (rr_tvalid = '1' and rr_tready = '1') then
+                micro_tdata.bpu_taken_cs <= rr_tdata.bpu_taken_cs;
+                micro_tdata.bpu_taken_ip <= rr_tdata.bpu_taken_ip;
+            end if;
+
             if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
                 (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
             then

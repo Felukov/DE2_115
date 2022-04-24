@@ -119,7 +119,7 @@ begin
     -- assigns
     instr_s_tready      <= '1' when jump_s_tvalid = '0' and jump_m_tvalid = '0' and (instr_m_tvalid = '0' or (instr_m_tvalid = '1' and instr_m_tready = '1')) else '0';
 
-    jump_pass          <= '1' when instr_s_tdata.op = RET or instr_s_tdata.op = BRANCH else '0';
+    jump_pass           <= '1' when instr_s_tdata.op = BRANCH or instr_s_tdata.op = RET else '0';
 
     -- forwarding instruction
     process (clk) begin
@@ -153,43 +153,46 @@ begin
                     instr_m_tdata.bpu_first <= '1';
                 end if;
 
-                instr_m_tdata.op        <= instr_s_tdata.op;
-                instr_m_tdata.code      <= instr_s_tdata.code;
-                instr_m_tdata.w         <= instr_s_tdata.w;
-                instr_m_tdata.dir       <= instr_s_tdata.dir;
-                instr_m_tdata.ea        <= instr_s_tdata.ea;
-                instr_m_tdata.dreg      <= instr_s_tdata.dreg;
-                instr_m_tdata.dmask     <= instr_s_tdata.dmask;
-                instr_m_tdata.sreg      <= instr_s_tdata.sreg;
-                instr_m_tdata.smask     <= instr_s_tdata.smask;
-                instr_m_tdata.data      <= instr_s_tdata.data;
-                instr_m_tdata.disp      <= instr_s_tdata.disp;
-                instr_m_tdata.fl        <= instr_s_tdata.fl;
-                instr_m_tdata.imm8      <= instr_s_tdata.imm8;
-                instr_m_tdata.wait_ax   <= instr_s_tdata.wait_ax;
-                instr_m_tdata.wait_bx   <= instr_s_tdata.wait_bx;
-                instr_m_tdata.wait_cx   <= instr_s_tdata.wait_cx;
-                instr_m_tdata.wait_dx   <= instr_s_tdata.wait_dx;
-                instr_m_tdata.wait_bp   <= instr_s_tdata.wait_bp;
-                instr_m_tdata.wait_si   <= instr_s_tdata.wait_si;
-                instr_m_tdata.wait_di   <= instr_s_tdata.wait_di;
-                instr_m_tdata.wait_sp   <= instr_s_tdata.wait_sp;
-                instr_m_tdata.wait_ds   <= instr_s_tdata.wait_ds;
-                instr_m_tdata.wait_es   <= instr_s_tdata.wait_es;
-                instr_m_tdata.wait_ss   <= instr_s_tdata.wait_ss;
-                instr_m_tdata.wait_fl   <= instr_s_tdata.wait_fl;
-                instr_m_tdata.lock_fl   <= instr_s_tdata.lock_fl;
-                instr_m_tdata.lock_sreg <= instr_s_tdata.lock_sreg;
-                instr_m_tdata.lock_dreg <= instr_s_tdata.lock_dreg;
-                instr_m_tdata.lock_ax   <= instr_s_tdata.lock_ax;
-                instr_m_tdata.lock_sp   <= instr_s_tdata.lock_sp;
-                instr_m_tdata.lock_si   <= instr_s_tdata.lock_si;
-                instr_m_tdata.lock_di   <= instr_s_tdata.lock_di;
-                instr_m_tdata.lock_ds   <= instr_s_tdata.lock_ds;
-                instr_m_tdata.lock_es   <= instr_s_tdata.lock_es;
-                instr_m_tdata.lock_all  <= instr_s_tdata.lock_all;
+                instr_m_tdata.bpu_taken_cs  <= bpu_items(bpu_item_rd_hit_idx).jump_cs;
+                instr_m_tdata.bpu_taken_ip  <= bpu_items(bpu_item_rd_hit_idx).jump_ip;
 
-                instr_m_tuser           <= instr_s_tuser;
+                instr_m_tdata.op            <= instr_s_tdata.op;
+                instr_m_tdata.code          <= instr_s_tdata.code;
+                instr_m_tdata.w             <= instr_s_tdata.w;
+                instr_m_tdata.dir           <= instr_s_tdata.dir;
+                instr_m_tdata.ea            <= instr_s_tdata.ea;
+                instr_m_tdata.dreg          <= instr_s_tdata.dreg;
+                instr_m_tdata.dmask         <= instr_s_tdata.dmask;
+                instr_m_tdata.sreg          <= instr_s_tdata.sreg;
+                instr_m_tdata.smask         <= instr_s_tdata.smask;
+                instr_m_tdata.data          <= instr_s_tdata.data;
+                instr_m_tdata.disp          <= instr_s_tdata.disp;
+                instr_m_tdata.fl            <= instr_s_tdata.fl;
+                instr_m_tdata.imm8          <= instr_s_tdata.imm8;
+                instr_m_tdata.wait_ax       <= instr_s_tdata.wait_ax;
+                instr_m_tdata.wait_bx       <= instr_s_tdata.wait_bx;
+                instr_m_tdata.wait_cx       <= instr_s_tdata.wait_cx;
+                instr_m_tdata.wait_dx       <= instr_s_tdata.wait_dx;
+                instr_m_tdata.wait_bp       <= instr_s_tdata.wait_bp;
+                instr_m_tdata.wait_si       <= instr_s_tdata.wait_si;
+                instr_m_tdata.wait_di       <= instr_s_tdata.wait_di;
+                instr_m_tdata.wait_sp       <= instr_s_tdata.wait_sp;
+                instr_m_tdata.wait_ds       <= instr_s_tdata.wait_ds;
+                instr_m_tdata.wait_es       <= instr_s_tdata.wait_es;
+                instr_m_tdata.wait_ss       <= instr_s_tdata.wait_ss;
+                instr_m_tdata.wait_fl       <= instr_s_tdata.wait_fl;
+                instr_m_tdata.lock_fl       <= instr_s_tdata.lock_fl;
+                instr_m_tdata.lock_sreg     <= instr_s_tdata.lock_sreg;
+                instr_m_tdata.lock_dreg     <= instr_s_tdata.lock_dreg;
+                instr_m_tdata.lock_ax       <= instr_s_tdata.lock_ax;
+                instr_m_tdata.lock_sp       <= instr_s_tdata.lock_sp;
+                instr_m_tdata.lock_si       <= instr_s_tdata.lock_si;
+                instr_m_tdata.lock_di       <= instr_s_tdata.lock_di;
+                instr_m_tdata.lock_ds       <= instr_s_tdata.lock_ds;
+                instr_m_tdata.lock_es       <= instr_s_tdata.lock_es;
+                instr_m_tdata.lock_all      <= instr_s_tdata.lock_all;
+
+                instr_m_tuser               <= instr_s_tuser;
             end if;
         end if;
     end process;
@@ -224,7 +227,7 @@ begin
                     jump_m_tdata(31 downto 16) <= instr_s_tuser(31 downto 16);
                     jump_m_tdata(15 downto 0)  <= std_logic_vector(unsigned(instr_s_tuser(15 downto 0)) + unsigned(instr_s_tdata.disp));
                 end if;
-            elsif (instr_s_tvalid = '1' and instr_s_tready = '1' and  bpu_item_rd_hit_any = '1' and bpu_items(bpu_item_rd_hit_idx).saturated_cnt > 1 and jump_pass = '1') then
+            elsif (instr_s_tvalid = '1' and instr_s_tready = '1') then
                 jump_m_tdata(31 downto 16) <= bpu_items(bpu_item_rd_hit_idx).jump_cs;
                 jump_m_tdata(15 downto 0)  <= bpu_items(bpu_item_rd_hit_idx).jump_ip;
             end if;

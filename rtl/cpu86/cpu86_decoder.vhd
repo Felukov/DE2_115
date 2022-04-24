@@ -2268,6 +2268,8 @@ begin
             end if;
 
             instr_tdata.bpu_taken <= '0';
+            instr_tdata.bpu_taken_cs <= (others => '0');
+            instr_tdata.bpu_taken_ip <= (others => '0');
             instr_tdata.bpu_first <= '0';
 
         end if;
