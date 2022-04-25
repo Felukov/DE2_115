@@ -29,6 +29,8 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 use work.cpu86_types.all;
+use ieee.math_real.all;
+
 
 entity cpu86_bpu is
     port (
@@ -37,12 +39,12 @@ entity cpu86_bpu is
 
         s_axis_instr_tvalid         : in std_logic;
         s_axis_instr_tready         : out std_logic;
-        s_axis_instr_tdata          : in decoded_instr_t;
+        s_axis_instr_tdata          : in slv_decoded_instr_t;
         s_axis_instr_tuser          : in user_t;
 
         m_axis_instr_tvalid         : out std_logic;
         m_axis_instr_tready         : in std_logic;
-        m_axis_instr_tdata          : out decoded_instr_t;
+        m_axis_instr_tdata          : out slv_decoded_instr_t;
         m_axis_instr_tuser          : out user_t;
 
         s_axis_jump_tvalid          : in std_logic;
@@ -55,7 +57,25 @@ end entity cpu86_bpu;
 
 architecture rtl of cpu86_bpu is
 
+    component axis_reg is
+        generic (
+            DATA_WIDTH              : natural := 32
+        );
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+            in_s_tvalid             : in std_logic;
+            in_s_tready             : out std_logic;
+            in_s_tdata              : in std_logic_vector (DATA_WIDTH-1 downto 0);
+            out_m_tvalid            : out std_logic;
+            out_m_tready            : in std_logic;
+            out_m_tdata             : out std_logic_vector (DATA_WIDTH-1 downto 0)
+        );
+    end component;
+
     constant BPU_ITEM_CNT           : natural := 8;
+    constant BPU_ITEM_IDX_WIDTH     : integer := integer(ceil(log2(real(BPU_ITEM_CNT))));
+
 
     type bpu_item_t is record
         valid                       : std_logic;
@@ -68,8 +88,12 @@ architecture rtl of cpu86_bpu is
 
     type bpu_items_t is array (natural range 0 to BPU_ITEM_CNT-1) of bpu_item_t;
 
+    signal local_resetn             : std_logic;
+    signal s_axis_instr_payload     : std_logic_vector(DECODED_INSTR_T_WIDTH + USER_T_WIDTH - 1 downto 0);
+
     signal instr_s_tvalid           : std_logic;
     signal instr_s_tready           : std_logic;
+    signal instr_s_payload          : std_logic_vector(DECODED_INSTR_T_WIDTH + USER_T_WIDTH - 1 downto 0);
     signal instr_s_tdata            : decoded_instr_t;
     signal instr_s_tuser            : user_t;
 
@@ -91,8 +115,18 @@ architecture rtl of cpu86_bpu is
     signal bpu_item_wr_hit_any      : std_logic;
 
     signal bpu_item_rd_hit          : std_logic_vector(BPU_ITEM_CNT-1 downto 0);
-    signal bpu_item_rd_hit_any      : std_logic;
     signal bpu_item_rd_hit_idx      : natural range 0 to BPU_ITEM_CNT-1;
+
+    signal read_ahead_tvalid        : std_logic;
+    signal read_ahead_tdata         : std_logic_vector(31 downto 0);
+
+    signal bpu_item_rd_tdata        : std_logic_vector(BPU_ITEM_CNT+BPU_ITEM_IDX_WIDTH-1 downto 0);
+
+    signal d_bpu_item_rd_tvalid     : std_logic;
+    signal d_bpu_item_rd_tdata      : std_logic_vector(BPU_ITEM_CNT+BPU_ITEM_IDX_WIDTH-1 downto 0);
+    signal d_bpu_item_rd_hit        : std_logic_vector(BPU_ITEM_CNT-1 downto 0);
+    signal d_bpu_item_rd_hit_idx    : natural range 0 to BPU_ITEM_CNT-1;
+    signal d_bpu_item_rd_hit_any    : std_logic;
 
     signal next_free_bpu_item_idx   : natural range 0 to BPU_ITEM_CNT-1;
 
@@ -100,14 +134,9 @@ architecture rtl of cpu86_bpu is
 
 begin
     -- i/o assigns
-    instr_s_tvalid      <= s_axis_instr_tvalid;
-    s_axis_instr_tready <= instr_s_tready;
-    instr_s_tdata       <= s_axis_instr_tdata;
-    instr_s_tuser       <= s_axis_instr_tuser;
-
     m_axis_instr_tvalid <= instr_m_tvalid;
     instr_m_tready      <= m_axis_instr_tready;
-    m_axis_instr_tdata  <= instr_m_tdata;
+    m_axis_instr_tdata  <= decoded_instr_t_to_slv(instr_m_tdata);
     m_axis_instr_tuser  <= instr_m_tuser;
 
     jump_s_tvalid       <= s_axis_jump_tvalid;
@@ -116,10 +145,57 @@ begin
     m_axis_jump_tvalid  <= jump_m_tvalid;
     m_axis_jump_tdata   <= jump_m_tdata;
 
-    -- assigns
-    instr_s_tready      <= '1' when jump_s_tvalid = '0' and jump_m_tvalid = '0' and (instr_m_tvalid = '0' or (instr_m_tvalid = '1' and instr_m_tready = '1')) else '0';
+    read_ahead_tvalid   <= '1' when s_axis_instr_tvalid = '1' and s_axis_instr_tready = '1' else '0';
+    read_ahead_tdata    <= s_axis_instr_tuser(31 downto 16) & s_axis_instr_tuser(47 downto 32);
 
-    jump_pass           <= '1' when instr_s_tdata.op = BRANCH or instr_s_tdata.op = RET else '0';
+
+    -- module axis_reg instantiation
+    delayed_instr_data_reg_inst : axis_reg generic map (
+        DATA_WIDTH              => DECODED_INSTR_T_WIDTH + USER_T_WIDTH
+    ) port map (
+        clk                     => clk,
+        resetn                  => local_resetn,
+
+        in_s_tvalid             => s_axis_instr_tvalid,
+        in_s_tready             => s_axis_instr_tready,
+        in_s_tdata              => s_axis_instr_payload,
+
+        out_m_tvalid            => instr_s_tvalid,
+        out_m_tready            => instr_s_tready,
+        out_m_tdata             => instr_s_payload
+    );
+
+    -- module axis_reg instantiation
+    bpu_item_reg_inst : axis_reg generic map (
+        DATA_WIDTH              => BPU_ITEM_IDX_WIDTH + BPU_ITEM_CNT
+    ) port map (
+        clk                     => clk,
+        resetn                  => local_resetn,
+
+        in_s_tvalid             => read_ahead_tvalid,
+        in_s_tready             => open,
+        in_s_tdata              => bpu_item_rd_tdata,
+
+        out_m_tvalid            => d_bpu_item_rd_tvalid,
+        out_m_tready            => instr_s_tvalid and instr_s_tready,
+        out_m_tdata             => d_bpu_item_rd_tdata
+    );
+
+
+    -- assigns
+    local_resetn            <= '0' when resetn = '0' or jump_m_tvalid = '1' else '1';
+
+    s_axis_instr_payload    <= s_axis_instr_tdata & s_axis_instr_tuser;
+    instr_s_tdata           <= slv_to_decoded_instr_t(instr_s_payload(DECODED_INSTR_T_WIDTH+USER_T_WIDTH-1 downto USER_T_WIDTH));
+    instr_s_tuser           <= instr_s_payload(USER_T_WIDTH-1 downto 0);
+
+    bpu_item_rd_tdata       <= bpu_item_rd_hit & std_logic_vector(to_unsigned(bpu_item_rd_hit_idx, BPU_ITEM_IDX_WIDTH));
+    d_bpu_item_rd_hit       <= d_bpu_item_rd_tdata(BPU_ITEM_CNT+BPU_ITEM_IDX_WIDTH-1 downto BPU_ITEM_IDX_WIDTH);
+    d_bpu_item_rd_hit_idx   <= to_integer(unsigned(d_bpu_item_rd_tdata(BPU_ITEM_IDX_WIDTH-1 downto 0)));
+
+    instr_s_tready          <= '1' when jump_s_tvalid = '0' and jump_m_tvalid = '0' and (instr_m_tvalid = '0' or (instr_m_tvalid = '1' and instr_m_tready = '1')) else '0';
+
+    jump_pass               <= '1' when instr_s_tdata.op = BRANCH or instr_s_tdata.op = RET else '0';
 
     -- forwarding instruction
     process (clk) begin
@@ -139,22 +215,22 @@ begin
 
             --without reset
             if (instr_s_tvalid = '1' and instr_s_tready = '1') then
-                if (bpu_item_rd_hit_any = '1' and
-                    bpu_items(bpu_item_rd_hit_idx).saturated_cnt > 1 and
+                if (d_bpu_item_rd_hit_any = '1' and
+                    bpu_items(d_bpu_item_rd_hit_idx).saturated_cnt > 1 and
                     jump_pass = '1') then
                     instr_m_tdata.bpu_taken <= '1';
                 else
                     instr_m_tdata.bpu_taken <= '0';
                 end if;
 
-                if (bpu_item_rd_hit_any = '1') then
+                if (d_bpu_item_rd_hit_any = '1') then
                     instr_m_tdata.bpu_first <= '0';
                 else
                     instr_m_tdata.bpu_first <= '1';
                 end if;
 
-                instr_m_tdata.bpu_taken_cs  <= bpu_items(bpu_item_rd_hit_idx).jump_cs;
-                instr_m_tdata.bpu_taken_ip  <= bpu_items(bpu_item_rd_hit_idx).jump_ip;
+                instr_m_tdata.bpu_taken_cs  <= bpu_items(d_bpu_item_rd_hit_idx).jump_cs;
+                instr_m_tdata.bpu_taken_ip  <= bpu_items(d_bpu_item_rd_hit_idx).jump_ip;
 
                 instr_m_tdata.op            <= instr_s_tdata.op;
                 instr_m_tdata.code          <= instr_s_tdata.code;
@@ -207,7 +283,7 @@ begin
                 if ((jump_s_tvalid = '1' and jump_s_tdata.mismatch = '1') or
                     (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JMPU  and instr_s_tdata.code(3) = '0') or
                     (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JCALL and instr_s_tdata.code(3) = '0') or
-                    (instr_s_tvalid = '1' and instr_s_tready = '1' and bpu_item_rd_hit_any = '1' and bpu_items(bpu_item_rd_hit_idx).saturated_cnt > 1 and jump_pass = '1'))
+                    (instr_s_tvalid = '1' and instr_s_tready = '1' and d_bpu_item_rd_hit_any = '1' and bpu_items(d_bpu_item_rd_hit_idx).saturated_cnt > 1 and jump_pass = '1'))
                 then
                     jump_m_tvalid <= '1';
                 else
@@ -228,8 +304,8 @@ begin
                     jump_m_tdata(15 downto 0)  <= std_logic_vector(unsigned(instr_s_tuser(15 downto 0)) + unsigned(instr_s_tdata.disp));
                 end if;
             elsif (instr_s_tvalid = '1' and instr_s_tready = '1') then
-                jump_m_tdata(31 downto 16) <= bpu_items(bpu_item_rd_hit_idx).jump_cs;
-                jump_m_tdata(15 downto 0)  <= bpu_items(bpu_item_rd_hit_idx).jump_ip;
+                jump_m_tdata(31 downto 16) <= bpu_items(d_bpu_item_rd_hit_idx).jump_cs;
+                jump_m_tdata(15 downto 0)  <= bpu_items(d_bpu_item_rd_hit_idx).jump_ip;
             end if;
         end if;
     end process;
@@ -249,8 +325,8 @@ begin
         for i in 0 to BPU_ITEM_CNT-1 loop
 
             if (bpu_items(i).valid = '1' and
-                bpu_items(i).inst_cs = instr_s_tuser(USER_T_CS) and
-                bpu_items(i).inst_ip = instr_s_tuser(USER_T_IP))
+                bpu_items(i).inst_cs = read_ahead_tdata(31 downto 16) and
+                bpu_items(i).inst_ip = read_ahead_tdata(15 downto 0))
             then
                 bpu_item_rd_hit(i) <= '1';
             else
@@ -259,12 +335,17 @@ begin
 
         end loop;
 
-        bpu_item_rd_hit_any <= '0';
         bpu_item_rd_hit_idx <= 0;
         for i in 0 to BPU_ITEM_CNT-1 loop
             if (bpu_item_rd_hit(i) = '1') then
-                bpu_item_rd_hit_any <= '1';
                 bpu_item_rd_hit_idx <= i;
+            end if;
+        end loop;
+
+        d_bpu_item_rd_hit_any <= '0';
+        for i in 0 to BPU_ITEM_CNT-1 loop
+            if (d_bpu_item_rd_hit(i) = '1') then
+                d_bpu_item_rd_hit_any <= '1';
             end if;
         end loop;
 

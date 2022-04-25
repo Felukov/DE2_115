@@ -33,18 +33,18 @@ use work.cpu86_types.all;
 
 entity cpu86_decoder is
     port (
-        clk                 : in std_logic;
-        resetn              : in std_logic;
+        clk                         : in std_logic;
+        resetn                      : in std_logic;
 
-        u8_s_tvalid         : in std_logic;
-        u8_s_tready         : out std_logic;
-        u8_s_tdata          : in std_logic_vector(7 downto 0);
-        u8_s_tuser          : in std_logic_vector(31 downto 0);
+        s_axis_u8_tvalid            : in std_logic;
+        s_axis_u8_tready            : out std_logic;
+        s_axis_u8_tdata             : in std_logic_vector(7 downto 0);
+        s_axis_u8_tuser             : in std_logic_vector(31 downto 0);
 
-        instr_m_tvalid      : out std_logic;
-        instr_m_tready      : in std_logic;
-        instr_m_tdata       : out decoded_instr_t;
-        instr_m_tuser       : out user_t
+        m_axis_instr_tvalid         : out std_logic;
+        m_axis_instr_tready         : in std_logic;
+        m_axis_instr_tdata          : out slv_decoded_instr_t;
+        m_axis_instr_tuser          : out user_t
     );
 end entity cpu86_decoder;
 
@@ -77,8 +77,10 @@ architecture rtl of cpu86_decoder is
     signal u8_tvalid            : std_logic;
     signal u8_tready            : std_logic;
     signal u8_tdata             : std_logic_vector(7 downto 0);
+    signal u8_tuser             : std_logic_vector(31 downto 0);
     signal u8_tdata_rm          : std_logic_vector(2 downto 0);
     signal u8_tdata_reg         : std_logic_vector(2 downto 0);
+
     signal byte_pos_chain       : bytes_chain_t;
     signal instr_tvalid         : std_logic;
     signal instr_tready         : std_logic;
@@ -86,7 +88,6 @@ architecture rtl of cpu86_decoder is
     signal instr_tuser          : user_t;
 
     signal byte0                : std_logic_vector(7 downto 0);
-    signal byte1                : std_logic_vector(7 downto 0);
     signal reg_rm_direction     : std_logic;
     signal dbg_instr_hs_cnt     : integer := 0;
 
@@ -142,19 +143,22 @@ architecture rtl of cpu86_decoder is
 
 begin
 
-    instr_m_tvalid <= instr_tvalid;
-    instr_tready <= instr_m_tready;
-    instr_m_tdata <= instr_tdata;
-    instr_m_tuser <= instr_tuser;
+    -- i/o assigns
+    m_axis_instr_tvalid <= instr_tvalid;
+    instr_tready        <= m_axis_instr_tready;
+    m_axis_instr_tdata  <= decoded_instr_t_to_slv(instr_tdata);
+    m_axis_instr_tuser  <= instr_tuser;
 
-    u8_tvalid <= u8_s_tvalid;
-    u8_s_tready <= u8_tready;
-    u8_tdata <= u8_s_tdata;
+    u8_tvalid           <= s_axis_u8_tvalid;
+    s_axis_u8_tready    <= u8_tready;
+    u8_tdata            <= s_axis_u8_tdata;
+    u8_tuser            <= s_axis_u8_tuser;
 
-    u8_tdata_rm <= u8_tdata(2 downto 0);
+    -- assigns
+    u8_tdata_rm  <= u8_tdata(2 downto 0);
     u8_tdata_reg <= u8_tdata(5 downto 3);
 
-    u8_tready <= '1' when instr_tvalid = '0' or (instr_tvalid = '1' and instr_tready = '1') else '0';
+    u8_tready    <= '1' when instr_tvalid = '0' or (instr_tvalid = '1' and instr_tready = '1') else '0';
 
     decode_chain_proc : process (clk)
         procedure decode_chain(p0, p1, p2, p3 : byte_pos_t) is begin
@@ -445,20 +449,16 @@ begin
                 byte0 <= u8_tdata;
             end if;
 
-            if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = mod_reg_rm) then
-                byte1 <= u8_tdata;
+            if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
+                instr_tuser(USER_T_IP) <= u8_tuser(15 downto 0);
             end if;
 
             if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
-                instr_tuser(USER_T_IP) <= u8_s_tuser(15 downto 0);
+                instr_tuser(USER_T_CS) <= u8_tuser(31 downto 16);
             end if;
 
             if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
-                instr_tuser(USER_T_CS) <= u8_s_tuser(31 downto 16);
-            end if;
-
-            if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
-                instr_tuser(USER_T_IP_NEXT) <= std_logic_vector(unsigned(u8_s_tuser(15 downto 0)) + to_unsigned(1, 16));
+                instr_tuser(USER_T_IP_NEXT) <= std_logic_vector(unsigned(u8_tuser(15 downto 0)) + to_unsigned(1, 16));
             elsif (u8_tvalid = '1' and u8_tready = '1') then
                 instr_tuser(USER_T_IP_NEXT) <= std_logic_vector(unsigned(instr_tuser(15 downto 0)) + to_unsigned(1, 16));
             end if;
@@ -1510,7 +1510,7 @@ begin
 
             if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
 
-                case u8_s_tdata is
+                case u8_tdata is
                     when x"A0" | x"A1" | x"A2" | x"A3" => instr_tdata.ea <= DIRECT;
                     when x"A4" | x"A5" | x"A6" | x"A7" => instr_tdata.ea <= SI_DISP;
                     when x"D7" => instr_tdata.ea <= XLAT;

@@ -37,7 +37,7 @@ entity cpu86_exec is
 
         instr_s_tvalid              : in std_logic;
         instr_s_tready              : out std_logic;
-        instr_s_tdata               : in decoded_instr_t;
+        instr_s_tdata               : in slv_decoded_instr_t;
         instr_s_tuser               : in user_t;
 
         req_m_tvalid                : out std_logic;
@@ -563,8 +563,7 @@ architecture rtl of cpu86_exec is
     signal dcache_thit              : std_logic;
     signal dcache_tcache            : std_logic_vector(15 downto 0);
 
-    signal fifo_instr_s_tdata       : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
-    signal fifo_instr_m_tdata       : std_logic_vector(DECODED_INSTR_T_WIDTH-1 downto 0);
+    signal fifo_instr_m_tdata       : slv_decoded_instr_t;
 
     signal instr_m_tvalid           : std_logic;
     signal instr_m_tready           : std_logic;
@@ -898,8 +897,6 @@ begin
         out_m_tdata             => bnd_intr_m_tdata
     );
 
-    fifo_instr_s_tdata <= decoded_instr_t_to_slv(instr_s_tdata);
-
     -- module axis_fifo instantiation
     axis_fifo_inst_0 : axis_fifo generic map (
         FIFO_DEPTH              => 16,
@@ -911,7 +908,7 @@ begin
 
         fifo_s_tvalid           => instr_s_tvalid,
         fifo_s_tready           => instr_s_tready,
-        fifo_s_tdata            => fifo_instr_s_tdata,
+        fifo_s_tdata            => instr_s_tdata,
 
         fifo_m_tvalid           => instr_m_tvalid,
         fifo_m_tready           => instr_m_tready,

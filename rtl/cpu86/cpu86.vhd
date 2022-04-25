@@ -64,20 +64,20 @@ architecture rtl of cpu86 is
             clk                         : in std_logic;
             resetn                      : in std_logic;
 
-            req_s_tvalid                : in std_logic;
-            req_s_tdata                 : in std_logic_vector(31 downto 0);
+            s_axis_jump_tvalid          : in std_logic;
+            s_axis_jump_tdata           : in std_logic_vector(31 downto 0);
 
-            rd_s_tvalid                 : in std_logic;
-            rd_s_tdata                  : in std_logic_vector(31 downto 0);
+            s_axis_mem_data_tvalid      : in std_logic;
+            s_axis_mem_data_tdata       : in std_logic_vector(31 downto 0);
 
-            cmd_m_tvalid                : out std_logic;
-            cmd_m_tready                : in std_logic;
-            cmd_m_tdata                 : out std_logic_vector(19 downto 0);
+            m_axis_mem_req_tvalid       : out std_logic;
+            m_axis_mem_req_tready       : in std_logic;
+            m_axis_mem_req_tdata        : out std_logic_vector(19 downto 0);
 
-            buf_m_tvalid                : out std_logic;
-            buf_m_tready                : in std_logic;
-            buf_m_tdata                 : out std_logic_vector(31 downto 0);
-            buf_m_tuser                 : out std_logic_vector(31 downto 0)
+            m_axis_data_tvalid          : out std_logic;
+            m_axis_data_tready          : in std_logic;
+            m_axis_data_tdata           : out std_logic_vector(31 downto 0);
+            m_axis_data_tuser           : out std_logic_vector(31 downto 0)
         );
     end component cpu86_fetcher;
 
@@ -103,15 +103,15 @@ architecture rtl of cpu86 is
             clk                         : in std_logic;
             resetn                      : in std_logic;
 
-            u8_s_tvalid                 : in std_logic;
-            u8_s_tready                 : out std_logic;
-            u8_s_tdata                  : in std_logic_vector(7 downto 0);
-            u8_s_tuser                  : in std_logic_vector(31 downto 0);
+            s_axis_u8_tvalid            : in std_logic;
+            s_axis_u8_tready            : out std_logic;
+            s_axis_u8_tdata             : in std_logic_vector(7 downto 0);
+            s_axis_u8_tuser             : in std_logic_vector(31 downto 0);
 
-            instr_m_tvalid              : out std_logic;
-            instr_m_tready              : in std_logic;
-            instr_m_tdata               : out decoded_instr_t;
-            instr_m_tuser               : out user_t
+            m_axis_instr_tvalid         : out std_logic;
+            m_axis_instr_tready         : in std_logic;
+            m_axis_instr_tdata          : out slv_decoded_instr_t;
+            m_axis_instr_tuser          : out user_t
         );
     end component cpu86_decoder;
 
@@ -122,12 +122,12 @@ architecture rtl of cpu86 is
 
             s_axis_instr_tvalid         : in std_logic;
             s_axis_instr_tready         : out std_logic;
-            s_axis_instr_tdata          : in decoded_instr_t;
+            s_axis_instr_tdata          : in slv_decoded_instr_t;
             s_axis_instr_tuser          : in user_t;
 
             m_axis_instr_tvalid         : out std_logic;
             m_axis_instr_tready         : in std_logic;
-            m_axis_instr_tdata          : out decoded_instr_t;
+            m_axis_instr_tdata          : out slv_decoded_instr_t;
             m_axis_instr_tuser          : out user_t;
 
             s_axis_jump_tvalid          : in std_logic;
@@ -145,7 +145,7 @@ architecture rtl of cpu86 is
 
             instr_s_tvalid              : in std_logic;
             instr_s_tready              : out std_logic;
-            instr_s_tdata               : in decoded_instr_t;
+            instr_s_tdata               : in slv_decoded_instr_t;
             instr_s_tuser               : in user_t;
 
             req_m_tvalid                : out std_logic;
@@ -204,8 +204,8 @@ architecture rtl of cpu86 is
         );
     end component cpu86_mem_interconnect;
 
-    signal jump_req_tvalid              : std_logic;
-    signal jump_req_tdata               : cpu86_jump_t;
+    signal exec_jump_req_tvalid         : std_logic;
+    signal exce_jump_req_tdata          : cpu86_jump_t;
 
     signal fetcher_mem_req_tvalid       : std_logic;
     signal fetcher_mem_req_tready       : std_logic;
@@ -231,18 +231,21 @@ architecture rtl of cpu86 is
     signal u8_tdata                     : std_logic_vector(7 downto 0);
     signal u8_tuser                     : std_logic_vector(31 downto 0);
 
+    signal bpu_read_ahead_tvalid        : std_logic;
+    signal bpu_read_ahead_tdata         : std_logic_vector(31 downto 0);
+
     signal instr_tvalid                 : std_logic;
     signal instr_tready                 : std_logic;
-    signal instr_tdata                  : decoded_instr_t;
+    signal instr_tdata                  : slv_decoded_instr_t;
     signal instr_tuser                  : user_t;
 
     signal bpu_tvalid                   : std_logic;
     signal bpu_tready                   : std_logic;
-    signal bpu_tdata                    : decoded_instr_t;
+    signal bpu_tdata                    : slv_decoded_instr_t;
     signal bpu_tuser                    : user_t;
 
-    signal bpu_req_tvalid               : std_logic;
-    signal bpu_req_tdata                : std_logic_vector(31 downto 0);
+    signal bpu_jump_req_tvalid          : std_logic;
+    signal bpu_jump_req_tdata           : std_logic_vector(31 downto 0);
 
     signal front_resetn                 : std_logic;
 
@@ -250,143 +253,144 @@ begin
 
     -- module cpu86_mem_interconnect instantiation
     cpu86_mem_interconnect_inst : cpu86_mem_interconnect port map(
-        clk                     => clk,
-        resetn                  => resetn,
+        clk                         => clk,
+        resetn                      => resetn,
 
-        mem_req_m_tvalid        => mem_req_m_tvalid,
-        mem_req_m_tready        => mem_req_m_tready,
-        mem_req_m_tdata         => mem_req_m_tdata,
+        mem_req_m_tvalid            => mem_req_m_tvalid,
+        mem_req_m_tready            => mem_req_m_tready,
+        mem_req_m_tdata             => mem_req_m_tdata,
 
-        mem_rd_s_tvalid         => mem_rd_s_tvalid,
-        mem_rd_s_tdata          => mem_rd_s_tdata,
+        mem_rd_s_tvalid             => mem_rd_s_tvalid,
+        mem_rd_s_tdata              => mem_rd_s_tdata,
 
-        fetcher_mem_req_tvalid  => fetcher_mem_req_tvalid,
-        fetcher_mem_req_tready  => fetcher_mem_req_tready,
-        fetcher_mem_req_tdata   => fetcher_mem_req_tdata,
+        fetcher_mem_req_tvalid      => fetcher_mem_req_tvalid,
+        fetcher_mem_req_tready      => fetcher_mem_req_tready,
+        fetcher_mem_req_tdata       => fetcher_mem_req_tdata,
 
-        fetcher_mem_res_tvalid  => fetcher_mem_res_tvalid,
-        fetcher_mem_res_tdata   => fetcher_mem_res_tdata,
+        fetcher_mem_res_tvalid      => fetcher_mem_res_tvalid,
+        fetcher_mem_res_tdata       => fetcher_mem_res_tdata,
 
-        exec_mem_req_tvalid     => exec_mem_req_tvalid,
-        exec_mem_req_tready     => exec_mem_req_tready,
-        exec_mem_req_tdata      => exec_mem_req_tdata,
+        exec_mem_req_tvalid         => exec_mem_req_tvalid,
+        exec_mem_req_tready         => exec_mem_req_tready,
+        exec_mem_req_tdata          => exec_mem_req_tdata,
 
-        exec_mem_res_tvalid     => exec_mem_res_tvalid,
-        exec_mem_res_tdata      => exec_mem_res_tdata
+        exec_mem_res_tvalid         => exec_mem_res_tvalid,
+        exec_mem_res_tdata          => exec_mem_res_tdata
     );
 
     -- module cpu86_fetcher instantiation
     cpu86_fetcher_inst : cpu86_fetcher port map(
-        clk                     => clk,
-        resetn                  => resetn,
+        clk                         => clk,
+        resetn                      => resetn,
 
-        req_s_tvalid            => bpu_req_tvalid,
-        req_s_tdata             => bpu_req_tdata,
+        s_axis_jump_tvalid          => bpu_jump_req_tvalid,
+        s_axis_jump_tdata           => bpu_jump_req_tdata,
 
-        rd_s_tvalid             => fetcher_mem_res_tvalid,
-        rd_s_tdata              => fetcher_mem_res_tdata,
+        s_axis_mem_data_tvalid      => fetcher_mem_res_tvalid,
+        s_axis_mem_data_tdata       => fetcher_mem_res_tdata,
 
-        cmd_m_tvalid            => fetcher_mem_req_tvalid,
-        cmd_m_tready            => fetcher_mem_req_tready,
-        cmd_m_tdata             => fetcher_mem_req_tdata,
+        m_axis_mem_req_tvalid       => fetcher_mem_req_tvalid,
+        m_axis_mem_req_tready       => fetcher_mem_req_tready,
+        m_axis_mem_req_tdata        => fetcher_mem_req_tdata,
 
-        buf_m_tvalid            => u32_tvalid,
-        buf_m_tready            => u32_tready,
-        buf_m_tdata             => u32_tdata,
-        buf_m_tuser             => u32_tuser
+        m_axis_data_tvalid          => u32_tvalid,
+        m_axis_data_tready          => u32_tready,
+        m_axis_data_tdata           => u32_tdata,
+        m_axis_data_tuser           => u32_tuser
     );
 
     -- module cpu86_fetcher_buf instantiation
     cpu86_fetcher_buf_inst : cpu86_fetcher_buf port map(
-        clk                     => clk,
-        resetn                  => front_resetn,
+        clk                         => clk,
+        resetn                      => front_resetn,
 
-        u32_s_tvalid            => u32_tvalid,
-        u32_s_tready            => u32_tready,
-        u32_s_tdata             => u32_tdata,
-        u32_s_tuser             => u32_tuser,
+        u32_s_tvalid                => u32_tvalid,
+        u32_s_tready                => u32_tready,
+        u32_s_tdata                 => u32_tdata,
+        u32_s_tuser                 => u32_tuser,
 
-        u8_m_tvalid             => u8_tvalid,
-        u8_m_tready             => u8_tready,
-        u8_m_tdata              => u8_tdata,
-        u8_m_tuser              => u8_tuser
+        u8_m_tvalid                 => u8_tvalid,
+        u8_m_tready                 => u8_tready,
+        u8_m_tdata                  => u8_tdata,
+        u8_m_tuser                  => u8_tuser
     );
 
     -- module cpu86_decoder instantiation
     cpu86_decoder_inst : cpu86_decoder port map (
-        clk                     => clk,
-        resetn                  => front_resetn,
+        clk                         => clk,
+        resetn                      => front_resetn,
 
-        u8_s_tvalid             => u8_tvalid,
-        u8_s_tready             => u8_tready,
-        u8_s_tdata              => u8_tdata,
-        u8_s_tuser              => u8_tuser,
+        s_axis_u8_tvalid            => u8_tvalid,
+        s_axis_u8_tready            => u8_tready,
+        s_axis_u8_tdata             => u8_tdata,
+        s_axis_u8_tuser             => u8_tuser,
 
-        instr_m_tvalid          => instr_tvalid,
-        instr_m_tready          => instr_tready,
-        instr_m_tdata           => instr_tdata,
-        instr_m_tuser           => instr_tuser
+        m_axis_instr_tvalid         => instr_tvalid,
+        m_axis_instr_tready         => instr_tready,
+        m_axis_instr_tdata          => instr_tdata,
+        m_axis_instr_tuser          => instr_tuser
+
     );
 
     -- module cpu86_bpu instantiation
     cpu86_bpu_inst : cpu86_bpu port map (
-        clk                     => clk,
-        resetn                  => resetn,
+        clk                         => clk,
+        resetn                      => resetn,
 
-        s_axis_instr_tvalid     => instr_tvalid,
-        s_axis_instr_tready     => instr_tready,
-        s_axis_instr_tdata      => instr_tdata,
-        s_axis_instr_tuser      => instr_tuser,
+        s_axis_instr_tvalid         => instr_tvalid,
+        s_axis_instr_tready         => instr_tready,
+        s_axis_instr_tdata          => instr_tdata,
+        s_axis_instr_tuser          => instr_tuser,
 
-        m_axis_instr_tvalid     => bpu_tvalid,
-        m_axis_instr_tready     => bpu_tready,
-        m_axis_instr_tdata      => bpu_tdata,
-        m_axis_instr_tuser      => bpu_tuser,
+        m_axis_instr_tvalid         => bpu_tvalid,
+        m_axis_instr_tready         => bpu_tready,
+        m_axis_instr_tdata          => bpu_tdata,
+        m_axis_instr_tuser          => bpu_tuser,
 
-        s_axis_jump_tvalid      => jump_req_tvalid,
-        s_axis_jump_tdata       => jump_req_tdata,
+        s_axis_jump_tvalid          => exec_jump_req_tvalid,
+        s_axis_jump_tdata           => exce_jump_req_tdata,
 
-        m_axis_jump_tvalid      => bpu_req_tvalid,
-        m_axis_jump_tdata       => bpu_req_tdata
+        m_axis_jump_tvalid          => bpu_jump_req_tvalid,
+        m_axis_jump_tdata           => bpu_jump_req_tdata
     );
 
     -- module cpu86_exec instantiation
     cpu86_exec_inst : cpu86_exec port map (
-        clk                     => clk,
-        resetn                  => resetn,
+        clk                         => clk,
+        resetn                      => resetn,
 
-        instr_s_tvalid          => bpu_tvalid,
-        instr_s_tready          => bpu_tready,
-        instr_s_tdata           => bpu_tdata,
-        instr_s_tuser           => bpu_tuser,
+        instr_s_tvalid              => bpu_tvalid,
+        instr_s_tready              => bpu_tready,
+        instr_s_tdata               => bpu_tdata,
+        instr_s_tuser               => bpu_tuser,
 
-        req_m_tvalid            => jump_req_tvalid,
-        req_m_tdata             => jump_req_tdata,
+        req_m_tvalid                => exec_jump_req_tvalid,
+        req_m_tdata                 => exce_jump_req_tdata,
 
-        mem_req_m_tvalid        => exec_mem_req_tvalid,
-        mem_req_m_tready        => exec_mem_req_tready,
-        mem_req_m_tdata         => exec_mem_req_tdata,
+        mem_req_m_tvalid            => exec_mem_req_tvalid,
+        mem_req_m_tready            => exec_mem_req_tready,
+        mem_req_m_tdata             => exec_mem_req_tdata,
 
-        mem_rd_s_tvalid         => exec_mem_res_tvalid,
-        mem_rd_s_tdata          => exec_mem_res_tdata,
+        mem_rd_s_tvalid             => exec_mem_res_tvalid,
+        mem_rd_s_tdata              => exec_mem_res_tdata,
 
-        io_req_m_tvalid         => io_req_m_tvalid,
-        io_req_m_tready         => io_req_m_tready,
-        io_req_m_tdata          => io_req_m_tdata,
+        io_req_m_tvalid             => io_req_m_tvalid,
+        io_req_m_tready             => io_req_m_tready,
+        io_req_m_tdata              => io_req_m_tdata,
 
-        io_rd_s_tvalid          => io_rd_s_tvalid,
-        io_rd_s_tready          => io_rd_s_tready,
-        io_rd_s_tdata           => io_rd_s_tdata,
+        io_rd_s_tvalid              => io_rd_s_tvalid,
+        io_rd_s_tready              => io_rd_s_tready,
+        io_rd_s_tdata               => io_rd_s_tdata,
 
-        interrupt_valid         => interrupt_valid,
-        interrupt_data          => interrupt_data,
-        interrupt_ack           => interrupt_ack,
+        interrupt_valid             => interrupt_valid,
+        interrupt_data              => interrupt_data,
+        interrupt_ack               => interrupt_ack,
 
-        dbg_m_tvalid            => open,
-        dbg_m_tdata             => open
+        dbg_m_tvalid                => open,
+        dbg_m_tdata                 => open
     );
 
     -- Assigns
-    front_resetn <= '0' when resetn = '0' or bpu_req_tvalid = '1' else '1';
+    front_resetn <= '0' when resetn = '0' or bpu_jump_req_tvalid = '1' else '1';
 
 end architecture;

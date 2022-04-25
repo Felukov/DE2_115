@@ -16,13 +16,41 @@ package cpu86_types is
         BX_SI_DISP, BX_DI_DISP, BP_SI_DISP, BP_DI_DISP, SI_DISP, DI_DISP, BP_DISP, BX_DISP, DIRECT, XLAT
     );
 
+    attribute enum_encoding of ea_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1001 1010";
+
     type direction_t is (
         R2R, M2R, R2M, I2R, I2M, R2F, M2M
     );
 
+    attribute enum_encoding of direction_t : type is "000 001 010 011 100 101 110";
+
     type op_t is (
-        MOVU, ALU, DIVU, MULU, FEU, STACKU, LOOPU, JMPU, BRANCH, JCALL, RET, SET_SEG, REP, STR, SET_FLAG, DBG, XCHG, SYS, LFP, ONEU, SHFU, BCDU, IO
+        MOVU,     -- 00000
+        ALU,      -- 00001
+        DIVU,     -- 00010
+        MULU,     -- 00011
+        FEU,      -- 00100
+        STACKU,   -- 00101
+        LOOPU,    -- 00110
+        JMPU,     -- 00111
+        BRANCH,   -- 01000
+        JCALL,    -- 01001
+        RET,      -- 01010
+        SET_SEG,  -- 01011
+        REP,      -- 01100
+        STR,      -- 01101
+        SET_FLAG, -- 01110
+        DBG,      -- 01111
+        XCHG,     -- 10000
+        SYS,      -- 10001
+        LFP,      -- 10010
+        ONEU,     -- 10011
+        SHFU,     -- 10100
+        BCDU,     -- 10101
+        IO        -- 10110
     );
+
+    attribute enum_encoding of op_t : type is "00000 00001 00010 00011 00100 00101 00110 00111 01000 01001 01010 01011 01100 01101 01110 01111 10000 10001 10010 10011 10100 10101 10110";
 
     type mem_data_src_t is (
         MEM_DATA_SRC_IMM, MEM_DATA_SRC_ALU, MEM_DATA_SRC_ONE, MEM_DATA_SRC_SHF, MEM_DATA_SRC_FIFO, MEM_DATA_SRC_IO
@@ -187,7 +215,10 @@ package cpu86_types is
     constant FLAG_01        : natural := 1;
     constant FLAG_CF        : natural := 0;
 
-    constant DECODED_INSTR_T_WIDTH : integer := 128;
+    constant DECODED_INSTR_T_WIDTH  : integer := 128;
+    constant USER_T_WIDTH           : integer := 48;
+
+    subtype slv_decoded_instr_t is std_logic_vector(DECODED_INSTR_T_WIDTH - 1 downto 0);
 
     type decoded_instr_t is record
         op              : op_t;
