@@ -8,6 +8,12 @@ SECTIONS {
     .text       : {
         *(.text)
     }
+    .rodata       : {
+        *(.rodata)
+    }
+    .data       : {
+        *(.data)
+    }
     /*.empty_bytes :
     {
         . = 0x0;

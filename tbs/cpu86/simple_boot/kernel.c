@@ -1,5 +1,6 @@
 #include "stdint.h"
 #include "x86platform.h"
+#include "x86uart.h"
 
 #define ICW1_ICW4          0x01        /* ICW4 (not) needed */
 #define ICW1_SINGLE        0x02        /* Single (cascade) mode */
@@ -69,16 +70,36 @@ int init_isr(){
 }
 
 int main(){
+    const char *str = "Hello world";
+
     // Initialization
     init_timer();
     init_pic_1();
     init_pic_2();
     init_isr();
 
-    uint8_t volatile a1;
+    uart_log(str);
+
+    uint8_t volatile ab;
+    uint16_t volatile sw;
+
+    uint16_t cnt_0 = 0;
+    uint16_t cnt_1 = 0;
+
     for (;;){
-        a1 = inb(0x43);
-        *VGA_MEMORY = a1;
+        ab = inb(0x43);
+        *VGA_MEMORY = (uint8_t)ab;
+
+        outw(0x305, cnt_1);
+
+        cnt_0++;
+        if (cnt_0 == 0xFFFF)
+            cnt_1++;
+
+        sw = inw(0x303);
+        outw(0x300, sw);
+
+        uart_transmit();
     }
 
     return 0;
