@@ -32,28 +32,30 @@ use ieee.math_real.all;
 
 entity cpu86_exec_lsu_fifo is
     generic (
-        FIFO_DEPTH      : natural := 4;
-        FIFO_WIDTH      : natural := 16;
-        ADDR_WIDTH      : natural := 2;
-        REGISTER_OUTPUT : std_logic := '1'
+        FIFO_DEPTH          : natural := 4;
+        FIFO_WIDTH          : natural := 16;
+        ADDR_WIDTH          : natural := 2;
+        REGISTER_OUTPUT     : std_logic := '1'
     );
     port (
-        clk             : in std_logic;
-        resetn          : in std_logic;
+        clk                 : in std_logic;
+        resetn              : in std_logic;
 
-        add_s_tvalid    : in std_logic;
-        add_s_tready    : out std_logic;
-        add_s_thit      : in std_logic;
-        add_s_tdata     : in std_logic_vector(FIFO_WIDTH-1 downto 0);
-        add_s_taddr     : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+        s_axis_add_tvalid   : in std_logic;
+        s_axis_add_tready   : out std_logic;
+        s_axis_add_tdata    : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+        s_axis_add_tuser    : in std_logic;
 
-        upd_s_tvalid    : in std_logic;
-        upd_s_taddr     : in std_logic_vector(ADDR_WIDTH-1 downto 0);
-        upd_s_tdata     : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+        m_axis_tag_tvalid   : out std_logic;
+        m_axis_tag_tdata    : out std_logic_vector(ADDR_WIDTH-1 downto 0);
 
-        fifo_m_tvalid   : out std_logic;
-        fifo_m_tready   : in std_logic;
-        fifo_m_tdata    : out std_logic_vector(FIFO_WIDTH-1 downto 0)
+        s_axis_upd_tvalid   : in std_logic;
+        s_axis_upd_tdata    : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+        s_axis_upd_tuser    : in std_logic_vector(ADDR_WIDTH-1 downto 0);
+
+        m_axis_dout_tvalid  : out std_logic;
+        m_axis_dout_tready  : in std_logic;
+        m_axis_dout_tdata   : out std_logic_vector(FIFO_WIDTH-1 downto 0)
     );
 end entity cpu86_exec_lsu_fifo;
 
@@ -74,7 +76,11 @@ architecture rtl of cpu86_exec_lsu_fifo is
     signal wr_data_tvalid   : std_logic;
     signal wr_data_tready   : std_logic;
     signal wr_data_tdata    : std_logic_vector(FIFO_WIDTH-1 downto 0);
-    signal wr_data_thit     : std_logic;
+    signal wr_data_hit      : std_logic;
+
+    signal upd_tvalid       : std_logic;
+    signal upd_tdata        : std_logic_vector(FIFO_WIDTH-1 downto 0);
+    signal upd_tag          : std_logic_vector(ADDR_WIDTH-1 downto 0);
 
     signal data_tvalid      : std_logic;
     signal data_tready      : std_logic;
@@ -85,18 +91,31 @@ architecture rtl of cpu86_exec_lsu_fifo is
 
 begin
 
+    -- io assigns
+    wr_data_tvalid      <= s_axis_add_tvalid;
+    s_axis_add_tready   <= wr_data_tready;
+    wr_data_tdata       <= s_axis_add_tdata;
+    wr_data_hit         <= s_axis_add_tuser;
+
+    m_axis_tag_tvalid   <= '1' when wr_data_tvalid = '1' and wr_data_tready = '1' else '0';
+    m_axis_tag_tdata    <= std_logic_vector(to_unsigned(wr_addr, ADDR_WIDTH));
+
+    m_axis_dout_tvalid  <= out_tvalid;
+    out_tready          <= m_axis_dout_tready;
+    m_axis_dout_tdata   <= out_tdata;
+
+    upd_tvalid          <= s_axis_upd_tvalid;
+    upd_tdata           <= s_axis_upd_tdata;
+    upd_tag             <= s_axis_upd_tuser;
+
     -- assigns
-    wr_data_tvalid  <= add_s_tvalid;
-    add_s_tready    <= wr_data_tready;
-    add_s_taddr     <= std_logic_vector(to_unsigned(wr_addr, ADDR_WIDTH));
-    wr_data_tdata   <= add_s_tdata;
-    wr_data_thit    <= add_s_thit;
+    register_output_ready_gen : if (REGISTER_OUTPUT = '1') generate
+        data_tready <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
+    end generate;
 
-    fifo_m_tvalid   <= out_tvalid;
-    out_tready      <= fifo_m_tready;
-    fifo_m_tdata    <= out_tdata;
-
-    data_tready     <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
+    async_output_ready_gen: if (REGISTER_OUTPUT = '0') generate
+        data_tready <= out_tready;
+    end generate;
 
     q_thit          <= fifo_ram_valid(rd_addr);
     q_tdata         <= fifo_ram_data(rd_addr);
@@ -144,27 +163,26 @@ begin
                 wr_addr <= 0;
                 fifo_ram_valid <= (others => '0');
             else
-                for i in 0 to FIFO_DEPTH-1 loop
-
-                    if (wr_data_tvalid = '1' and wr_data_tready = '1' and i = wr_addr) then
-                        fifo_ram_valid(i) <= wr_data_thit;
-                    elsif (upd_s_tvalid = '1' and i = to_integer(unsigned(upd_s_taddr))) then
-                        fifo_ram_valid(i) <= '1';
-                    end if;
-
-                end loop;
-
                 wr_addr <= wr_addr_next;
+
+                for i in 0 to FIFO_DEPTH-1 loop
+                    if (wr_data_tvalid = '1' and wr_data_tready = '1' and i = wr_addr) or
+                       (upd_tvalid = '1' and i = to_integer(unsigned(upd_tag))) then
+                        fifo_ram_valid(i) <= wr_data_hit or upd_tvalid;
+                    end if;
+                end loop;
             end if;
             -- Without reset
-            if wr_data_tvalid = '1' and wr_data_tready = '1' then
-                fifo_ram_data(wr_addr) <= wr_data_tdata;
-            end if;
-
-            if (upd_s_tvalid = '1') then
-                fifo_ram_data(to_integer(unsigned(upd_s_taddr))) <= upd_s_tdata;
-            end if;
-
+            for i in 0 to FIFO_DEPTH-1 loop
+                if (wr_data_tvalid = '1' and wr_data_tready = '1' and i = wr_addr) or
+                    (upd_tvalid = '1' and i = to_integer(unsigned(upd_tag))) then
+                    if upd_tvalid = '1' then
+                        fifo_ram_data(i) <= upd_tdata;
+                    else
+                        fifo_ram_data(i) <= wr_data_tdata;
+                    end if;
+                end if;
+            end loop;
         end if;
     end process;
 

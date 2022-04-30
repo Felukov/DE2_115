@@ -61,30 +61,29 @@ end entity cpu86_exec_lsu;
 
 architecture rtl of cpu86_exec_lsu is
 
-    component axis_fifo is
+    component axis_fifo_er is
         generic (
             FIFO_DEPTH          : natural := 2**8;
-            FIFO_WIDTH          : natural := 128;
-            REGISTER_OUTPUT     : std_logic := '1'
+            FIFO_WIDTH          : natural := 128
         );
         port (
             clk                 : in std_logic;
             resetn              : in std_logic;
 
-            fifo_s_tvalid       : in std_logic;
-            fifo_s_tready       : out std_logic;
-            fifo_s_tdata        : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+            s_axis_fifo_tvalid  : in std_logic;
+            s_axis_fifo_tready  : out std_logic;
+            s_axis_fifo_tdata   : in std_logic_vector(FIFO_WIDTH-1 downto 0);
 
-            fifo_m_tvalid       : out std_logic;
-            fifo_m_tready       : in std_logic;
-            fifo_m_tdata        : out std_logic_vector(FIFO_WIDTH-1 downto 0)
+            m_axis_fifo_tvalid  : out std_logic;
+            m_axis_fifo_tready  : in std_logic;
+            m_axis_fifo_tdata   : out std_logic_vector(FIFO_WIDTH-1 downto 0)
         );
-    end component;
+    end component axis_fifo_er;
 
     component cpu86_exec_lsu_fifo is
         generic (
-            FIFO_DEPTH          : natural := 2**8;
-            FIFO_WIDTH          : natural := 128;
+            FIFO_DEPTH          : natural := 4;
+            FIFO_WIDTH          : natural := 16;
             ADDR_WIDTH          : natural := 2;
             REGISTER_OUTPUT     : std_logic := '1'
         );
@@ -92,19 +91,21 @@ architecture rtl of cpu86_exec_lsu is
             clk                 : in std_logic;
             resetn              : in std_logic;
 
-            add_s_tvalid        : in std_logic;
-            add_s_tready        : out std_logic;
-            add_s_thit          : in std_logic;
-            add_s_tdata         : in std_logic_vector(FIFO_WIDTH-1 downto 0);
-            add_s_taddr         : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+            s_axis_add_tvalid   : in std_logic;
+            s_axis_add_tready   : out std_logic;
+            s_axis_add_tdata    : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+            s_axis_add_tuser    : in std_logic;
 
-            upd_s_tvalid        : in std_logic;
-            upd_s_taddr         : in std_logic_vector(ADDR_WIDTH-1 downto 0);
-            upd_s_tdata         : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+            m_axis_tag_tvalid   : out std_logic;
+            m_axis_tag_tdata    : out std_logic_vector(ADDR_WIDTH-1 downto 0);
 
-            fifo_m_tvalid       : out std_logic;
-            fifo_m_tready       : in std_logic;
-            fifo_m_tdata        : out std_logic_vector(FIFO_WIDTH-1 downto 0)
+            s_axis_upd_tvalid   : in std_logic;
+            s_axis_upd_tdata    : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+            s_axis_upd_tuser    : in std_logic_vector(ADDR_WIDTH-1 downto 0);
+
+            m_axis_dout_tvalid  : out std_logic;
+            m_axis_dout_tready  : in std_logic;
+            m_axis_dout_tdata   : out std_logic_vector(FIFO_WIDTH-1 downto 0)
         );
     end component cpu86_exec_lsu_fifo;
 
@@ -117,7 +118,7 @@ architecture rtl of cpu86_exec_lsu is
     signal req_buf_twidth       : std_logic;
     signal req_buf_taddr        : std_logic_vector(17 downto 0);
     signal req_buf_tdata        : std_logic_vector(7 downto 0);
-    signal req_buf_tupd_addr    : std_logic_vector(3 downto 0);
+    signal req_buf_tag          : std_logic_vector(3 downto 0);
 
     signal mem_req_tlast        : std_logic;
     signal mem_req_tcmd         : std_logic;
@@ -125,10 +126,11 @@ architecture rtl of cpu86_exec_lsu is
     signal mem_req_tmask        : std_logic_vector(3 downto 0);
     signal mem_req_tdata        : std_logic_vector(31 downto 0) := (others => '0');
 
-    signal add_s_tvalid         : std_logic;
-    signal add_s_tready         : std_logic;
-    signal add_s_taddr          : std_logic_vector(3 downto 0);
-    signal add_s_tdata          : std_logic_vector(3 downto 0);
+    signal add_tvalid           : std_logic;
+    signal add_tready           : std_logic;
+    signal add_tdata            : std_logic_vector(3 downto 0);
+
+    signal tag_tdata            : std_logic_vector(3 downto 0);
 
     signal fifo_0_s_tvalid      : std_logic;
     signal fifo_0_s_tready      : std_logic;
@@ -137,9 +139,9 @@ architecture rtl of cpu86_exec_lsu is
     signal fifo_0_m_tready      : std_logic;
     signal fifo_0_m_tdata       : std_logic_vector(7 downto 0);
 
-    signal upd_s_tvalid         : std_logic;
-    signal upd_s_tdata          : std_logic_vector(15 downto 0);
-    signal upd_s_taddr          : std_logic_vector(3 downto 0);
+    signal upd_tvalid           : std_logic;
+    signal upd_tdata            : std_logic_vector(15 downto 0);
+    signal upd_tag              : std_logic_vector(3 downto 0);
 
     signal fifo_1_m_tvalid      : std_logic;
     signal fifo_1_m_tready      : std_logic;
@@ -147,22 +149,26 @@ architecture rtl of cpu86_exec_lsu is
 
 begin
 
+    -- important note:
+    -- we can use a fifo with an output latency of 2 cycles
+    -- if we do not expect data from memory on the next clock
+    -- after the read request
+
     -- module axis_fifo instantiation
-    axis_fifo_inst : axis_fifo generic map (
+    axis_fifo_inst : axis_fifo_er generic map (
         FIFO_DEPTH              => 16,
-        FIFO_WIDTH              => 8,
-        REGISTER_OUTPUT         => '0'
+        FIFO_WIDTH              => 8
     ) port map (
         clk                     => clk,
         resetn                  => resetn,
 
-        fifo_s_tvalid           => fifo_0_s_tvalid,
-        fifo_s_tready           => fifo_0_s_tready,
-        fifo_s_tdata            => fifo_0_s_tdata,
+        s_axis_fifo_tvalid      => fifo_0_s_tvalid,
+        s_axis_fifo_tready      => fifo_0_s_tready,
+        s_axis_fifo_tdata       => fifo_0_s_tdata,
 
-        fifo_m_tvalid           => fifo_0_m_tvalid,
-        fifo_m_tready           => fifo_0_m_tready,
-        fifo_m_tdata            => fifo_0_m_tdata
+        m_axis_fifo_tvalid      => fifo_0_m_tvalid,
+        m_axis_fifo_tready      => fifo_0_m_tready,
+        m_axis_fifo_tdata       => fifo_0_m_tdata
     );
 
     -- module cpu86_exec_lsu_fifo instantiation
@@ -175,19 +181,21 @@ begin
         clk                     => clk,
         resetn                  => resetn,
 
-        add_s_tvalid            => add_s_tvalid,
-        add_s_tready            => add_s_tready,
-        add_s_thit              => dcache_s_tvalid,
-        add_s_tdata             => dcache_s_tdata,
-        add_s_taddr             => add_s_taddr,
+        s_axis_add_tvalid       => add_tvalid,
+        s_axis_add_tready       => add_tready,
+        s_axis_add_tdata        => dcache_s_tdata,
+        s_axis_add_tuser        => dcache_s_tvalid,
 
-        upd_s_tvalid            => upd_s_tvalid,
-        upd_s_tdata             => upd_s_tdata,
-        upd_s_taddr             => upd_s_taddr,
+        m_axis_tag_tvalid       => open,
+        m_axis_tag_tdata        => tag_tdata,
 
-        fifo_m_tvalid           => fifo_1_m_tvalid,
-        fifo_m_tready           => fifo_1_m_tready,
-        fifo_m_tdata            => fifo_1_m_tdata
+        s_axis_upd_tvalid       => upd_tvalid,
+        s_axis_upd_tdata        => upd_tdata,
+        s_axis_upd_tuser        => upd_tag,
+
+        m_axis_dout_tvalid      => fifo_1_m_tvalid,
+        m_axis_dout_tready      => fifo_1_m_tready,
+        m_axis_dout_tdata       => fifo_1_m_tdata
     );
 
     -- assigns
@@ -204,11 +212,17 @@ begin
     mem_req_m_tdata(61 downto 58) <= mem_req_tmask;
     mem_req_m_tdata(63 downto 62) <= "00";
 
-    add_s_tvalid    <= '1' when lsu_req_s_tvalid = '1' and lsu_req_s_tready = '1' and lsu_req_s_tcmd = '0' else '0';
+    add_tvalid      <= '1' when lsu_req_s_tvalid = '1' and lsu_req_s_tready = '1' and lsu_req_s_tcmd = '0' else '0';
 
-    lsu_req_tready  <= '1' when req_buf_tvalid = '0' and (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) and add_s_tready = '1' else '0';
+    lsu_req_tready  <= '1' when req_buf_tvalid = '0' and (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) and add_tready = '1' else '0';
     req_buf_tready  <= '1' when (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) else '0';
     fifo_0_m_tready <= mem_rd_s_tvalid;
+
+    fifo_0_s_tvalid <= '1' when (req_buf_tvalid = '1' and req_buf_tready = '1') or
+        (lsu_req_tvalid = '1' and lsu_req_tready = '1' and lsu_req_s_tcmd = '0' and dcache_s_tvalid = '0') else '0';
+
+    fifo_0_s_tdata <= req_buf_tag & '1' & req_buf_twidth & req_buf_taddr(1 downto 0) when req_buf_tvalid = '1'
+        else tag_tdata & '0' & lsu_req_s_twidth & lsu_req_s_taddr(1 downto 0);
 
     buffering_req_proc: process (clk) begin
         if rising_edge(clk) then
@@ -228,13 +242,12 @@ begin
             end if;
             -- Without reset
             if (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
-                req_buf_tcmd <= lsu_req_s_tcmd;
-                req_buf_twidth <= lsu_req_s_twidth;
-                req_buf_taddr <= std_logic_vector(unsigned(lsu_req_s_taddr(19 downto 2)) + to_unsigned(1,18));
-                req_buf_tdata <= lsu_req_s_tdata(15 downto 8);
-                req_buf_tupd_addr <= add_s_taddr;
+                req_buf_tcmd    <= lsu_req_s_tcmd;
+                req_buf_twidth  <= lsu_req_s_twidth;
+                req_buf_taddr   <= std_logic_vector(unsigned(lsu_req_s_taddr(19 downto 2)) + to_unsigned(1,18));
+                req_buf_tdata   <= lsu_req_s_tdata(15 downto 8);
+                req_buf_tag     <= tag_tdata;
             end if;
-
         end if;
     end process;
 
@@ -317,59 +330,22 @@ begin
         end if;
     end process;
 
-    loading_wait_response_fifo_proc: process (clk) begin
-        if rising_edge(clk) then
-            -- Resettable
-            if resetn = '0' then
-                fifo_0_s_tvalid <= '0';
-            else
-
-                if (req_buf_tvalid = '1' and req_buf_tready = '1') then
-                    if (req_buf_tcmd = '0') then
-                        fifo_0_s_tvalid <= '1';
-                    else
-                        fifo_0_s_tvalid <= '0';
-                    end if;
-                elsif (lsu_req_tvalid = '1' and lsu_req_tready = '1' and dcache_s_tvalid = '0') then
-                    if (lsu_req_s_tcmd = '0') then
-                        fifo_0_s_tvalid <= '1';
-                    else
-                        fifo_0_s_tvalid <= '0';
-                    end if;
-                elsif (fifo_0_s_tready = '1') then
-                    fifo_0_s_tvalid <= '0';
-                end if;
-
-            end if;
-            -- Without reset
-            if (req_buf_tvalid = '1' and req_buf_tready = '1') then
-                --if (req_buf_tcmd = '0') then
-                    fifo_0_s_tdata <= req_buf_tupd_addr & '1' & req_buf_twidth & req_buf_taddr(1 downto 0);
-                --end if;
-            elsif (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
-                --if (lsu_req_s_tcmd = '0') then
-                    fifo_0_s_tdata <= add_s_taddr & '0' & lsu_req_s_twidth & lsu_req_s_taddr(1 downto 0);
-                --end if;
-            end if;
-        end if;
-    end process;
-
     parsing_results_to_fifo_proc: process (clk) begin
         if rising_edge(clk) then
             -- Resettable
             if resetn = '0' then
-                upd_s_tvalid <= '0';
+                upd_tvalid <= '0';
             else
                 if (mem_rd_s_tvalid = '1') then
                     if (fifo_0_m_tdata(3) = '0' and (fifo_0_m_tdata(2) = '0' or (fifo_0_m_tdata(2) = '1' and fifo_0_m_tdata(1 downto 0) /= "11"))) then
-                        upd_s_tvalid <= '1';
+                        upd_tvalid <= '1';
                     elsif (fifo_0_m_tdata(3) = '1') then
-                        upd_s_tvalid <= '1';
+                        upd_tvalid <= '1';
                     else
-                        upd_s_tvalid <= '0';
+                        upd_tvalid <= '0';
                     end if;
                 else
-                    upd_s_tvalid <= '0';
+                    upd_tvalid <= '0';
                 end if;
             end if;
             -- Without reset
@@ -378,28 +354,28 @@ begin
                     if (fifo_0_m_tdata(2) = '0') then
                         -- load byte
                         case fifo_0_m_tdata(1 downto 0) is
-                            when "00" => upd_s_tdata <= x"00" & mem_rd_s_tdata(31 downto 24);
-                            when "01" => upd_s_tdata <= x"00" & mem_rd_s_tdata(23 downto 16);
-                            when "10" => upd_s_tdata <= x"00" & mem_rd_s_tdata(15 downto  8);
-                            when "11" => upd_s_tdata <= x"00" & mem_rd_s_tdata( 7 downto  0);
+                            when "00" => upd_tdata <= x"00" & mem_rd_s_tdata(31 downto 24);
+                            when "01" => upd_tdata <= x"00" & mem_rd_s_tdata(23 downto 16);
+                            when "10" => upd_tdata <= x"00" & mem_rd_s_tdata(15 downto  8);
+                            when "11" => upd_tdata <= x"00" & mem_rd_s_tdata( 7 downto  0);
                             when others => null;
                         end case;
                     else
                         -- load word
                         case fifo_0_m_tdata(1 downto 0) is
-                            when "00" => upd_s_tdata <= mem_rd_s_tdata(23 downto 16) & mem_rd_s_tdata(31 downto 24);
-                            when "01" => upd_s_tdata <= mem_rd_s_tdata(15 downto  8) & mem_rd_s_tdata(23 downto 16);
-                            when "10" => upd_s_tdata <= mem_rd_s_tdata( 7 downto  0) & mem_rd_s_tdata(15 downto  8);
-                            when "11" => upd_s_tdata(7 downto 0) <= mem_rd_s_tdata( 7 downto  0);
+                            when "00" => upd_tdata <= mem_rd_s_tdata(23 downto 16) & mem_rd_s_tdata(31 downto 24);
+                            when "01" => upd_tdata <= mem_rd_s_tdata(15 downto  8) & mem_rd_s_tdata(23 downto 16);
+                            when "10" => upd_tdata <= mem_rd_s_tdata( 7 downto  0) & mem_rd_s_tdata(15 downto  8);
+                            when "11" => upd_tdata(7 downto 0) <= mem_rd_s_tdata( 7 downto  0);
                             when others => null;
                         end case;
                     end if;
                 elsif (fifo_0_m_tdata(3) = '1') then
                     -- load tail of the word
-                    upd_s_tdata(15 downto 8) <= mem_rd_s_tdata(31 downto 24);
+                    upd_tdata(15 downto 8) <= mem_rd_s_tdata(31 downto 24);
                 end if;
 
-                upd_s_taddr <= fifo_0_m_tdata(7 downto 4);
+                upd_tag <= fifo_0_m_tdata(7 downto 4);
             end if;
         end if;
     end process;
