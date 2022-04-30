@@ -110,6 +110,25 @@ architecture rtl of cpu86_exec is
         );
     end component;
 
+    component axis_fifo_er is
+        generic (
+            FIFO_DEPTH      : natural := 2**8;
+            FIFO_WIDTH      : natural := 128
+        );
+        port (
+            clk                 : in std_logic;
+            resetn              : in std_logic;
+
+            s_axis_fifo_tvalid  : in std_logic;
+            s_axis_fifo_tready  : out std_logic;
+            s_axis_fifo_tdata   : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+
+            m_axis_fifo_tvalid  : out std_logic;
+            m_axis_fifo_tready  : in std_logic;
+            m_axis_fifo_tdata   : out std_logic_vector(FIFO_WIDTH-1 downto 0)
+        );
+    end component axis_fifo_er;
+
     component axis_reg is
         generic (
             DATA_WIDTH              : natural := 32
@@ -898,39 +917,37 @@ begin
     );
 
     -- module axis_fifo instantiation
-    axis_fifo_inst_0 : axis_fifo generic map (
+    axis_fifo_inst_0 : axis_fifo_er generic map (
         FIFO_DEPTH              => 16,
-        FIFO_WIDTH              => DECODED_INSTR_T_WIDTH,
-        REGISTER_OUTPUT         => '1'
+        FIFO_WIDTH              => DECODED_INSTR_T_WIDTH
     ) port map (
         clk                     => clk,
         resetn                  => exec_resetn,
 
-        fifo_s_tvalid           => instr_s_tvalid,
-        fifo_s_tready           => instr_s_tready,
-        fifo_s_tdata            => instr_s_tdata,
+        s_axis_fifo_tvalid      => instr_s_tvalid,
+        s_axis_fifo_tready      => instr_s_tready,
+        s_axis_fifo_tdata       => instr_s_tdata,
 
-        fifo_m_tvalid           => instr_m_tvalid,
-        fifo_m_tready           => instr_m_tready,
-        fifo_m_tdata            => fifo_instr_m_tdata
+        m_axis_fifo_tvalid      => instr_m_tvalid,
+        m_axis_fifo_tready      => instr_m_tready,
+        m_axis_fifo_tdata       => fifo_instr_m_tdata
     );
 
     -- module axis_fifo instantiation
-    axis_fifo_inst_1 : axis_fifo generic map (
+    axis_fifo_inst_1 : axis_fifo_er generic map (
         FIFO_DEPTH              => 16,
-        FIFO_WIDTH              => 48,
-        REGISTER_OUTPUT         => '1'
+        FIFO_WIDTH              => 48
     ) port map (
         clk                     => clk,
         resetn                  => exec_resetn,
 
-        fifo_s_tvalid           => instr_s_tvalid and instr_s_tready,
-        fifo_s_tready           => open,
-        fifo_s_tdata            => instr_s_tuser,
+        s_axis_fifo_tvalid      => instr_s_tvalid and instr_s_tready,
+        s_axis_fifo_tready      => open,
+        s_axis_fifo_tdata       => instr_s_tuser,
 
-        fifo_m_tvalid           => open,
-        fifo_m_tready           => instr_m_tready,
-        fifo_m_tdata            => instr_m_tuser
+        m_axis_fifo_tvalid      => open,
+        m_axis_fifo_tready      => instr_m_tready,
+        m_axis_fifo_tdata       => instr_m_tuser
     );
 
     instr_m_tdata <= slv_to_decoded_instr_t(fifo_instr_m_tdata);

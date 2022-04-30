@@ -3,27 +3,26 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.std_logic_unsigned.all;
 
-entity axis_fifo is
+entity axis_fifo_er is
     generic (
         FIFO_DEPTH      : natural := 2**8;
-        FIFO_WIDTH      : natural := 128;
-        REGISTER_OUTPUT : std_logic := '1'
+        FIFO_WIDTH      : natural := 128
     );
     port (
-        clk             : in std_logic;
-        resetn          : in std_logic;
+        clk                 : in std_logic;
+        resetn              : in std_logic;
 
-        fifo_s_tvalid   : in std_logic;
-        fifo_s_tready   : out std_logic;
-        fifo_s_tdata    : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+        s_axis_fifo_tvalid  : in std_logic;
+        s_axis_fifo_tready  : out std_logic;
+        s_axis_fifo_tdata   : in std_logic_vector(FIFO_WIDTH-1 downto 0);
 
-        fifo_m_tvalid   : out std_logic;
-        fifo_m_tready   : in std_logic;
-        fifo_m_tdata    : out std_logic_vector(FIFO_WIDTH-1 downto 0)
+        m_axis_fifo_tvalid  : out std_logic;
+        m_axis_fifo_tready  : in std_logic;
+        m_axis_fifo_tdata   : out std_logic_vector(FIFO_WIDTH-1 downto 0)
     );
-end entity axis_fifo;
+end entity axis_fifo_er;
 
-architecture rtl of axis_fifo is
+architecture rtl of axis_fifo_er is
 
     type ram_t is array (FIFO_DEPTH-1 downto 0) of std_logic_vector(FIFO_WIDTH-1 downto 0);
 
@@ -36,14 +35,19 @@ architecture rtl of axis_fifo is
     attribute ramstyle : string;
     attribute ramstyle of fifo_ram : signal is "no_rw_check";
 
-    signal q_tdata          : std_logic_vector(FIFO_WIDTH-1 downto 0);
+    --signal q_tdata          : std_logic_vector(FIFO_WIDTH-1 downto 0);
 
     signal wr_data_tvalid   : std_logic;
     signal wr_data_tready   : std_logic;
     signal wr_data_tdata    : std_logic_vector(FIFO_WIDTH-1 downto 0);
 
-    signal data_tvalid      : std_logic;
-    signal data_tready      : std_logic;
+    signal rd_data_tvalid   : std_logic;
+    signal rd_data_tready   : std_logic;
+    signal rd_data_tdata    : std_logic_vector(FIFO_WIDTH-1 downto 0);
+
+    signal q_tvalid         : std_logic;
+    signal q_tready         : std_logic;
+    signal q_tdata          : std_logic_vector(FIFO_WIDTH-1 downto 0);
 
     signal out_tvalid       : std_logic;
     signal out_tready       : std_logic;
@@ -51,22 +55,17 @@ architecture rtl of axis_fifo is
 
 begin
 
-    wr_data_tvalid  <= fifo_s_tvalid;
-    fifo_s_tready   <= wr_data_tready;
-    wr_data_tdata   <= fifo_s_tdata;
+    wr_data_tvalid      <= s_axis_fifo_tvalid;
+    s_axis_fifo_tready  <= wr_data_tready;
+    wr_data_tdata       <= s_axis_fifo_tdata;
 
-    fifo_m_tvalid   <= out_tvalid;
-    out_tready      <= fifo_m_tready;
-    fifo_m_tdata    <= out_tdata;
+    m_axis_fifo_tvalid  <= out_tvalid;
+    out_tready          <= m_axis_fifo_tready;
+    m_axis_fifo_tdata   <= out_tdata;
 
-    register_output_ready_gen : if (REGISTER_OUTPUT = '1') generate
-        data_tready <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
-    end generate;
-
-    async_output_ready_gen: if (REGISTER_OUTPUT = '0') generate
-        data_tready <= out_tready;
-        q_tdata     <= fifo_ram(rd_addr);
-    end generate;
+    rd_data_tready      <= '1' when q_tvalid = '0' or (q_tvalid = '1' and q_tready = '1') else '0';
+    q_tready            <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
+    --q_tdata             <= fifo_ram(rd_addr);
 
     wr_data_tready_proc : process (clk) begin
         if rising_edge(clk) then
@@ -85,12 +84,12 @@ begin
     data_tvalid_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
-                data_tvalid <= '0';
+                rd_data_tvalid <= '0';
             else
                 if wr_addr_next /= rd_addr_next then
-                    data_tvalid <= '1';
+                    rd_data_tvalid <= '1';
                 else
-                    data_tvalid <= '0';
+                    rd_data_tvalid <= '0';
                 end if;
             end if;
         end if;
@@ -121,7 +120,7 @@ begin
     end process;
 
     read_proc_next : process (all) begin
-        if data_tvalid = '1' and data_tready = '1' then
+        if rd_data_tvalid = '1' and rd_data_tready = '1' then
             rd_addr_next <= (rd_addr + 1) mod FIFO_DEPTH;
         else
             rd_addr_next <= rd_addr;
@@ -138,33 +137,44 @@ begin
         end if;
     end process;
 
-    register_output_gen : if (REGISTER_OUTPUT = '1') generate
-        register_output_proc: process (clk) begin
-            if rising_edge(clk) then
+    register_q_proc: process (clk) begin
+        if rising_edge(clk) then
 
-                if resetn = '0' then
-                    out_tvalid <= '0';
-                else
-                    if data_tvalid = '1' and data_tready = '1' then
-                        out_tvalid <= '1';
-                    elsif out_tready = '1' then
-                        out_tvalid <= '0';
-                    end if;
+            if resetn = '0' then
+                q_tvalid <= '0';
+            else
+                if rd_data_tvalid = '1' and rd_data_tready = '1' then
+                    q_tvalid <= '1';
+                elsif q_tready = '1' then
+                    q_tvalid <= '0';
                 end if;
-
-                if data_tready = '1' then
-                    out_tdata <= fifo_ram(rd_addr);
-                end if;
-
             end if;
-        end process;
-    end generate;
 
-    async_output_gen: if (REGISTER_OUTPUT = '0') generate
+            if rd_data_tready = '1' then
+                q_tdata <= fifo_ram(rd_addr);
+            end if;
 
-        out_tvalid <= data_tvalid;
-        out_tdata  <= q_tdata;
+        end if;
+    end process;
 
-    end generate;
+    register_output_proc: process (clk) begin
+        if rising_edge(clk) then
+
+            if resetn = '0' then
+                out_tvalid <= '0';
+            else
+                if q_tvalid = '1' and q_tready = '1' then
+                    out_tvalid <= '1';
+                elsif out_tready = '1' then
+                    out_tvalid <= '0';
+                end if;
+            end if;
+
+            if q_tready = '1' then
+                out_tdata <= q_tdata;
+            end if;
+
+        end if;
+    end process;
 
 end architecture;
