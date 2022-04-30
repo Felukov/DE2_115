@@ -88,6 +88,8 @@ architecture rtl of cpu86_bpu is
 
     type bpu_items_t is array (natural range 0 to BPU_ITEM_CNT-1) of bpu_item_t;
 
+    type items_pos_t is array (natural range 0 to BPU_ITEM_CNT-1) of std_logic_vector(BPU_ITEM_IDX_WIDTH-1 downto 0);
+
     signal local_resetn             : std_logic;
     signal s_axis_instr_payload     : std_logic_vector(DECODED_INSTR_T_WIDTH + USER_T_WIDTH - 1 downto 0);
 
@@ -115,7 +117,8 @@ architecture rtl of cpu86_bpu is
     signal bpu_item_wr_hit_any      : std_logic;
 
     signal bpu_item_rd_hit          : std_logic_vector(BPU_ITEM_CNT-1 downto 0);
-    signal bpu_item_rd_hit_idx      : natural range 0 to BPU_ITEM_CNT-1;
+    signal bpu_item_rd_hit_idx      : std_logic_vector(BPU_ITEM_IDX_WIDTH-1 downto 0);  --natural range 0 to BPU_ITEM_CNT-1;
+    signal bpu_item_rd_hit_pos      : items_pos_t;
 
     signal read_ahead_tvalid        : std_logic;
     signal read_ahead_tdata         : std_logic_vector(31 downto 0);
@@ -189,7 +192,7 @@ begin
     instr_s_tdata           <= slv_to_decoded_instr_t(instr_s_payload(DECODED_INSTR_T_WIDTH+USER_T_WIDTH-1 downto USER_T_WIDTH));
     instr_s_tuser           <= instr_s_payload(USER_T_WIDTH-1 downto 0);
 
-    bpu_item_rd_tdata       <= bpu_item_rd_hit & std_logic_vector(to_unsigned(bpu_item_rd_hit_idx, BPU_ITEM_IDX_WIDTH));
+    bpu_item_rd_tdata       <= bpu_item_rd_hit & bpu_item_rd_hit_idx; -- std_logic_vector(to_unsigned(bpu_item_rd_hit_idx, BPU_ITEM_IDX_WIDTH));
     d_bpu_item_rd_hit       <= d_bpu_item_rd_tdata(BPU_ITEM_CNT+BPU_ITEM_IDX_WIDTH-1 downto BPU_ITEM_IDX_WIDTH);
     d_bpu_item_rd_hit_idx   <= to_integer(unsigned(d_bpu_item_rd_tdata(BPU_ITEM_IDX_WIDTH-1 downto 0)));
 
@@ -319,37 +322,31 @@ begin
 
     end generate;
 
+    bpu_item_rd_hit_gen : for i in 0 to BPU_ITEM_CNT-1 generate
+
+        bpu_item_rd_hit(i) <= '1' when (bpu_items(i).valid = '1' and
+            bpu_items(i).inst_cs = read_ahead_tdata(31 downto 16) and
+            bpu_items(i).inst_ip = read_ahead_tdata(15 downto 0))
+        else '0';
+
+    end generate;
+
+    bpu_item_rd_hit_pos(0) <= std_logic_vector(to_unsigned(0, BPU_ITEM_IDX_WIDTH));
+    bpu_item_rd_hit_pos_gen : for i in 1 to BPU_ITEM_CNT-1 generate
+
+        bpu_item_rd_hit_pos(i) <= std_logic_vector(to_unsigned(i, BPU_ITEM_IDX_WIDTH)) when bpu_item_rd_hit(i) = '1'
+            else std_logic_vector(to_unsigned(0, BPU_ITEM_IDX_WIDTH));
+
+    end generate;
+
+    bpu_item_rd_hit_idx <= bpu_item_rd_hit_pos(0) or bpu_item_rd_hit_pos(1) or
+        bpu_item_rd_hit_pos(2) or bpu_item_rd_hit_pos(3) or
+        bpu_item_rd_hit_pos(4) or bpu_item_rd_hit_pos(5) or
+        bpu_item_rd_hit_pos(6) or bpu_item_rd_hit_pos(7);
+
     bpu_item_wr_hit_any <= '1' when bpu_item_wr_hit /= "00000000" else '0';
 
-    process (all) begin
-        for i in 0 to BPU_ITEM_CNT-1 loop
-
-            if (bpu_items(i).valid = '1' and
-                bpu_items(i).inst_cs = read_ahead_tdata(31 downto 16) and
-                bpu_items(i).inst_ip = read_ahead_tdata(15 downto 0))
-            then
-                bpu_item_rd_hit(i) <= '1';
-            else
-                bpu_item_rd_hit(i) <= '0';
-            end if;
-
-        end loop;
-
-        bpu_item_rd_hit_idx <= 0;
-        for i in 0 to BPU_ITEM_CNT-1 loop
-            if (bpu_item_rd_hit(i) = '1') then
-                bpu_item_rd_hit_idx <= i;
-            end if;
-        end loop;
-
-        d_bpu_item_rd_hit_any <= '0';
-        for i in 0 to BPU_ITEM_CNT-1 loop
-            if (d_bpu_item_rd_hit(i) = '1') then
-                d_bpu_item_rd_hit_any <= '1';
-            end if;
-        end loop;
-
-    end process;
+    d_bpu_item_rd_hit_any <= '1' when d_bpu_item_rd_hit /= "00000000" else '0';
 
     process (clk) begin
         if rising_edge(clk) then
