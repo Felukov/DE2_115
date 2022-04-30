@@ -269,7 +269,7 @@ begin
     else '0';
 
     instr_tready <= '1' when instr_tready_mask = '0' and
-        (instr_tvalid = '0' or (instr_tvalid = '1' and instr_hazards_resolved = '1')) and
+        ((instr_tvalid = '1' and instr_hazards_resolved = '1')) and
         (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) else '0';
 
     -- handling external interrupt process

@@ -63,6 +63,7 @@ package cpu86_types is
     type fl_action_t is (
         SET, CLR, TOGGLE
     );
+    attribute enum_encoding of fl_action_t : type is "00 01 10";
 
     constant ALU_OP_ADD     : std_logic_vector (3 downto 0) := "0000";
     constant ALU_OP_SUB     : std_logic_vector (3 downto 0) := "0001";

@@ -123,7 +123,7 @@ begin
         if (exec_mem_req_tvalid = '1') then
             mem_req_m_tdata <= exec_mem_req_tdata;
         else
-            mem_req_m_tdata(63 downto 59) <= (others => '0');
+            mem_req_m_tdata(63 downto 62) <= (others => '0');
             mem_req_m_tdata(61 downto 58) <= "0000";
             mem_req_m_tdata(57)           <= '0';
             mem_req_m_tdata(56 downto 32) <= "00000" & fetcher_mem_req_tdata;
