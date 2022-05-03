@@ -175,7 +175,8 @@ begin
             -- Without reset
             for i in 0 to FIFO_DEPTH-1 loop
                 if (wr_data_tvalid = '1' and wr_data_tready = '1' and i = wr_addr) or
-                    (upd_tvalid = '1' and i = to_integer(unsigned(upd_tag))) then
+                    (upd_tvalid = '1' and i = to_integer(unsigned(upd_tag)))
+                then
                     if upd_tvalid = '1' then
                         fifo_ram_data(i) <= upd_tdata;
                     else
