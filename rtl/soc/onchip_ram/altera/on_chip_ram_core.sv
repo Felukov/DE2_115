@@ -27,12 +27,11 @@ module on_chip_ram_core #(
             if (~be[2]) ram[waddr][2] <= wdata_array[2];
             if (~be[3]) ram[waddr][3] <= wdata_array[3];
         end
-
         q <= ram[raddr];
     end
 
     initial begin
-        $readmemh("C:/Projects/DE2_115/tbs/cpu86/simple_boot/bootstrap.vmem", ram, 0, WORDS-1);
+        $readmemh("C:/Projects/DE2_115/rtl/soc/onchip_ram/altera/bootstrap.vmem", ram, 0, WORDS-1);
     end
 
 endmodule
