@@ -680,19 +680,19 @@ begin
                 when x"0C" => set_op(ALU, ALU_OP_OR,  '0', LOCK_AX or LOCK_FL, WAIT_AX);
                 when x"0D" => set_op(ALU, ALU_OP_OR,  '1', LOCK_AX or LOCK_FL, WAIT_AX);
 
-                when x"10" => set_op(ALU, ALU_OP_ADC, '0', LOCK_FL,            WAIT_NO_WAIT);
-                when x"11" => set_op(ALU, ALU_OP_ADC, '1', LOCK_FL,            WAIT_NO_WAIT);
-                when x"12" => set_op(ALU, ALU_OP_ADC, '0', LOCK_FL,            WAIT_NO_WAIT);
-                when x"13" => set_op(ALU, ALU_OP_ADC, '1', LOCK_FL,            WAIT_NO_WAIT);
-                when x"14" => set_op(ALU, ALU_OP_ADC, '0', LOCK_AX or LOCK_FL, WAIT_AX);
-                when x"15" => set_op(ALU, ALU_OP_ADC, '1', LOCK_AX or LOCK_FL, WAIT_AX);
+                when x"10" => set_op(ALU, ALU_OP_ADC, '0', LOCK_FL,            WAIT_FL);
+                when x"11" => set_op(ALU, ALU_OP_ADC, '1', LOCK_FL,            WAIT_FL);
+                when x"12" => set_op(ALU, ALU_OP_ADC, '0', LOCK_FL,            WAIT_FL);
+                when x"13" => set_op(ALU, ALU_OP_ADC, '1', LOCK_FL,            WAIT_FL);
+                when x"14" => set_op(ALU, ALU_OP_ADC, '0', LOCK_AX or LOCK_FL, WAIT_FL or WAIT_AX);
+                when x"15" => set_op(ALU, ALU_OP_ADC, '1', LOCK_AX or LOCK_FL, WAIT_FL or WAIT_AX);
 
-                when x"18" => set_op(ALU, ALU_OP_SBB, '0', LOCK_FL,            WAIT_NO_WAIT);
-                when x"19" => set_op(ALU, ALU_OP_SBB, '1', LOCK_FL,            WAIT_NO_WAIT);
-                when x"1A" => set_op(ALU, ALU_OP_SBB, '0', LOCK_FL,            WAIT_NO_WAIT);
-                when x"1B" => set_op(ALU, ALU_OP_SBB, '1', LOCK_FL,            WAIT_NO_WAIT);
-                when x"1C" => set_op(ALU, ALU_OP_SBB, '0', LOCK_AX or LOCK_FL, WAIT_AX);
-                when x"1D" => set_op(ALU, ALU_OP_SBB, '1', LOCK_AX or LOCK_FL, WAIT_AX);
+                when x"18" => set_op(ALU, ALU_OP_SBB, '0', LOCK_FL,            WAIT_FL);
+                when x"19" => set_op(ALU, ALU_OP_SBB, '1', LOCK_FL,            WAIT_FL);
+                when x"1A" => set_op(ALU, ALU_OP_SBB, '0', LOCK_FL,            WAIT_FL);
+                when x"1B" => set_op(ALU, ALU_OP_SBB, '1', LOCK_FL,            WAIT_FL);
+                when x"1C" => set_op(ALU, ALU_OP_SBB, '0', LOCK_AX or LOCK_FL, WAIT_FL or WAIT_AX);
+                when x"1D" => set_op(ALU, ALU_OP_SBB, '1', LOCK_AX or LOCK_FL, WAIT_FL or WAIT_AX);
 
                 when x"20" => set_op(ALU, ALU_OP_AND, '0', LOCK_FL,            WAIT_NO_WAIT);
                 when x"21" => set_op(ALU, ALU_OP_AND, '1', LOCK_FL,            WAIT_NO_WAIT);
@@ -863,7 +863,7 @@ begin
                 --
                 when x"80" => no_lock; no_wait; set_lock(LOCK_FL);
                 when x"81" => no_lock; no_wait;
-                when x"82" => no_lock; no_wait; set_lock(LOCK_FL);
+                --when x"82" => no_lock; no_wait; set_lock(LOCK_FL);
                 when x"83" => no_lock; no_wait; set_lock(LOCK_FL);
                 when x"8F" => no_lock; no_wait;
                 when x"C0" => no_lock; no_wait;
@@ -874,6 +874,7 @@ begin
                 when x"D3" => no_lock; no_wait;
                 when x"F6" => no_lock; no_wait;
                 when x"F7" => no_lock; no_wait;
+                when x"FE" => no_lock; no_wait;
                 when x"FF" => no_lock; no_wait;
 
                 -- FEU
@@ -963,8 +964,7 @@ begin
                 when x"FC" => set_flag_op(FLAG_DF, CLR,    LOCK_DREG or LOCK_FL, WAIT_FL);
                 when x"FD" => set_flag_op(FLAG_DF, SET,    LOCK_DREG or LOCK_FL, WAIT_FL);
 
-                when others =>
-                    instr_tdata.code <= "0000";
+                when others => set_op(ILLEGAL, "0000");
             end case;
         end;
 
@@ -1237,6 +1237,12 @@ begin
                 when others => null;
             end case;
 
+            case u8_tdata(5 downto 3) is
+                when "010" => instr_tdata.wait_fl <= '1';
+                when "011" => instr_tdata.wait_fl <= '1';
+                when others => null;
+            end case;
+
             if (u8_tdata(7 downto 6) = "11") then
                 case u8_tdata_rm is
                     when "000" => instr_tdata.wait_ax <= '1';
@@ -1250,7 +1256,7 @@ begin
                     when others => null;
                 end case;
 
-                upd_lock(LOCK_DREG);
+                upd_lock(LOCK_DREG or LOCK_FL);
             end if;
         end;
 
@@ -2070,7 +2076,7 @@ begin
 
                 case byte0 is
 
-                    when x"C0" | x"D0" | x"D2"  =>
+                    when x"C0" | x"D0" | x"D2" | x"80" =>
                         case u8_tdata_rm is
                             when "000" => instr_tdata.sreg <= AX;
                             when "001" => instr_tdata.sreg <= CX;
@@ -2089,7 +2095,7 @@ begin
                             instr_tdata.smask <= "10";
                         end if;
 
-                    when x"C1" | x"D1" | x"D3"  =>
+                    when x"C1" | x"D1" | x"D3" | x"81" | x"83"  =>
                         case u8_tdata_rm is
                             when "000" => instr_tdata.sreg <= AX;
                             when "001" => instr_tdata.sreg <= CX;
