@@ -54,6 +54,7 @@ architecture rtl of cpu86_exec_reg is
 
     signal reg_tvalid   : std_logic;
     signal reg_tdata    : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal hs_cnt       : natural range 0 to 7;
 
 begin
     -- Assigns
@@ -65,13 +66,31 @@ begin
             if resetn = '0' then
                 reg_tvalid <= '1';
                 reg_tdata <= INIT_VALUE;
+                hs_cnt <= 0;
             else
                 -- Resettable
-                if (wr_s_tvalid = '1' or unlk_s_tvalid = '1') then
+                if (unlk_s_tvalid = '1') then
+                    reg_tvalid <= '1';
+                elsif (wr_s_tvalid = '1' and (hs_cnt = 1 or hs_cnt = 0)) then
                     reg_tvalid <= '1';
                 elsif (lock_s_tvalid = '1') then
                     reg_tvalid <= '0';
                 end if;
+
+                if (unlk_s_tvalid = '1') then
+                    hs_cnt <= 0;
+                elsif (wr_s_tvalid = '1' and lock_s_tvalid = '0') then
+                    if (hs_cnt > 0) then
+                        hs_cnt <= hs_cnt - 1;
+                    -- else
+                    --     report "hs_cnt error: " & to_hstring(wr_s_tdata) severity error;
+                    end if;
+                elsif (wr_s_tvalid = '0' and lock_s_tvalid = '1') then
+                        hs_cnt <= hs_cnt + 1;
+                else
+                    hs_cnt <= hs_cnt;
+                end if;
+
                 -- Without reset
                 if (wr_s_tvalid = '1') then
                     case wr_s_tmask is
