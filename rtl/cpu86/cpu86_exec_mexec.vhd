@@ -1351,7 +1351,7 @@ begin
                        mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1' or
                        shf8_res_tvalid = '1' or shf16_res_tvalid = '1' or
                        (div_res_tvalid = '1' and div_res_tdata.code = DIVU_AAM) or
-                       (str_res_tvalid = '1')) then
+                       (str_res_tvalid = '1' and (str_res_tdata.code = CMPS_OP or str_res_tdata.code = SCAS_OP))) then
                     flags_m_wr_tvalid <= '1';
                 else
                     flags_m_wr_tvalid <= '0';
