@@ -63,33 +63,38 @@ architecture rtl of cpu86_mem_interconnect is
 
     component axis_fifo is
         generic (
-            FIFO_DEPTH      : natural := 8;
-            FIFO_WIDTH      : natural := 128
+            FIFO_DEPTH          : natural := 8;
+            FIFO_WIDTH          : natural := 128
         );
         port (
-            clk             : in std_logic;
-            resetn          : in std_logic;
+            clk                 : in std_logic;
+            resetn              : in std_logic;
 
-            fifo_s_tvalid   : in std_logic;
-            fifo_s_tready   : out std_logic;
-            fifo_s_tdata    : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+            fifo_s_tvalid       : in std_logic;
+            fifo_s_tready       : out std_logic;
+            fifo_s_tdata        : in std_logic_vector(FIFO_WIDTH-1 downto 0);
 
-            fifo_m_tvalid   : out std_logic;
-            fifo_m_tready   : in std_logic;
-            fifo_m_tdata    : out std_logic_vector(FIFO_WIDTH-1 downto 0)
+            fifo_m_tvalid       : out std_logic;
+            fifo_m_tready       : in std_logic;
+            fifo_m_tdata        : out std_logic_vector(FIFO_WIDTH-1 downto 0)
         );
     end component;
 
-    signal fifo_s_tvalid    : std_logic;
-    signal fifo_s_tready    : std_logic;
-    signal fifo_s_tdata     : std_logic_vector(1 downto 0);
-    signal fifo_m_tdata     : std_logic_vector(1 downto 0);
+    signal fifo_s_tvalid        : std_logic;
+    signal fifo_s_tready        : std_logic;
+    signal fifo_s_tdata         : std_logic_vector(1 downto 0);
+    signal fifo_m_tvalid        : std_logic;
+    signal fifo_m_tdata         : std_logic_vector(1 downto 0);
+
+    signal exec_mem_req_read    : std_logic;
+    signal exec_mem_req_write   : std_logic;
+    signal fetcher_mem_req_read : std_logic;
 
 begin
 
     -- Module axis_fifo instantiation
     axis_fifo_inst : axis_fifo generic map (
-        FIFO_DEPTH      => 16,
+        FIFO_DEPTH      => 32,
         FIFO_WIDTH      => 2
     ) port map (
         clk             => clk,
@@ -97,21 +102,25 @@ begin
         fifo_s_tvalid   => fifo_s_tvalid,
         fifo_s_tready   => fifo_s_tready,
         fifo_s_tdata    => fifo_s_tdata,
-        fifo_m_tvalid   => open,
+        fifo_m_tvalid   => fifo_m_tvalid,
         fifo_m_tready   => mem_rd_s_tvalid,
         fifo_m_tdata    => fifo_m_tdata
     );
 
     -- Assigns
+    exec_mem_req_read      <= '1' when exec_mem_req_tvalid = '1' and mem_req_m_tready = '1' and exec_mem_req_tdata(57) = '0' else '0';
+    exec_mem_req_write     <= '1' when exec_mem_req_tvalid = '1' and mem_req_m_tready = '1' and exec_mem_req_tdata(57) = '1' else '0';
+    fetcher_mem_req_read   <= '1' when fetcher_mem_req_tvalid = '1' and mem_req_m_tready = '1' else '0';
+
     fetcher_mem_req_tready <= '1' when fifo_s_tready = '1' and exec_mem_req_tvalid = '0' and mem_req_m_tready = '1' else '0';
     exec_mem_req_tready    <= '1' when fifo_s_tready = '1' and mem_req_m_tready = '1' else '0';
 
-    fifo_s_tdata(1)        <= '1' when fetcher_mem_req_tvalid = '1' and exec_mem_req_tvalid = '0' else '0';
-    fifo_s_tdata(0)        <= '1' when exec_mem_req_tvalid = '1' else '0';
+    fifo_s_tdata(1)        <= '1' when fetcher_mem_req_read = '1' and exec_mem_req_read = '0' and exec_mem_req_write = '0' else '0';
+    fifo_s_tdata(0)        <= '1' when exec_mem_req_read = '1' else '0';
 
     mem_req_m_tvalid       <= '1' when exec_mem_req_tvalid = '1' or fetcher_mem_req_tvalid = '1' else '0';
 
-    fifo_s_tvalid          <= '1' when (exec_mem_req_tvalid = '1' and exec_mem_req_tdata(57) = '0') or (fetcher_mem_req_tvalid = '1' and exec_mem_req_tvalid = '0') else '0';
+    fifo_s_tvalid          <= '1' when (exec_mem_req_read = '1') or (fetcher_mem_req_read = '1' and exec_mem_req_read = '0' and exec_mem_req_write = '0') else '0';
 
     fetcher_mem_res_tvalid <= '1' when mem_rd_s_tvalid = '1' and fifo_m_tdata(1) = '1' else '0';
     fetcher_mem_res_tdata  <= mem_rd_s_tdata;
