@@ -50,20 +50,20 @@ architecture rtl of cpu86_tb is
             clk                     : in std_logic;
             resetn                  : in std_logic;
 
-            mem_req_m_tvalid        : out std_logic;
-            mem_req_m_tready        : in std_logic;
-            mem_req_m_tdata         : out std_logic_vector(63 downto 0);
+            m_axis_mem_req_tvalid   : out std_logic;
+            m_axis_mem_req_tready   : in std_logic;
+            m_axis_mem_req_tdata    : out std_logic_vector(63 downto 0);
 
-            mem_rd_s_tvalid         : in std_logic;
-            mem_rd_s_tdata          : in std_logic_vector(31 downto 0);
+            s_axis_mem_res_tvalid   : in std_logic;
+            s_axis_mem_res_tdata    : in std_logic_vector(31 downto 0);
 
-            io_req_m_tvalid         : out std_logic;
-            io_req_m_tready         : in std_logic;
-            io_req_m_tdata          : out std_logic_vector(39 downto 0);
+            m_axis_io_req_tvalid    : out std_logic;
+            m_axis_io_req_tready    : in std_logic;
+            m_axis_io_req_tdata     : out std_logic_vector(39 downto 0);
 
-            io_rd_s_tvalid          : in std_logic;
-            io_rd_s_tready          : out std_logic;
-            io_rd_s_tdata           : in std_logic_vector(15 downto 0);
+            s_axis_io_res_tvalid    : in std_logic;
+            s_axis_io_res_tready    : out std_logic;
+            s_axis_io_res_tdata     : in std_logic_vector(15 downto 0);
 
             interrupt_valid         : in std_logic;
             interrupt_data          : in std_logic_vector(7 downto 0);
@@ -74,92 +74,99 @@ architecture rtl of cpu86_tb is
     component soc_io_interconnect is
         port (
             -- global singals
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
+            clk                         : in std_logic;
+            resetn                      : in std_logic;
             -- cpu io
-            io_req_s_tvalid         : in std_logic;
-            io_req_s_tready         : out std_logic;
-            io_req_s_tdata          : in std_logic_vector(39 downto 0);
-            io_rd_m_tvalid          : out std_logic;
-            io_rd_m_tready          : in std_logic;
-            io_rd_m_tdata           : out std_logic_vector(15 downto 0);
+            s_axis_io_req_tvalid        : in std_logic;
+            s_axis_io_req_tready        : out std_logic;
+            s_axis_io_req_tdata         : in std_logic_vector(39 downto 0);
+            m_axis_io_res_tvalid        : out std_logic;
+            m_axis_io_res_tready        : in std_logic;
+            m_axis_io_res_tdata         : out std_logic_vector(15 downto 0);
             -- pit
-            pit_req_m_tvalid        : out std_logic;
-            pit_req_m_tready        : in std_logic;
-            pit_req_m_tdata         : out std_logic_vector(39 downto 0);
-            pit_rd_s_tvalid         : in std_logic;
-            pit_rd_s_tready         : out std_logic;
-            pit_rd_s_tdata          : in std_logic_vector(15 downto 0);
+            m_axis_pit_req_tvalid       : out std_logic;
+            m_axis_pit_req_tready       : in std_logic;
+            m_axis_pit_req_tdata        : out std_logic_vector(39 downto 0);
+            s_axis_pit_res_tvalid       : in std_logic;
+            s_axis_pit_res_tready       : out std_logic;
+            s_axis_pit_res_tdata        : in std_logic_vector(15 downto 0);
             -- pic
-            pic_req_m_tvalid        : out std_logic;
-            pic_req_m_tready        : in std_logic;
-            pic_req_m_tdata         : out std_logic_vector(39 downto 0);
-            pic_rd_s_tvalid         : in std_logic;
-            pic_rd_s_tready         : out std_logic;
-            pic_rd_s_tdata          : in std_logic_vector(15 downto 0);
+            m_axis_pic_req_tvalid       : out std_logic;
+            m_axis_pic_req_tready       : in std_logic;
+            m_axis_pic_req_tdata        : out std_logic_vector(39 downto 0);
+            s_axis_pic_res_tvalid       : in std_logic;
+            s_axis_pic_res_tready       : out std_logic;
+            s_axis_pic_res_tdata        : in std_logic_vector(15 downto 0);
             -- led green
-            led_0_req_m_tvalid      : out std_logic;
-            led_0_req_m_tready      : in std_logic;
-            led_0_req_m_tdata       : out std_logic_vector(39 downto 0);
-            led_0_rd_s_tvalid       : in std_logic;
-            led_0_rd_s_tready       : out std_logic;
-            led_0_rd_s_tdata        : in std_logic_vector(15 downto 0);
+            m_axis_led_0_req_tvalid     : out std_logic;
+            m_axis_led_0_req_tready     : in std_logic;
+            m_axis_led_0_req_tdata      : out std_logic_vector(39 downto 0);
+            s_axis_led_0_res_tvalid     : in std_logic;
+            s_axis_led_0_res_tready     : out std_logic;
+            s_axis_led_0_res_tdata      : in std_logic_vector(15 downto 0);
             -- led red (15 downto 0)
-            led_1_req_m_tvalid      : out std_logic;
-            led_1_req_m_tready      : in std_logic;
-            led_1_req_m_tdata       : out std_logic_vector(39 downto 0);
-            led_1_rd_s_tvalid       : in std_logic;
-            led_1_rd_s_tready       : out std_logic;
-            led_1_rd_s_tdata        : in std_logic_vector(15 downto 0);
+            m_axis_led_1_req_tvalid     : out std_logic;
+            m_axis_led_1_req_tready     : in std_logic;
+            m_axis_led_1_req_tdata      : out std_logic_vector(39 downto 0);
+            s_axis_led_1_res_tvalid     : in std_logic;
+            s_axis_led_1_res_tready     : out std_logic;
+            s_axis_led_1_res_tdata      : in std_logic_vector(15 downto 0);
             -- led red (17 downto 16)
-            led_2_req_m_tvalid      : out std_logic;
-            led_2_req_m_tready      : in std_logic;
-            led_2_req_m_tdata       : out std_logic_vector(39 downto 0);
-            led_2_rd_s_tvalid       : in std_logic;
-            led_2_rd_s_tready       : out std_logic;
-            led_2_rd_s_tdata        : in std_logic_vector(15 downto 0);
+            m_axis_led_2_req_tvalid     : out std_logic;
+            m_axis_led_2_req_tready     : in std_logic;
+            m_axis_led_2_req_tdata      : out std_logic_vector(39 downto 0);
+            s_axis_led_2_res_tvalid     : in std_logic;
+            s_axis_led_2_res_tready     : out std_logic;
+            s_axis_led_2_res_tdata      : in std_logic_vector(15 downto 0);
             -- sw (17 downto 16)
-            sw_0_req_m_tvalid       : out std_logic;
-            sw_0_req_m_tready       : in std_logic;
-            sw_0_req_m_tdata        : out std_logic_vector(39 downto 0);
-            sw_0_rd_s_tvalid        : in std_logic;
-            sw_0_rd_s_tready        : out std_logic;
-            sw_0_rd_s_tdata         : in std_logic_vector(15 downto 0);
+            m_axis_sw_0_req_tvalid      : out std_logic;
+            m_axis_sw_0_req_tready      : in std_logic;
+            m_axis_sw_0_req_tdata       : out std_logic_vector(39 downto 0);
+            s_axis_sw_0_res_tvalid      : in std_logic;
+            s_axis_sw_0_res_tready      : out std_logic;
+            s_axis_sw_0_res_tdata       : in std_logic_vector(15 downto 0);
             -- sw (15 downto 0)
-            sw_1_req_m_tvalid       : out std_logic;
-            sw_1_req_m_tready       : in std_logic;
-            sw_1_req_m_tdata        : out std_logic_vector(39 downto 0);
-            sw_1_rd_s_tvalid        : in std_logic;
-            sw_1_rd_s_tready        : out std_logic;
-            sw_1_rd_s_tdata         : in std_logic_vector(15 downto 0);
+            m_axis_sw_1_req_tvalid      : out std_logic;
+            m_axis_sw_1_req_tready      : in std_logic;
+            m_axis_sw_1_req_tdata       : out std_logic_vector(39 downto 0);
+            s_axis_sw_1_res_tvalid      : in std_logic;
+            s_axis_sw_1_res_tready      : out std_logic;
+            s_axis_sw_1_res_tdata       : in std_logic_vector(15 downto 0);
             -- hex_group_0
-            hex_0_req_m_tvalid      : out std_logic;
-            hex_0_req_m_tready      : in std_logic;
-            hex_0_req_m_tdata       : out std_logic_vector(39 downto 0);
-            hex_0_rd_s_tvalid       : in std_logic;
-            hex_0_rd_s_tready       : out std_logic;
-            hex_0_rd_s_tdata        : in std_logic_vector(15 downto 0);
+            m_axis_hex_0_req_tvalid     : out std_logic;
+            m_axis_hex_0_req_tready     : in std_logic;
+            m_axis_hex_0_req_tdata      : out std_logic_vector(39 downto 0);
+            s_axis_hex_0_res_tvalid     : in std_logic;
+            s_axis_hex_0_res_tready     : out std_logic;
+            s_axis_hex_0_res_tdata      : in std_logic_vector(15 downto 0);
             -- hex_group_1
-            hex_1_req_m_tvalid      : out std_logic;
-            hex_1_req_m_tready      : in std_logic;
-            hex_1_req_m_tdata       : out std_logic_vector(39 downto 0);
-            hex_1_rd_s_tvalid       : in std_logic;
-            hex_1_rd_s_tready       : out std_logic;
-            hex_1_rd_s_tdata        : in std_logic_vector(15 downto 0);
+            m_axis_hex_1_req_tvalid     : out std_logic;
+            m_axis_hex_1_req_tready     : in std_logic;
+            m_axis_hex_1_req_tdata      : out std_logic_vector(39 downto 0);
+            s_axis_hex_1_res_tvalid     : in std_logic;
+            s_axis_hex_1_res_tready     : out std_logic;
+            s_axis_hex_1_res_tdata      : in std_logic_vector(15 downto 0);
             -- uart
-            uart_req_m_tvalid       : out std_logic;
-            uart_req_m_tready       : in std_logic;
-            uart_req_m_tdata        : out std_logic_vector(39 downto 0);
-            uart_rd_s_tvalid        : in std_logic;
-            uart_rd_s_tready        : out std_logic;
-            uart_rd_s_tdata         : in std_logic_vector(15 downto 0);
+            m_axis_uart_req_tvalid      : out std_logic;
+            m_axis_uart_req_tready      : in std_logic;
+            m_axis_uart_req_tdata       : out std_logic_vector(39 downto 0);
+            s_axis_uart_res_tvalid      : in std_logic;
+            s_axis_uart_res_tready      : out std_logic;
+            s_axis_uart_res_tdata       : in std_logic_vector(15 downto 0);
             -- port 61
-            port_61_req_m_tvalid    : out std_logic;
-            port_61_req_m_tready    : in std_logic;
-            port_61_req_m_tdata     : out std_logic_vector(39 downto 0);
-            port_61_rd_s_tvalid     : in std_logic;
-            port_61_rd_s_tready     : out std_logic;
-            port_61_rd_s_tdata      : in std_logic_vector(15 downto 0)
+            m_axis_port_61_req_tvalid   : out std_logic;
+            m_axis_port_61_req_tready   : in std_logic;
+            m_axis_port_61_req_tdata    : out std_logic_vector(39 downto 0);
+            s_axis_port_61_res_tvalid   : in std_logic;
+            s_axis_port_61_res_tready   : out std_logic;
+            s_axis_port_61_res_tdata    : in std_logic_vector(15 downto 0);
+            -- mmu
+            m_axis_mmu_req_tvalid       : out std_logic;
+            m_axis_mmu_req_tready       : in std_logic;
+            m_axis_mmu_req_tdata        : out std_logic_vector(39 downto 0);
+            s_axis_mmu_res_tvalid       : in std_logic;
+            s_axis_mmu_res_tready       : out std_logic;
+            s_axis_mmu_res_tdata        : in std_logic_vector(15 downto 0)
         );
     end component soc_io_interconnect;
 
@@ -422,20 +429,20 @@ begin
         clk                     => clk,
         resetn                  => resetn,
 
-        mem_req_m_tvalid        => mem_req_m_tvalid,
-        mem_req_m_tready        => mem_req_m_tready,
-        mem_req_m_tdata         => mem_req_m_tdata,
+        m_axis_mem_req_tvalid   => mem_req_m_tvalid,
+        m_axis_mem_req_tready   => mem_req_m_tready,
+        m_axis_mem_req_tdata    => mem_req_m_tdata,
 
-        mem_rd_s_tvalid         => mem_rd_s_tvalid,
-        mem_rd_s_tdata          => mem_rd_s_tdata,
+        s_axis_mem_res_tvalid   => mem_rd_s_tvalid,
+        s_axis_mem_res_tdata    => mem_rd_s_tdata,
 
-        io_req_m_tvalid         => io_req_tvalid,
-        io_req_m_tready         => io_req_tready,
-        io_req_m_tdata          => io_req_tdata,
+        m_axis_io_req_tvalid    => io_req_tvalid,
+        m_axis_io_req_tready    => io_req_tready,
+        m_axis_io_req_tdata     => io_req_tdata,
 
-        io_rd_s_tvalid          => io_rd_tvalid,
-        io_rd_s_tready          => io_rd_tready,
-        io_rd_s_tdata           => io_rd_tdata,
+        s_axis_io_res_tvalid    => io_rd_tvalid,
+        s_axis_io_res_tready    => io_rd_tready,
+        s_axis_io_res_tdata     => io_rd_tdata,
 
         interrupt_valid         => interrupt_valid,
         interrupt_data          => interrupt_data,
@@ -445,92 +452,99 @@ begin
     -- Module soc_io_interconnect instantiation
     soc_io_interconnect_inst : soc_io_interconnect port map (
         -- global singals
-        clk                     => clk,
-        resetn                  => resetn,
+        clk                         => clk,
+        resetn                      => resetn,
         -- cpu io
-        io_req_s_tvalid         => io_req_tvalid,
-        io_req_s_tready         => io_req_tready,
-        io_req_s_tdata          => io_req_tdata,
-        io_rd_m_tvalid          => io_rd_tvalid,
-        io_rd_m_tready          => io_rd_tready,
-        io_rd_m_tdata           => io_rd_tdata,
+        s_axis_io_req_tvalid        => io_req_tvalid,
+        s_axis_io_req_tready        => io_req_tready,
+        s_axis_io_req_tdata         => io_req_tdata,
+        m_axis_io_res_tvalid        => io_rd_tvalid,
+        m_axis_io_res_tready        => io_rd_tready,
+        m_axis_io_res_tdata         => io_rd_tdata,
         -- pit
-        pit_req_m_tvalid        => pit_req_tvalid,
-        pit_req_m_tready        => pit_req_tready,
-        pit_req_m_tdata         => pit_req_tdata,
-        pit_rd_s_tvalid         => pit_rd_tvalid,
-        pit_rd_s_tready         => pit_rd_tready,
-        pit_rd_s_tdata          => pit_rd_tdata,
+        m_axis_pit_req_tvalid       => pit_req_tvalid,
+        m_axis_pit_req_tready       => pit_req_tready,
+        m_axis_pit_req_tdata        => pit_req_tdata,
+        s_axis_pit_res_tvalid       => pit_rd_tvalid,
+        s_axis_pit_res_tready       => pit_rd_tready,
+        s_axis_pit_res_tdata        => pit_rd_tdata,
         -- pic
-        pic_req_m_tvalid        => pic_req_tvalid,
-        pic_req_m_tready        => pic_req_tready,
-        pic_req_m_tdata         => pic_req_tdata,
-        pic_rd_s_tvalid         => pic_rd_tvalid,
-        pic_rd_s_tready         => pic_rd_tready,
-        pic_rd_s_tdata          => pic_rd_tdata,
+        m_axis_pic_req_tvalid       => pic_req_tvalid,
+        m_axis_pic_req_tready       => pic_req_tready,
+        m_axis_pic_req_tdata        => pic_req_tdata,
+        s_axis_pic_res_tvalid       => pic_rd_tvalid,
+        s_axis_pic_res_tready       => pic_rd_tready,
+        s_axis_pic_res_tdata        => pic_rd_tdata,
         -- led_0
-        led_0_req_m_tvalid      => leds_0_req_tvalid,
-        led_0_req_m_tready      => leds_0_req_tready,
-        led_0_req_m_tdata       => leds_0_req_tdata,
-        led_0_rd_s_tvalid       => leds_0_rd_tvalid,
-        led_0_rd_s_tready       => leds_0_rd_tready,
-        led_0_rd_s_tdata        => leds_0_rd_tdata,
+        m_axis_led_0_req_tvalid     => leds_0_req_tvalid,
+        m_axis_led_0_req_tready     => leds_0_req_tready,
+        m_axis_led_0_req_tdata      => leds_0_req_tdata,
+        s_axis_led_0_res_tvalid     => leds_0_rd_tvalid,
+        s_axis_led_0_res_tready     => leds_0_rd_tready,
+        s_axis_led_0_res_tdata      => leds_0_rd_tdata,
         -- led_1
-        led_1_req_m_tvalid      => open,
-        led_1_req_m_tready      => '1',
-        led_1_req_m_tdata       => open,
-        led_1_rd_s_tvalid       => '0',
-        led_1_rd_s_tready       => open,
-        led_1_rd_s_tdata        => x"0000",
+        m_axis_led_1_req_tvalid     => open,
+        m_axis_led_1_req_tready     => '1',
+        m_axis_led_1_req_tdata      => open,
+        s_axis_led_1_res_tvalid     => '0',
+        s_axis_led_1_res_tready     => open,
+        s_axis_led_1_res_tdata      => x"0000",
         -- led_2
-        led_2_req_m_tvalid      => open,
-        led_2_req_m_tready      => '1',
-        led_2_req_m_tdata       => open,
-        led_2_rd_s_tvalid       => '0',
-        led_2_rd_s_tready       => open,
-        led_2_rd_s_tdata        => x"0000",
+        m_axis_led_2_req_tvalid     => open,
+        m_axis_led_2_req_tready     => '1',
+        m_axis_led_2_req_tdata      => open,
+        s_axis_led_2_res_tvalid     => '0',
+        s_axis_led_2_res_tready     => open,
+        s_axis_led_2_res_tdata      => x"0000",
         -- sw_0
-        sw_0_req_m_tvalid       => sw_0_req_tvalid,
-        sw_0_req_m_tready       => sw_0_req_tready,
-        sw_0_req_m_tdata        => sw_0_req_tdata,
-        sw_0_rd_s_tvalid        => sw_0_rd_tvalid,
-        sw_0_rd_s_tready        => sw_0_rd_tready,
-        sw_0_rd_s_tdata         => sw_0_rd_tdata,
+        m_axis_sw_0_req_tvalid      => sw_0_req_tvalid,
+        m_axis_sw_0_req_tready      => sw_0_req_tready,
+        m_axis_sw_0_req_tdata       => sw_0_req_tdata,
+        s_axis_sw_0_res_tvalid      => sw_0_rd_tvalid,
+        s_axis_sw_0_res_tready      => sw_0_rd_tready,
+        s_axis_sw_0_res_tdata       => sw_0_rd_tdata,
         -- sw_1
-        sw_1_req_m_tvalid       => open,
-        sw_1_req_m_tready       => '1',
-        sw_1_req_m_tdata        => open,
-        sw_1_rd_s_tvalid        => '0',
-        sw_1_rd_s_tready        => open,
-        sw_1_rd_s_tdata         => x"0000",
+        m_axis_sw_1_req_tvalid      => open,
+        m_axis_sw_1_req_tready      => '1',
+        m_axis_sw_1_req_tdata       => open,
+        s_axis_sw_1_res_tvalid      => '0',
+        s_axis_sw_1_res_tready      => open,
+        s_axis_sw_1_res_tdata       => x"0000",
         -- hex_0
-        hex_0_req_m_tvalid      => hex_0_req_tvalid,
-        hex_0_req_m_tready      => hex_0_req_tready,
-        hex_0_req_m_tdata       => hex_0_req_tdata,
-        hex_0_rd_s_tvalid       => hex_0_rd_tvalid,
-        hex_0_rd_s_tready       => hex_0_rd_tready,
-        hex_0_rd_s_tdata        => hex_0_rd_tdata,
+        m_axis_hex_0_req_tvalid     => hex_0_req_tvalid,
+        m_axis_hex_0_req_tready     => hex_0_req_tready,
+        m_axis_hex_0_req_tdata      => hex_0_req_tdata,
+        s_axis_hex_0_res_tvalid     => hex_0_rd_tvalid,
+        s_axis_hex_0_res_tready     => hex_0_rd_tready,
+        s_axis_hex_0_res_tdata      => hex_0_rd_tdata,
         -- hex_1
-        hex_1_req_m_tvalid      => hex_1_req_tvalid,
-        hex_1_req_m_tready      => hex_1_req_tready,
-        hex_1_req_m_tdata       => hex_1_req_tdata,
-        hex_1_rd_s_tvalid       => hex_1_rd_tvalid,
-        hex_1_rd_s_tready       => hex_1_rd_tready,
-        hex_1_rd_s_tdata        => hex_1_rd_tdata,
+        m_axis_hex_1_req_tvalid     => hex_1_req_tvalid,
+        m_axis_hex_1_req_tready     => hex_1_req_tready,
+        m_axis_hex_1_req_tdata      => hex_1_req_tdata,
+        s_axis_hex_1_res_tvalid     => hex_1_rd_tvalid,
+        s_axis_hex_1_res_tready     => hex_1_rd_tready,
+        s_axis_hex_1_res_tdata      => hex_1_rd_tdata,
         -- uart
-        uart_req_m_tvalid       => uart_req_tvalid,
-        uart_req_m_tready       => uart_req_tready,
-        uart_req_m_tdata        => uart_req_tdata,
-        uart_rd_s_tvalid        => uart_rd_tvalid,
-        uart_rd_s_tready        => uart_rd_tready,
-        uart_rd_s_tdata         => uart_rd_tdata,
+        m_axis_uart_req_tvalid      => uart_req_tvalid,
+        m_axis_uart_req_tready      => uart_req_tready,
+        m_axis_uart_req_tdata       => uart_req_tdata,
+        s_axis_uart_res_tvalid      => uart_rd_tvalid,
+        s_axis_uart_res_tready      => uart_rd_tready,
+        s_axis_uart_res_tdata       => uart_rd_tdata,
+        -- uart
+        m_axis_mmu_req_tvalid       => open,
+        m_axis_mmu_req_tready       => '1',
+        m_axis_mmu_req_tdata        => open,
+        s_axis_mmu_res_tvalid       => '0',
+        s_axis_mmu_res_tready       => open,
+        s_axis_mmu_res_tdata        => x"0000",
         -- port_61
-        port_61_req_m_tvalid    => port_61_req_tvalid,
-        port_61_req_m_tready    => port_61_req_tready,
-        port_61_req_m_tdata     => port_61_req_tdata,
-        port_61_rd_s_tvalid     => port_61_rd_tvalid,
-        port_61_rd_s_tready     => port_61_rd_tready,
-        port_61_rd_s_tdata      => port_61_rd_tdata
+        m_axis_port_61_req_tvalid   => port_61_req_tvalid,
+        m_axis_port_61_req_tready   => port_61_req_tready,
+        m_axis_port_61_req_tdata    => port_61_req_tdata,
+        s_axis_port_61_res_tvalid   => port_61_rd_tvalid,
+        s_axis_port_61_res_tready   => port_61_rd_tready,
+        s_axis_port_61_res_tdata    => port_61_rd_tdata
     );
 
     -- Module pit_8254 instantiation
