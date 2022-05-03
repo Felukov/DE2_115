@@ -50,11 +50,15 @@ architecture rtl of on_chip_ram is
         );
     end component;
 
-    signal ram_re       : std_logic;
+    -- bram output
+    signal q_tvalid     : std_logic;
+    signal q_tdata      : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal q_tuser      : std_logic_vector(USER_WIDTH-1 downto 0);
+    -- bram embedded register
+    signal bram_tvalid  : std_logic;
+    signal bram_tdata   : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal bram_tuser   : std_logic_vector(USER_WIDTH-1 downto 0);
 
-    signal bram_valid   : std_logic;
-    signal bram_data    : std_logic_vector(DATA_WIDTH-1 downto 0);
-    signal bram_user    : std_logic_vector(USER_WIDTH-1 downto 0);
 begin
 
     on_chip_ram_core_inst : on_chip_ram_core generic map (
@@ -68,52 +72,37 @@ begin
         wdata           => wr_s_tdata,
         waddr           => wr_s_taddr,
         raddr           => rd_s_taddr,
-        q               => bram_data
+        q               => q_tdata
     );
 
     read_proc : process (clk) begin
         if rising_edge(clk) then
-
+            -- resettable
             if resetn = '0' then
-                bram_valid <= '0';
+                q_tvalid <= '0';
+                bram_tvalid <= '0';
             else
-                if (rd_s_tvalid = '1') then
-                    bram_valid <= '1';
-                else
-                    bram_valid <= '0';
-                end if;
+                q_tvalid <= rd_s_tvalid;
+                bram_tvalid <= q_tvalid;
             end if;
-
-            if (rd_s_tvalid = '1') then
-                bram_user <= rd_s_tuser;
-            end if;
-
+            -- without reset
+            q_tuser <= rd_s_tuser;
+            bram_tdata <= q_tdata;
+            bram_tuser <= q_tuser;
         end if;
     end process;
 
-    latch_proc : process (clk) begin
+    register_bram_out_proc : process (clk) begin
         if rising_edge(clk) then
-
+            -- resettable
             if resetn = '0' then
                 rd_m_tvalid <= '0';
             else
-
-                if (bram_valid = '1') then
-                    rd_m_tvalid <= '1';
-                else
-                    rd_m_tvalid <= '0';
-                end if;
-
+                rd_m_tvalid <= bram_tvalid;
             end if;
-
-            if (bram_valid = '1') then
-                rd_m_tdata <= bram_data;
-            end if;
-
-            if (bram_valid = '1') then
-                rd_m_tuser <= bram_user;
-            end if;
-
+            -- without reset
+            rd_m_tdata <= bram_tdata;
+            rd_m_tuser <= bram_tuser;
         end if;
     end process;
 
