@@ -36,20 +36,20 @@ entity cpu86 is
         clk                             : in std_logic;
         resetn                          : in std_logic;
 
-        mem_req_m_tvalid                : out std_logic;
-        mem_req_m_tready                : in std_logic;
-        mem_req_m_tdata                 : out std_logic_vector(63 downto 0);
+        m_axis_mem_req_tvalid           : out std_logic;
+        m_axis_mem_req_tready           : in std_logic;
+        m_axis_mem_req_tdata            : out std_logic_vector(63 downto 0);
 
-        mem_rd_s_tvalid                 : in std_logic;
-        mem_rd_s_tdata                  : in std_logic_vector(31 downto 0);
+        s_axis_mem_res_tvalid           : in std_logic;
+        s_axis_mem_res_tdata            : in std_logic_vector(31 downto 0);
 
-        io_req_m_tvalid                 : out std_logic;
-        io_req_m_tready                 : in std_logic;
-        io_req_m_tdata                  : out std_logic_vector(39 downto 0);
+        m_axis_io_req_tvalid            : out std_logic;
+        m_axis_io_req_tready            : in std_logic;
+        m_axis_io_req_tdata             : out std_logic_vector(39 downto 0);
 
-        io_rd_s_tvalid                  : in std_logic;
-        io_rd_s_tready                  : out std_logic;
-        io_rd_s_tdata                   : in std_logic_vector(15 downto 0);
+        s_axis_io_res_tvalid            : in std_logic;
+        s_axis_io_res_tready            : out std_logic;
+        s_axis_io_res_tdata             : in std_logic_vector(15 downto 0);
 
         interrupt_valid                 : in std_logic;
         interrupt_data                  : in std_logic_vector(7 downto 0);
@@ -256,12 +256,12 @@ begin
         clk                         => clk,
         resetn                      => resetn,
 
-        mem_req_m_tvalid            => mem_req_m_tvalid,
-        mem_req_m_tready            => mem_req_m_tready,
-        mem_req_m_tdata             => mem_req_m_tdata,
+        mem_req_m_tvalid            => m_axis_mem_req_tvalid,
+        mem_req_m_tready            => m_axis_mem_req_tready,
+        mem_req_m_tdata             => m_axis_mem_req_tdata,
 
-        mem_rd_s_tvalid             => mem_rd_s_tvalid,
-        mem_rd_s_tdata              => mem_rd_s_tdata,
+        mem_rd_s_tvalid             => s_axis_mem_res_tvalid,
+        mem_rd_s_tdata              => s_axis_mem_res_tdata,
 
         fetcher_mem_req_tvalid      => fetcher_mem_req_tvalid,
         fetcher_mem_req_tready      => fetcher_mem_req_tready,
@@ -374,13 +374,13 @@ begin
         mem_rd_s_tvalid             => exec_mem_res_tvalid,
         mem_rd_s_tdata              => exec_mem_res_tdata,
 
-        io_req_m_tvalid             => io_req_m_tvalid,
-        io_req_m_tready             => io_req_m_tready,
-        io_req_m_tdata              => io_req_m_tdata,
+        io_req_m_tvalid             => m_axis_io_req_tvalid,
+        io_req_m_tready             => m_axis_io_req_tready,
+        io_req_m_tdata              => m_axis_io_req_tdata,
 
-        io_rd_s_tvalid              => io_rd_s_tvalid,
-        io_rd_s_tready              => io_rd_s_tready,
-        io_rd_s_tdata               => io_rd_s_tdata,
+        io_rd_s_tvalid              => s_axis_io_res_tvalid,
+        io_rd_s_tready              => s_axis_io_res_tready,
+        io_rd_s_tdata               => s_axis_io_res_tdata,
 
         interrupt_valid             => interrupt_valid,
         interrupt_data              => interrupt_data,
