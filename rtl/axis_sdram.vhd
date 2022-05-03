@@ -1,3 +1,29 @@
+
+-- Copyright (C) 2022, Konstantin Felukov
+-- All rights reserved.
+--
+-- Redistribution and use in source and binary forms, with or without
+-- modification, are permitted provided that the following conditions are met:
+--
+-- * Redistributions of source code must retain the above copyright notice, this
+--   list of conditions and the following disclaimer.
+--
+-- * Redistributions in binary form must reproduce the above copyright notice,
+--   this list of conditions and the following disclaimer in the documentation
+--   and/or other materials provided with the distribution.
+--
+-- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+-- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+-- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+-- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+-- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+-- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+-- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -5,26 +31,25 @@ use ieee.numeric_std.all;
 
 entity axis_sdram is
     port (
-        clk             : in std_logic;
-        resetn          : in std_logic;
+        clk                 : in std_logic;
+        resetn              : in std_logic;
 
-        cmd_s_tvalid    : in std_logic;
-        cmd_s_tready    : out std_logic;
-        cmd_s_tdata     : in std_logic_vector (63 downto 0);
+        s_axis_req_tvalid   : in std_logic;
+        s_axis_req_tready   : out std_logic;
+        s_axis_req_tdata    : in std_logic_vector (63 downto 0);
 
-        rd_m_tvalid     : out std_logic;
-        rd_m_tdata      : out std_logic_vector(31 downto 0);
+        m_axis_res_tvalid   : out std_logic;
+        m_axis_res_tdata    : out std_logic_vector(31 downto 0);
 
-        DRAM_ADDR       : out std_logic_vector(12 downto 0);
-        DRAM_BA         : out std_logic_vector(1 downto 0);
-        DRAM_CAS_N      : out std_logic;
-        DRAM_CKE        : out std_logic;
-        DRAM_CS_N       : out std_logic;
-        DRAM_DQ         : inout std_logic_vector(31 downto 0);
-        DRAM_DQM        : out std_logic_vector(3 downto 0);
-        DRAM_RAS_N      : out std_logic;
-        DRAM_WE_N       : out std_logic
-
+        DRAM_ADDR           : out std_logic_vector(12 downto 0);
+        DRAM_BA             : out std_logic_vector(1 downto 0);
+        DRAM_CAS_N          : out std_logic;
+        DRAM_CKE            : out std_logic;
+        DRAM_CS_N           : out std_logic;
+        DRAM_DQ             : inout std_logic_vector(31 downto 0);
+        DRAM_DQM            : out std_logic_vector(3 downto 0);
+        DRAM_RAS_N          : out std_logic;
+        DRAM_WE_N           : out std_logic
     );
 end entity axis_sdram;
 
@@ -77,8 +102,8 @@ architecture rtl of axis_sdram is
 
 begin
 
+    -- sd ram controller instantiation
     sdram_ctrl_inst : sdram_ctrl port map (
-
         clk             => clk,
         reset_n         => resetn,
 
@@ -104,22 +129,25 @@ begin
         zs_we_n         => DRAM_WE_N
     );
 
-    req_tvalid <= cmd_s_tvalid;
-    cmd_s_tready <= req_tready;
-    req_tdata <= cmd_s_tdata(31 downto 0);
-    req_taddr <= cmd_s_tdata(56 downto 32);
-    req_tcmd <= cmd_s_tdata(57);
-    req_tmask <= cmd_s_tdata(61 downto 58);
+    -- i/o assigns
+    req_tvalid          <= s_axis_req_tvalid;
+    s_axis_req_tready   <= req_tready;
+    req_tdata           <= s_axis_req_tdata(31 downto 0);
+    req_taddr           <= s_axis_req_tdata(56 downto 32);
+    req_tcmd            <= s_axis_req_tdata(57);
+    req_tmask           <= s_axis_req_tdata(61 downto 58);
 
-    req_tready <= '1' when za_waitrequest = '0' else '0';
+    m_axis_res_tvalid   <= za_valid;
+    m_axis_res_tdata    <= za_data;
 
-    rd_m_tvalid <= za_valid;
-    rd_m_tdata <= za_data;
+    -- assigns
+    req_tready          <= '1' when za_waitrequest = '0' else '0';
 
-    az_wr_n <= '0' when req_tvalid = '1' and req_tcmd = '1' else '1';
-    az_rd_n <= '0' when req_tvalid = '1' and req_tcmd = '0' else '1';
-    az_be_n <= req_tmask;
-    az_addr <= req_taddr;
-    az_data <= req_tdata;
+    az_cs               <= '1';
+    az_wr_n             <= '0' when req_tvalid = '1' and req_tcmd = '1' else '1';
+    az_rd_n             <= '0' when req_tvalid = '1' and req_tcmd = '0' else '1';
+    az_be_n             <= req_tmask;
+    az_addr             <= req_taddr;
+    az_data             <= req_tdata;
 
 end architecture;
