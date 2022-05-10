@@ -11,7 +11,6 @@ entity video_vga_ctrl is
         m_axis_vid_tvalid   : out std_logic;
         m_axis_vid_tdata    : out std_logic_vector(7 downto 0);
 
-        VGA_CLK             : out std_logic;
         VGA_BLANK_N         : out std_logic;
         VGA_SYNC_N          : out std_logic;
         VGA_HS              : out std_logic;
@@ -47,20 +46,6 @@ architecture rtl of video_vga_ctrl is
     constant V_BP           : natural := 38; -- V back porch width
     constant V_MAX          : natural := 1066; --V total period (lines)
 
-    constant H_POL          : std_logic := '0';
-    constant V_POL          : std_logic := '0';
-
-    signal vga_en           : std_logic;
-
-    -- Horizontal and Vertical counters
-    -- signal h_cntr_reg       : std_logic_vector(11 downto 0) := (others =>'0');
-    -- signal v_cntr_reg       : std_logic_vector(11 downto 0) := (others =>'0');
-
-    type state_t is (FRONT_PORCH, SYNC_PULSE, BACK_PORCH, ACTIVE_VIDEO);
-
-    signal x_state : state_t;
-    signal y_state : state_t;
-
 	signal hcnt				: integer range 0 to 1687;
 	signal vcnt				: integer range 0 to 1065;
 	signal display_en		: std_logic;
@@ -69,8 +54,6 @@ architecture rtl of video_vga_ctrl is
 
 begin
     -- i/o assigns
-    VGA_CLK                      <= vga_en;
-
     VGA_HS                       <= hsync;
     VGA_VS                       <= vsync;
 
@@ -78,21 +61,9 @@ begin
     VGA_BLANK_N                  <= display_en;
 
     m_axis_vid_tvalid            <= display_en;
-    m_axis_vid_tdata(7 downto 1) <= (others => '0');
-    m_axis_vid_tdata(0)          <= vga_en;
+    m_axis_vid_tdata(7 downto 0) <= (others => '0');
 
-
-    -- vga output clock gen
-    process (vid_clk) begin
-        if (rising_edge(vid_clk)) then
-            if (vid_resetn = '0') then
-                vga_en <= '0';
-            else
-                vga_en <= '0'; --not vga_en;
-            end if;
-        end if;
-    end process;
-
+    -- forming sync pulses and display area
 	process(vid_clk) begin
 		if rising_edge(vid_clk) then
             if vid_resetn = '0' then
@@ -102,20 +73,17 @@ begin
                 vsync <= '0';
                 display_en <= '0';
             else
-
-                --if (vga_en = '1') then
-                    --counters
-                    if (hcnt = 1687) then
-                        hcnt <= 0;
-                        if (vcnt = 1065) then
-                            vcnt <= 0;
-                        else
-                            vcnt <= vcnt+1;
-                        end if;
+                -- counters
+                if (hcnt = 1687) then
+                    hcnt <= 0;
+                    if (vcnt = 1065) then
+                        vcnt <= 0;
                     else
-                        hcnt <= hcnt+1;
+                        vcnt <= vcnt+1;
                     end if;
-                --end if;
+                else
+                    hcnt <= hcnt+1;
+                end if;
 
                 --sync pulses
                 if (hcnt > 47 and hcnt < 160) then

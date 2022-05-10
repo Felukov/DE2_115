@@ -8,7 +8,6 @@ entity video_system is
         vid_clk                     : in std_logic;
         vid_resetn                  : in std_logic;
 
-        VGA_CLK                     : out std_logic;
         VGA_BLANK_N                 : out std_logic;
         VGA_SYNC_N                  : out std_logic;
         VGA_HS                      : out std_logic;
@@ -27,17 +26,16 @@ architecture rtl of video_system is
 
     component video_vga_ctrl is
         port (
-            vid_clk                 : in std_logic;
-            vid_resetn              : in std_logic;
+            vid_clk             : in std_logic;
+            vid_resetn          : in std_logic;
 
-            m_axis_vid_tvalid       : out std_logic;
-            m_axis_vid_tdata        : out std_logic_vector(7 downto 0);
+            m_axis_vid_tvalid   : out std_logic;
+            m_axis_vid_tdata    : out std_logic_vector(7 downto 0);
 
-            VGA_CLK                 : out std_logic;
-            VGA_BLANK_N             : out std_logic;
-            VGA_SYNC_N              : out std_logic;
-            VGA_HS                  : out std_logic;
-            VGA_VS                  : out std_logic
+            VGA_BLANK_N         : out std_logic;
+            VGA_SYNC_N          : out std_logic;
+            VGA_HS              : out std_logic;
+            VGA_VS              : out std_logic
         );
     end component video_vga_ctrl;
 
@@ -59,13 +57,11 @@ architecture rtl of video_system is
     signal vid_ctrl_tvalid      : std_logic;
     signal vid_ctrl_tdata       : std_logic_vector(7 downto 0);
 
-    signal vid_ctrl_clk         : std_logic;
     signal vid_ctrl_blank_n     : std_logic;
     signal vid_ctrl_sync_n      : std_logic;
     signal vid_ctrl_hs          : std_logic;
     signal vid_ctrl_vs          : std_logic;
 
-    signal d_vid_ctrl_clk       : std_logic;
     signal d_vid_ctrl_blank_n   : std_logic;
     signal d_vid_ctrl_sync_n    : std_logic;
     signal d_vid_ctrl_hs        : std_logic;
@@ -81,7 +77,6 @@ architecture rtl of video_system is
 begin
 
     -- i/o assigns
-    VGA_CLK                 <= d_vid_ctrl_clk;
     VGA_BLANK_N             <= d_vid_ctrl_blank_n;
     VGA_SYNC_N              <= d_vid_ctrl_sync_n;
     VGA_HS                  <= d_vid_ctrl_hs;
@@ -100,7 +95,6 @@ begin
         m_axis_vid_tvalid   => vid_ctrl_tvalid,
         m_axis_vid_tdata    => vid_ctrl_tdata,
 
-        VGA_CLK             => vid_ctrl_clk,
         VGA_BLANK_N         => vid_ctrl_blank_n,
         VGA_SYNC_N          => vid_ctrl_sync_n,
         VGA_HS              => vid_ctrl_hs,
@@ -126,13 +120,11 @@ begin
     process (vid_clk) begin
         if rising_edge(vid_clk) then
             if vid_resetn = '0' then
-                d_vid_ctrl_clk     <= '0';
                 d_vid_ctrl_blank_n <= '0';
                 d_vid_ctrl_sync_n  <= '0';
                 d_vid_ctrl_hs      <= '0';
                 d_vid_ctrl_vs      <= '0';
             else
-                d_vid_ctrl_clk     <= vid_ctrl_clk;
                 d_vid_ctrl_blank_n <= vid_ctrl_blank_n;
                 d_vid_ctrl_sync_n  <= vid_ctrl_sync_n;
                 d_vid_ctrl_hs      <= vid_ctrl_hs;
