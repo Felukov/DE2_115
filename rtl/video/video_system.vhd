@@ -145,7 +145,7 @@ begin
     process (vid_clk) begin
         if (rising_edge(vid_clk)) then
             if (vid_resetn = '0') then
-                x_cnt <= (others =>'0');
+                x_cnt <= (others => '0');
             else
                 if (vid_ctrl_tvalid = '1' and vid_ctrl_tdata(0) = '0') then
                     if (x_cnt = (H_MAX - 1)) then
@@ -162,7 +162,7 @@ begin
     process (vid_clk) begin
         if (rising_edge(vid_clk)) then
             if (vid_resetn = '0') then
-                y_cnt <= (others =>'0');
+                y_cnt <= (others => '0');
             else
                 if (vid_ctrl_tvalid = '1' and vid_ctrl_tdata(0) = '0') then
                     if ((x_cnt = (H_MAX - 1)) and (y_cnt = (V_MAX - 1))) then

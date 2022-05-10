@@ -88,7 +88,7 @@ begin
             if (vid_resetn = '0') then
                 vga_en <= '0';
             else
-                vga_en <= not vga_en;
+                vga_en <= '0'; --not vga_en;
             end if;
         end if;
     end process;
@@ -103,7 +103,7 @@ begin
                 display_en <= '0';
             else
 
-                if (vga_en = '1') then
+                --if (vga_en = '1') then
                     --counters
                     if (hcnt = 1687) then
                         hcnt <= 0;
@@ -115,7 +115,7 @@ begin
                     else
                         hcnt <= hcnt+1;
                     end if;
-                end if;
+                --end if;
 
                 --sync pulses
                 if (hcnt > 47 and hcnt < 160) then

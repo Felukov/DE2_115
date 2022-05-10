@@ -69,24 +69,34 @@ begin
                 dout_tvalid <= din_tvalid;
 
                 if (din_tvalid = '1' and din_en = '0') then
-                    if (din_y = x"069") then
+                    if (din_y = x"06F") then
                         blank_mask <= (others => '1');
-                    elsif (din_y = x"38F") then
+                    elsif (din_y = x"390") then
                         blank_mask <= (others => '0');
                     end if;
                 end if;
 
                 if (din_tvalid = '1') then
-                    if (din_x = x"000" or din_x = x"4FF" or din_y = x"070" or din_y=x"38F") then
+                    if ((din_x = x"000" and din_y = x"000") or (din_x = x"4FF" and din_y = x"000") or
+                        (din_x = x"000" and din_y = x"3FF") or (din_x = x"4FF" and din_y = x"3FF"))
+                    then
+                        -- calibration points
                         dout_r <= x"FF";
                         dout_g <= x"FF";
                         dout_b <= x"FF";
+                    elsif (din_x = x"000" or din_x = x"4FF" or din_y = x"070" or din_y=x"38F") then
+                        -- border
+                        dout_r <= comb_and(x"FF", blank_mask);
+                        dout_g <= comb_and(x"FF", blank_mask);
+                        dout_b <= comb_and(x"FF", blank_mask);
                     else
-                        dout_r <= x"00";
-                        dout_g <= x"00";
-                        dout_b <= x"FF";
+                        -- main
+                        dout_r <= comb_and(x"00", blank_mask);
+                        dout_g <= comb_and(x"00", blank_mask);
+                        dout_b <= comb_and(x"FF", blank_mask);
                     end if;
                 else
+                    -- dark area
                     dout_r <= (others => '0');
                     dout_g <= (others => '0');
                     dout_b <= (others => '0');
