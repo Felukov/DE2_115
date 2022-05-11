@@ -92,7 +92,16 @@ architecture rtl of video_mda_fb is
     signal frame_2x_tready          : std_logic;
     signal frame_2x_tdata           : std_logic_vector(31 downto 0);
     signal frame_2x_tuser           : std_logic_vector(7 downto 0);
+    signal frame_2x_tready_mask     : std_logic;
 
+    function comb_and (a, b : std_logic_vector) return std_logic_vector is
+        variable o : std_logic_vector(a'range);
+    begin
+        for i in o'range loop
+            o := a and b;
+        end loop;
+        return o;
+    end function;
 begin
     -- i/o assigns
     din_tvalid          <= s_axis_vid_tvalid;
@@ -153,32 +162,25 @@ begin
     dout_tdata(15 downto  8) <= dout_g;
     dout_tdata( 7 downto  0) <= dout_b;
 
-    frame_2x_tready <= '1' when dout_tvalid = '1' and blank_mask(0) = '1' else '0';
+    frame_2x_tready <= '1' when dout_tvalid = '1' and frame_2x_tready_mask = '1' else '0';
 
-    -- process (vid_clk) begin
-    --     if rising_edge(vid_clk) then
-    --         if vid_resetn = '0' then
-    --             frame_2x_tready_mask <= '0';
-    --         else
-    --             if (frame_2x_tvalid = '1' and din_tvalid = '1' and din_y = x"06F" and din_x = x"4FF") then
-    --                 frame_2x_tready_mask <= '1';
-    --             elsif (din_tvalid = '1' and din_y=x"38F" and din_x = x"4FF") then
-    --                 frame_2x_tready_mask <= '0';
-    --             end if;
-    --         end if;
-    --     end if;
-    -- end process;
+    process (vid_clk) begin
+        if rising_edge(vid_clk) then
+            if vid_resetn = '0' then
+                frame_2x_tready_mask <= '0';
+            else
+                if (din_tvalid = '1') then
+                    if (din_y = x"070") then
+                        frame_2x_tready_mask <= '1';
+                    elsif (din_y = x"390") then
+                        frame_2x_tready_mask <= '0';
+                    end if;
+                end if;
+            end if;
+        end if;
+    end process;
 
-    process (vid_clk)
-        function comb_and (a, b : std_logic_vector) return std_logic_vector is
-            variable o : std_logic_vector(a'range);
-        begin
-            for i in o'range loop
-                o := a and b;
-            end loop;
-            return o;
-        end function;
-    begin
+    process (vid_clk) begin
         if rising_edge(vid_clk) then
             if vid_resetn = '0' then
                 dout_tvalid <= '0';
@@ -189,7 +191,7 @@ begin
             else
                 dout_tvalid <= din_tvalid;
 
-                if (din_tvalid = '1') then
+                if (din_tvalid = '0') then
                     if (din_y = x"070") then
                         blank_mask <= (others => '1');
                     elsif (din_y = x"390") then
