@@ -19,22 +19,83 @@ entity video_mda_fb is
 end entity video_mda_fb;
 
 architecture rtl of video_mda_fb is
-    signal din_tvalid       : std_logic;
-    signal din_en           : std_logic;
-    signal din_x            : std_logic_vector(11 downto 0);
-    signal din_y            : std_logic_vector(11 downto 0);
-    signal dout_tvalid      : std_logic;
-    signal dout_tdata       : std_logic_vector(31 downto 0);
-    signal dout_tuser       : std_logic_vector(31 downto 0);
-    signal dout_r           : std_logic_vector(7 downto 0);
-    signal dout_g           : std_logic_vector(7 downto 0);
-    signal dout_b           : std_logic_vector(7 downto 0);
-    signal blank_mask       : std_logic_vector(7 downto 0);
-    signal border           : std_logic;
+
+    component video_mda_fb_frame_gen is
+        port (
+            vid_clk                 : in std_logic;
+            vid_resetn              : in std_logic;
+
+            m_axis_frame_tvalid     : out std_logic;
+            m_axis_frame_tready     : in std_logic;
+            m_axis_frame_tdata      : out std_logic_vector(31 downto 0);
+            m_axis_frame_tuser      : out std_logic_vector(7 downto 0)
+        );
+    end component video_mda_fb_frame_gen;
+
+    component video_mda_fb_scaler is
+        port (
+            vid_clk                 : in std_logic;
+            vid_resetn              : in std_logic;
+
+            s_axis_frame_tvalid     : in std_logic;
+            s_axis_frame_tready     : out std_logic;
+            s_axis_frame_tdata      : in std_logic_vector(31 downto 0);
+            s_axis_frame_tuser      : in std_logic_vector(7 downto 0);
+
+            m_axis_frame_tvalid     : out std_logic;
+            m_axis_frame_tready     : in std_logic;
+            m_axis_frame_tdata      : out std_logic_vector(31 downto 0);
+            m_axis_frame_tuser      : out std_logic_vector(7 downto 0)
+        );
+    end component video_mda_fb_scaler;
+
+    component axis_reg is
+        generic (
+            DATA_WIDTH              : natural := 32
+        );
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+            in_s_tvalid             : in std_logic;
+            in_s_tready             : out std_logic;
+            in_s_tdata              : in std_logic_vector (DATA_WIDTH-1 downto 0);
+            out_m_tvalid            : out std_logic;
+            out_m_tready            : in std_logic;
+            out_m_tdata             : out std_logic_vector (DATA_WIDTH-1 downto 0)
+        );
+    end component;
+
+    signal din_tvalid               : std_logic;
+    signal din_x                    : std_logic_vector(11 downto 0);
+    signal din_y                    : std_logic_vector(11 downto 0);
+    signal dout_tvalid              : std_logic;
+    signal dout_tdata               : std_logic_vector(31 downto 0);
+    signal dout_tuser               : std_logic_vector(31 downto 0);
+    signal dout_r                   : std_logic_vector(7 downto 0);
+    signal dout_g                   : std_logic_vector(7 downto 0);
+    signal dout_b                   : std_logic_vector(7 downto 0);
+    signal blank_mask               : std_logic_vector(7 downto 0);
+    signal border                   : std_logic;
+
+    signal src_frame_tvalid         : std_logic;
+    signal src_frame_tready         : std_logic;
+    signal src_frame_tdata          : std_logic_vector(31 downto 0);
+    signal src_frame_tuser          : std_logic_vector(7 downto 0);
+
+    signal buf_frame_s_tdata        : std_logic_vector(39 downto 0);
+
+    signal buf_frame_m_tvalid       : std_logic;
+    signal buf_frame_m_tready       : std_logic;
+    signal buf_frame_m_tdata        : std_logic_vector(39 downto 0);
+
+    signal frame_2x_tvalid          : std_logic;
+    signal frame_2x_tready          : std_logic;
+    signal frame_2x_tdata           : std_logic_vector(31 downto 0);
+    signal frame_2x_tuser           : std_logic_vector(7 downto 0);
+
 begin
     -- i/o assigns
     din_tvalid          <= s_axis_vid_tvalid;
-    din_en              <= s_axis_vid_tuser(0);
     din_x               <= s_axis_vid_tdata(11 downto 0);
     din_y               <= s_axis_vid_tdata(27 downto 16);
 
@@ -42,11 +103,71 @@ begin
     m_axis_vid_tdata    <= dout_tdata;
     m_axis_vid_tuser    <= dout_tuser;
 
+
+    video_mda_fb_frame_gen_inst : video_mda_fb_frame_gen port map (
+        vid_clk             => vid_clk,
+        vid_resetn          => vid_resetn,
+
+        m_axis_frame_tvalid => src_frame_tvalid,
+        m_axis_frame_tready => src_frame_tready,
+        m_axis_frame_tdata  => src_frame_tdata,
+        m_axis_frame_tuser  => src_frame_tuser
+    );
+
+    -- module axis_reg instantiation
+    axis_reg_data_inst : axis_reg generic map (
+        DATA_WIDTH          => 40
+    ) port map (
+        clk                 => vid_clk,
+        resetn              => vid_resetn,
+
+        in_s_tvalid         => src_frame_tvalid,
+        in_s_tready         => src_frame_tready,
+        in_s_tdata          => buf_frame_s_tdata,
+
+        out_m_tvalid        => buf_frame_m_tvalid,
+        out_m_tready        => buf_frame_m_tready,
+        out_m_tdata         => buf_frame_m_tdata
+    );
+
+    video_mda_fb_scaler_inst : video_mda_fb_scaler port map (
+        vid_clk             => vid_clk,
+        vid_resetn          => vid_resetn,
+
+        s_axis_frame_tvalid => buf_frame_m_tvalid,
+        s_axis_frame_tready => buf_frame_m_tready,
+        s_axis_frame_tdata  => buf_frame_m_tdata(31 downto  0),
+        s_axis_frame_tuser  => buf_frame_m_tdata(39 downto 32),
+
+        m_axis_frame_tvalid => frame_2x_tvalid,
+        m_axis_frame_tready => frame_2x_tready,
+        m_axis_frame_tdata  => frame_2x_tdata,
+        m_axis_frame_tuser  => frame_2x_tuser
+    );
+
     -- assigns
+    buf_frame_s_tdata <= src_frame_tuser & src_frame_tdata;
+
     dout_tdata(31 downto 24) <= (others => '0');
     dout_tdata(23 downto 16) <= dout_r;
     dout_tdata(15 downto  8) <= dout_g;
     dout_tdata( 7 downto  0) <= dout_b;
+
+    frame_2x_tready <= '1' when dout_tvalid = '1' and blank_mask(0) = '1' else '0';
+
+    -- process (vid_clk) begin
+    --     if rising_edge(vid_clk) then
+    --         if vid_resetn = '0' then
+    --             frame_2x_tready_mask <= '0';
+    --         else
+    --             if (frame_2x_tvalid = '1' and din_tvalid = '1' and din_y = x"06F" and din_x = x"4FF") then
+    --                 frame_2x_tready_mask <= '1';
+    --             elsif (din_tvalid = '1' and din_y=x"38F" and din_x = x"4FF") then
+    --                 frame_2x_tready_mask <= '0';
+    --             end if;
+    --         end if;
+    --     end if;
+    -- end process;
 
     process (vid_clk)
         function comb_and (a, b : std_logic_vector) return std_logic_vector is
@@ -68,8 +189,8 @@ begin
             else
                 dout_tvalid <= din_tvalid;
 
-                if (din_tvalid = '1' and din_en = '0') then
-                    if (din_y = x"06F") then
+                if (din_tvalid = '1') then
+                    if (din_y = x"070") then
                         blank_mask <= (others => '1');
                     elsif (din_y = x"390") then
                         blank_mask <= (others => '0');
@@ -93,7 +214,7 @@ begin
                         -- main
                         dout_r <= comb_and(x"00", blank_mask);
                         dout_g <= comb_and(x"00", blank_mask);
-                        dout_b <= comb_and(x"FF", blank_mask);
+                        dout_b <= comb_and(frame_2x_tdata(7 downto 0), blank_mask);
                     end if;
                 else
                     -- dark area

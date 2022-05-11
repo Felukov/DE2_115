@@ -25,27 +25,30 @@
  */
 
 
-module video_mda_fb_font_rom #(
-    parameter integer                           ADDR_WIDTH = 11,
-    parameter integer                           DATA_WIDTH = 8
+module video_mda_fb_frame_gen_ram #(
+    parameter integer                           ADDR_WIDTH = 6,
+    parameter integer                           DATA_WIDTH = 16
 )(
     input  logic                                clk,
+    input  logic [ADDR_WIDTH-1:0]               waddr,
+    input  logic                                we,
+    input  logic [DATA_WIDTH-1:0]               wdata,
     input  logic                                re,
     input  logic [ADDR_WIDTH-1:0]               raddr,
     output logic [DATA_WIDTH-1:0]               q
 );
     localparam integer                          WORDS = 1 << ADDR_WIDTH;
 
-    logic [DATA_WIDTH-1:0]                      mem[0:WORDS-1] /* synthesis ramstyle = "no_rw_check" */;
+    logic [DATA_WIDTH-1:0]                      ram[0:WORDS-1] /* synthesis ramstyle = "no_rw_check" */;
 
     always_ff @(posedge clk) begin
-        if (re == 1'b1) begin
-            q <= mem[raddr];
+        if (we == 1'b1) begin
+            ram[waddr] <= wdata;
         end
-    end
 
-    initial begin
-        $readmemh("C:/Projects/DE2_115/rtl/video/vgafont.vmem", mem, 0, WORDS-1);
+        if (re == 1'b1) begin
+            q <= ram[raddr];
+        end
     end
 
 endmodule
