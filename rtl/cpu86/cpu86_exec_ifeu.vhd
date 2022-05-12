@@ -1602,7 +1602,7 @@ begin
                 when BRA_JGE => micro_tdata.jump_cond <= j_jge;
                 when BRA_JLE => micro_tdata.jump_cond <= j_jle;
                 when BRA_JG  => micro_tdata.jump_cond <= j_jg;
-                when others => null;
+                when others  => null;
             end case;
 
             micro_tdata.jump_imm <= '1';

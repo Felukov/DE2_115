@@ -371,9 +371,9 @@ architecture rtl of cpu86_exec is
             dcache_s_tvalid         : in std_logic;
             dcache_s_tdata          : in std_logic_vector(15 downto 0);
 
-            mem_req_m_tvalid        : out std_logic;
-            mem_req_m_tready        : in std_logic;
-            mem_req_m_tdata         : out std_logic_vector(63 downto 0);
+            m_axis_mem_req_tvalid   : out std_logic;
+            m_axis_mem_req_tready   : in std_logic;
+            m_axis_mem_req_tdata    : out std_logic_vector(63 downto 0);
 
             mem_rd_s_tvalid         : in std_logic;
             mem_rd_s_tdata          : in std_logic_vector(31 downto 0);
@@ -1196,9 +1196,9 @@ begin
         dcache_s_tvalid         => dcache_thit,
         dcache_s_tdata          => dcache_tcache,
 
-        mem_req_m_tvalid        => mem_req_m_tvalid,
-        mem_req_m_tready        => mem_req_m_tready,
-        mem_req_m_tdata         => mem_req_m_tdata,
+        m_axis_mem_req_tvalid   => mem_req_m_tvalid,
+        m_axis_mem_req_tready   => mem_req_m_tready,
+        m_axis_mem_req_tdata    => mem_req_m_tdata,
 
         mem_rd_s_tvalid         => mem_rd_s_tvalid,
         mem_rd_s_tdata          => mem_rd_s_tdata,

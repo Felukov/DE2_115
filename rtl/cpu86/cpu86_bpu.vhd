@@ -57,6 +57,9 @@ end entity cpu86_bpu;
 
 architecture rtl of cpu86_bpu is
 
+    constant BPU_ITEM_CNT           : natural := 8;
+    constant BPU_ITEM_IDX_WIDTH     : integer := integer(ceil(log2(real(BPU_ITEM_CNT))));
+
     component axis_reg is
         generic (
             DATA_WIDTH              : natural := 32
@@ -72,10 +75,6 @@ architecture rtl of cpu86_bpu is
             out_m_tdata             : out std_logic_vector (DATA_WIDTH-1 downto 0)
         );
     end component;
-
-    constant BPU_ITEM_CNT           : natural := 8;
-    constant BPU_ITEM_IDX_WIDTH     : integer := integer(ceil(log2(real(BPU_ITEM_CNT))));
-
 
     type bpu_item_t is record
         valid                       : std_logic;
