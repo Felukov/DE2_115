@@ -46,9 +46,9 @@ entity cpu86_exec_lsu is
         dcache_s_tvalid         : in std_logic;
         dcache_s_tdata          : in std_logic_vector(15 downto 0);
 
-        mem_req_m_tvalid        : out std_logic;
-        mem_req_m_tready        : in std_logic;
-        mem_req_m_tdata         : out std_logic_vector(63 downto 0);
+        m_axis_mem_req_tvalid   : out std_logic;
+        m_axis_mem_req_tready   : in std_logic;
+        m_axis_mem_req_tdata    : out std_logic_vector(63 downto 0);
 
         mem_rd_s_tvalid         : in std_logic;
         mem_rd_s_tdata          : in std_logic_vector(31 downto 0);
@@ -60,6 +60,22 @@ entity cpu86_exec_lsu is
 end entity cpu86_exec_lsu;
 
 architecture rtl of cpu86_exec_lsu is
+
+    component axis_reg is
+        generic (
+            DATA_WIDTH              : natural := 32
+        );
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+            in_s_tvalid             : in std_logic;
+            in_s_tready             : out std_logic;
+            in_s_tdata              : in std_logic_vector (DATA_WIDTH-1 downto 0);
+            out_m_tvalid            : out std_logic;
+            out_m_tready            : in std_logic;
+            out_m_tdata             : out std_logic_vector (DATA_WIDTH-1 downto 0)
+        );
+    end component;
 
     component axis_fifo_er is
         generic (
@@ -120,11 +136,14 @@ architecture rtl of cpu86_exec_lsu is
     signal req_buf_tdata        : std_logic_vector(7 downto 0);
     signal req_buf_tag          : std_logic_vector(3 downto 0);
 
-    signal mem_req_tlast        : std_logic;
-    signal mem_req_tcmd         : std_logic;
-    signal mem_req_taddr        : std_logic_vector(17 downto 0);
-    signal mem_req_tmask        : std_logic_vector(3 downto 0);
-    signal mem_req_tdata        : std_logic_vector(31 downto 0) := (others => '0');
+    signal mem_req_tvalid       : std_logic;
+    signal mem_req_tready       : std_logic;
+    signal mem_req_tdata        : std_logic_vector(63 downto 0);
+    signal mem_req_last         : std_logic;
+    signal mem_req_cmd          : std_logic;
+    signal mem_req_addr         : std_logic_vector(17 downto 0);
+    signal mem_req_mask         : std_logic_vector(3 downto 0);
+    signal mem_req_wdata        : std_logic_vector(31 downto 0) := (others => '0');
 
     signal add_tvalid           : std_logic;
     signal add_tready           : std_logic;
@@ -198,6 +217,22 @@ begin
         m_axis_dout_tdata       => fifo_1_m_tdata
     );
 
+    -- module axis_reg instantiation
+    axis_reg_mem_req_inst : axis_reg generic map (
+        DATA_WIDTH              => 64
+    ) port map (
+        clk                     => clk,
+        resetn                  => resetn,
+
+        in_s_tvalid             => mem_req_tvalid,
+        in_s_tready             => mem_req_tready,
+        in_s_tdata              => mem_req_tdata,
+
+        out_m_tvalid            => m_axis_mem_req_tvalid,
+        out_m_tready            => m_axis_mem_req_tready,
+        out_m_tdata             => m_axis_mem_req_tdata
+    );
+
     -- assigns
     lsu_rd_m_tvalid  <= fifo_1_m_tvalid;
     fifo_1_m_tready  <= lsu_rd_m_tready;
@@ -206,16 +241,16 @@ begin
     lsu_req_tvalid   <= lsu_req_s_tvalid;
     lsu_req_s_tready <= lsu_req_tready;
 
-    mem_req_m_tdata(31 downto 0)  <= mem_req_tdata;
-    mem_req_m_tdata(56 downto 32) <= "0000000" & mem_req_taddr;
-    mem_req_m_tdata(57)           <= mem_req_tcmd;
-    mem_req_m_tdata(61 downto 58) <= mem_req_tmask;
-    mem_req_m_tdata(63 downto 62) <= "00";
+    mem_req_tdata(31 downto 0)  <= mem_req_wdata;
+    mem_req_tdata(56 downto 32) <= "0000000" & mem_req_addr;
+    mem_req_tdata(57)           <= mem_req_cmd;
+    mem_req_tdata(61 downto 58) <= mem_req_mask;
+    mem_req_tdata(63 downto 62) <= "00";
 
     add_tvalid      <= '1' when lsu_req_s_tvalid = '1' and lsu_req_s_tready = '1' and lsu_req_s_tcmd = '0' else '0';
 
-    lsu_req_tready  <= '1' when req_buf_tvalid = '0' and (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) and add_tready = '1' else '0';
-    req_buf_tready  <= '1' when (mem_req_m_tvalid = '0' or (mem_req_m_tvalid = '1' and mem_req_m_tready = '1')) else '0';
+    lsu_req_tready  <= '1' when req_buf_tvalid = '0' and (mem_req_tvalid = '0' or (mem_req_tvalid = '1' and mem_req_tready = '1')) and add_tready = '1' else '0';
+    req_buf_tready  <= '1' when (mem_req_tvalid = '0' or (mem_req_tvalid = '1' and mem_req_tready = '1')) else '0';
     fifo_0_m_tready <= mem_rd_s_tvalid;
 
     fifo_0_s_tvalid <= '1' when (req_buf_tvalid = '1' and req_buf_tready = '1') or
@@ -255,73 +290,73 @@ begin
         if rising_edge(clk) then
             -- Resettable
             if resetn = '0' then
-                mem_req_m_tvalid <= '0';
-                mem_req_tlast <= '0';
+                mem_req_tvalid <= '0';
+                mem_req_last <= '0';
             else
                 if (req_buf_tvalid = '1' and req_buf_tready = '1') then
-                    mem_req_m_tvalid <= '1';
+                    mem_req_tvalid <= '1';
                 elsif (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
                     if (dcache_s_tvalid = '0' or lsu_req_s_tcmd = '1') then
-                        mem_req_m_tvalid <= '1';
+                        mem_req_tvalid <= '1';
                     else
-                        mem_req_m_tvalid <= '0';
+                        mem_req_tvalid <= '0';
                     end if;
-                elsif (mem_req_m_tready = '1') then
-                    mem_req_m_tvalid <= '0';
+                elsif (mem_req_tready = '1') then
+                    mem_req_tvalid <= '0';
                 end if;
 
                 if (req_buf_tvalid = '1' and req_buf_tready = '1') then
-                    mem_req_tlast <= '1';
+                    mem_req_last <= '1';
                 elsif (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
                     if (lsu_req_s_taddr(1 downto 0) = "11" and lsu_req_s_twidth = '1') then
-                        mem_req_tlast <= '0';
+                        mem_req_last <= '0';
                     else
-                        mem_req_tlast <= '1';
+                        mem_req_last <= '1';
                     end if;
                 end if;
             end if;
             -- Without reset
             if (req_buf_tvalid = '1' and req_buf_tready = '1') then
-                mem_req_tcmd <= req_buf_tcmd;
-                mem_req_taddr <= req_buf_taddr;
-                mem_req_tmask <= "0111";
-                mem_req_tdata(31 downto 24) <= req_buf_tdata;
+                mem_req_cmd <= req_buf_tcmd;
+                mem_req_addr <= req_buf_taddr;
+                mem_req_mask <= "0111";
+                mem_req_wdata(31 downto 24) <= req_buf_tdata;
             elsif (lsu_req_tvalid = '1' and lsu_req_tready = '1') then
-                mem_req_tcmd <= lsu_req_s_tcmd;
-                mem_req_taddr <= lsu_req_s_taddr(19 downto 2);
+                mem_req_cmd <= lsu_req_s_tcmd;
+                mem_req_addr <= lsu_req_s_taddr(19 downto 2);
 
                 if (lsu_req_s_twidth = '0') then
                     case lsu_req_s_taddr(1 downto 0) is
-                        when "00" => mem_req_tmask <= "0111";
-                        when "01" => mem_req_tmask <= "1011";
-                        when "10" => mem_req_tmask <= "1101";
-                        when "11" => mem_req_tmask <= "1110";
+                        when "00" => mem_req_mask <= "0111";
+                        when "01" => mem_req_mask <= "1011";
+                        when "10" => mem_req_mask <= "1101";
+                        when "11" => mem_req_mask <= "1110";
                         when others => null;
                     end case;
                 else
                     case lsu_req_s_taddr(1 downto 0) is
-                        when "00" => mem_req_tmask <= "0011";
-                        when "01" => mem_req_tmask <= "1001";
-                        when "10" => mem_req_tmask <= "1100";
-                        when "11" => mem_req_tmask <= "1110";
+                        when "00" => mem_req_mask <= "0011";
+                        when "01" => mem_req_mask <= "1001";
+                        when "10" => mem_req_mask <= "1100";
+                        when "11" => mem_req_mask <= "1110";
                         when others => null;
                     end case;
                 end if;
 
                 if (lsu_req_s_twidth = '0') then
                     case lsu_req_s_taddr(1 downto 0) is
-                        when "00" => mem_req_tdata(31 downto 24) <= lsu_req_s_tdata(7 downto 0);
-                        when "01" => mem_req_tdata(23 downto 16) <= lsu_req_s_tdata(7 downto 0);
-                        when "10" => mem_req_tdata(15 downto  8) <= lsu_req_s_tdata(7 downto 0);
-                        when "11" => mem_req_tdata( 7 downto  0) <= lsu_req_s_tdata(7 downto 0);
+                        when "00" => mem_req_wdata(31 downto 24) <= lsu_req_s_tdata(7 downto 0);
+                        when "01" => mem_req_wdata(23 downto 16) <= lsu_req_s_tdata(7 downto 0);
+                        when "10" => mem_req_wdata(15 downto  8) <= lsu_req_s_tdata(7 downto 0);
+                        when "11" => mem_req_wdata( 7 downto  0) <= lsu_req_s_tdata(7 downto 0);
                         when others => null;
                     end case;
                 else
                     case lsu_req_s_taddr(1 downto 0) is
-                        when "00" => mem_req_tdata(31 downto 16) <= lsu_req_s_tdata(7 downto 0) & lsu_req_s_tdata(15 downto 8);
-                        when "01" => mem_req_tdata(23 downto  8) <= lsu_req_s_tdata(7 downto 0) & lsu_req_s_tdata(15 downto 8);
-                        when "10" => mem_req_tdata(15 downto  0) <= lsu_req_s_tdata(7 downto 0) & lsu_req_s_tdata(15 downto 8);
-                        when "11" => mem_req_tdata( 7 downto  0) <= lsu_req_s_tdata(7 downto 0);
+                        when "00" => mem_req_wdata(31 downto 16) <= lsu_req_s_tdata(7 downto 0) & lsu_req_s_tdata(15 downto 8);
+                        when "01" => mem_req_wdata(23 downto  8) <= lsu_req_s_tdata(7 downto 0) & lsu_req_s_tdata(15 downto 8);
+                        when "10" => mem_req_wdata(15 downto  0) <= lsu_req_s_tdata(7 downto 0) & lsu_req_s_tdata(15 downto 8);
+                        when "11" => mem_req_wdata( 7 downto  0) <= lsu_req_s_tdata(7 downto 0);
                         when others => null;
                     end case;
                 end if;
