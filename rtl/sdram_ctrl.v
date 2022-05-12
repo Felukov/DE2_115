@@ -492,10 +492,11 @@ module sdram_ctrl (
     assign rd_strobe = m_cmd[2 : 0] == 3'h5;
     //Track RD Req's based on cas_latency w/shift reg
     always @(posedge clk) begin
-        if (reset_n == 0)
+        if (reset_n == 0) begin
             rd_valid <= {3{1'b0}};
-        else
+        end else begin
             rd_valid <= (rd_valid << 1) | { {2{1'b0}}, rd_strobe };
+        end
     end
 
 
