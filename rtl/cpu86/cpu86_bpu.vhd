@@ -113,7 +113,7 @@ architecture rtl of cpu86_bpu is
     signal bpu_wr_idx               : natural range 0 to BPU_ITEM_CNT-1;
     signal bpu_rd_idx               : natural range 0 to BPU_ITEM_CNT-1;
     signal bpu_item_wr_hit          : std_logic_vector(BPU_ITEM_CNT-1 downto 0);
-    signal bpu_item_wr_hit_any      : std_logic;
+    --signal bpu_item_wr_hit_any      : std_logic;
 
     signal bpu_item_rd_hit          : std_logic_vector(BPU_ITEM_CNT-1 downto 0);
     signal bpu_item_rd_hit_idx      : std_logic_vector(BPU_ITEM_IDX_WIDTH-1 downto 0);  --natural range 0 to BPU_ITEM_CNT-1;
@@ -343,7 +343,7 @@ begin
         bpu_item_rd_hit_pos(4) or bpu_item_rd_hit_pos(5) or
         bpu_item_rd_hit_pos(6) or bpu_item_rd_hit_pos(7);
 
-    bpu_item_wr_hit_any <= '1' when bpu_item_wr_hit /= "00000000" else '0';
+    --bpu_item_wr_hit_any <= '1' when bpu_item_wr_hit /= "00000000" else '0';
 
     d_bpu_item_rd_hit_any <= '1' when d_bpu_item_rd_hit /= "00000000" else '0';
 
@@ -357,7 +357,7 @@ begin
             else
 
                 for i in 0 to BPU_ITEM_CNT-1 loop
-                    if (jump_s_tvalid = '1' and jump_s_tdata.bypass = '0' and ((bpu_item_wr_hit(i) = '1') or (bpu_item_wr_hit_any = '0' and i = next_free_bpu_item_idx))) then
+                    if (jump_s_tvalid = '1' and jump_s_tdata.bypass = '0' and ((bpu_item_wr_hit(i) = '1') or (jump_s_tdata.first = '1' and i = next_free_bpu_item_idx))) then
                         bpu_items(i).valid <= '1';
                     end if;
                 end loop;
@@ -366,7 +366,7 @@ begin
 
             -- Without reset
             for i in 0 to BPU_ITEM_CNT-1 loop
-                if (jump_s_tvalid = '1' and jump_s_tdata.bypass = '0' and ((bpu_item_wr_hit(i) = '1') or (bpu_item_wr_hit_any = '0' and i = next_free_bpu_item_idx))) then
+                if (jump_s_tvalid = '1' and jump_s_tdata.bypass = '0' and ((bpu_item_wr_hit(i) = '1') or (jump_s_tdata.first = '1' and i = next_free_bpu_item_idx))) then
                     bpu_items(i).inst_cs <= jump_s_tdata.inst_cs;
                     bpu_items(i).inst_ip <= jump_s_tdata.inst_ip;
 
@@ -401,7 +401,7 @@ begin
             if resetn = '0' then
                 next_free_bpu_item_idx <= 0;
             else
-                if (jump_s_tvalid = '1' and jump_s_tdata.bypass = '0' and bpu_item_wr_hit_any = '0') then
+                if (jump_s_tvalid = '1' and jump_s_tdata.bypass = '0' and jump_s_tdata.first = '1') then
                     next_free_bpu_item_idx <= (next_free_bpu_item_idx + 1) mod BPU_ITEM_CNT;
                 end if;
             end if;
