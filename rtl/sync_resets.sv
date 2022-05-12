@@ -33,42 +33,70 @@ module sync_resets (
     output logic    sync_resetn_b
 );
 
-    (* keep = "true" *) logic [2:0]     cdc_resetn_b = '{default:'0};
-    (* keep = "true" *) logic [2:0]     cdc_resetn_a = '{default:'0};
+    (* useioff = 0 *)
+    (* preserve *)
+    logic [2:0]     clk_a_cdc_resetn_a = '{default:'0};
 
-    (* keep = "true" *) logic           sync_resetn_a_ff = 1'b0;
-    (* keep = "true" *) logic           sync_resetn_b_ff = 1'b0;
+    (* useioff = 0 *)
+    (* preserve *)
+    logic [2:0]     clk_a_cdc_resetn_b = '{default:'0};
+
+    (* useioff = 0 *)
+    (* preserve *)
+    logic [2:0]     clk_b_cdc_resetn_a = '{default:'0};
+
+    (* useioff = 0 *)
+    (* preserve *)
+    logic [2:0]     clk_b_cdc_resetn_b = '{default:'0};
+
+    logic           sync_resetn_a_ff = 1'b0;
+    logic           sync_resetn_b_ff = 1'b0;
 
     assign sync_resetn_a = sync_resetn_a_ff;
     assign sync_resetn_b = sync_resetn_b_ff;
 
-    always_ff @(posedge clk_a) begin
-        // resettable
+    always_ff @(posedge clk_a, negedge resetn_a) begin
         if (resetn_a == 1'b0) begin
-            sync_resetn_a_ff  <= 1'b0;
+            clk_a_cdc_resetn_a <= '{default:'0};
         end else begin
-            sync_resetn_a_ff  <= cdc_resetn_b[2];
+            clk_a_cdc_resetn_a[0]   <= resetn_a;
+            clk_a_cdc_resetn_a[2:1] <= clk_a_cdc_resetn_a[1:0];
         end
-        // without reset
-        begin
-            cdc_resetn_b[0]   <= resetn_b;
-            cdc_resetn_b[2:1] <= cdc_resetn_b[1:0];
+    end
+
+    always_ff @(posedge clk_a, negedge resetn_b) begin
+        if (resetn_b == 1'b0) begin
+            clk_a_cdc_resetn_b <= '{default:'0};
+        end else begin
+            clk_a_cdc_resetn_b[0]   <= resetn_b;
+            clk_a_cdc_resetn_b[2:1] <= clk_a_cdc_resetn_b[1:0];
+        end
+    end
+
+    always_ff @(posedge clk_a) begin
+        sync_resetn_a_ff  <= clk_a_cdc_resetn_a[2] & clk_a_cdc_resetn_b[2];
+    end
+
+    always_ff @(posedge clk_b, negedge resetn_a) begin
+        if (resetn_a == 1'b0) begin
+            clk_b_cdc_resetn_a <= '{default:'0};
+        end else begin
+            clk_b_cdc_resetn_a[0]   <= resetn_a;
+            clk_b_cdc_resetn_a[2:1] <= clk_b_cdc_resetn_a[1:0];
+        end
+    end
+
+    always_ff @(posedge clk_b, negedge resetn_b) begin
+        if (resetn_b == 1'b0) begin
+            clk_b_cdc_resetn_b <= '{default:'0};
+        end else begin
+            clk_b_cdc_resetn_b[0]   <= resetn_b;
+            clk_b_cdc_resetn_b[2:1] <= clk_b_cdc_resetn_b[1:0];
         end
     end
 
     always_ff @(posedge clk_b) begin
-        // resettable
-        if (resetn_b == 1'b0) begin
-            cdc_resetn_a      <= '{default:'0};
-            sync_resetn_b_ff  <= 1'b0;
-        end else begin
-            sync_resetn_b_ff  <= cdc_resetn_a[2];
-        end
-        // without reset
-        begin
-            cdc_resetn_a[0]   <= resetn_a;
-            cdc_resetn_a[2:1] <= cdc_resetn_a[1:0];
-        end
+        sync_resetn_b_ff  <= clk_b_cdc_resetn_a[2] & clk_b_cdc_resetn_b[2];
     end
 
 endmodule
