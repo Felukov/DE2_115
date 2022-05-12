@@ -1,3 +1,28 @@
+
+-- Copyright (C) 2022, Konstantin Felukov
+-- All rights reserved.
+--
+-- Redistribution and use in source and binary forms, with or without
+-- modification, are permitted provided that the following conditions are met:
+--
+-- * Redistributions of source code must retain the above copyright notice, this
+--   list of conditions and the following disclaimer.
+--
+-- * Redistributions in binary form must reproduce the above copyright notice,
+--   this list of conditions and the following disclaimer in the documentation
+--   and/or other materials provided with the distribution.
+--
+-- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+-- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+-- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+-- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+-- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+-- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+-- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -143,7 +168,7 @@ begin
     font_re          <= '1' when char_tvalid = '1' and char_tready = '1' else '0';
     font_addr        <= char_tdata(7 downto 0) & std_logic_vector(to_unsigned(char_line, 4));
 
-
+    -- requesting data from an external storage
     process (vid_clk) begin
         if rising_edge(vid_clk) then
             if vid_resetn = '0' then
@@ -162,6 +187,7 @@ begin
         end if;
     end process;
 
+    -- storing data from an external storage into the internal buffer
     process (vid_clk) begin
         if rising_edge(vid_clk) then
             -- resettable
@@ -220,6 +246,7 @@ begin
         end if;
     end process;
 
+    -- reading data from the internal buffer
     process (vid_clk) begin
         if rising_edge(vid_clk) then
             if vid_resetn = '0' then
@@ -271,6 +298,7 @@ begin
         end if;
     end process;
 
+    -- reading an ascii character from the internal buffer
     process (vid_clk) begin
         if rising_edge(vid_clk) then
             -- resettable
@@ -300,6 +328,7 @@ begin
         end if;
     end process;
 
+    -- requesting font line for the ascii character
     process (vid_clk) begin
         if rising_edge(vid_clk) then
             -- resettable
@@ -331,6 +360,7 @@ begin
         end if;
     end process;
 
+    -- forming the pixel value
     process (vid_clk) begin
         if rising_edge(vid_clk) then
             -- resettable
