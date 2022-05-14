@@ -29,7 +29,7 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
-entity axis_sdram is
+entity sdram_system is
     port (
         clk                 : in std_logic;
         resetn              : in std_logic;
@@ -51,9 +51,9 @@ entity axis_sdram is
         DRAM_RAS_N          : out std_logic;
         DRAM_WE_N           : out std_logic
     );
-end entity axis_sdram;
+end entity sdram_system;
 
-architecture rtl of axis_sdram is
+architecture rtl of sdram_system is
 
     component sdram_ctrl is
         port (

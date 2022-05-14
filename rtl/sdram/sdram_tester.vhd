@@ -8,6 +8,9 @@ entity sdram_tester is
         clk             : in std_logic;
         resetn          : in std_logic;
 
+        cmd_s_tvalid    : in std_logic;
+        cmd_s_tdata     : in std_logic;
+
         cmd_m_tvalid    : out std_logic;
         cmd_m_tready    : in std_logic;
         cmd_m_tdata     : out std_logic_vector(63 downto 0)
@@ -16,7 +19,6 @@ end entity sdram_tester;
 
 architecture rtl of sdram_tester is
 
-    signal start_fl     : std_logic;
     signal cmd_tvalid   : std_logic;
     signal cmd_tready   : std_logic;
     signal cmd_tdata    : std_logic_vector(63 downto 0);
@@ -40,11 +42,9 @@ begin
             if resetn = '0' then
                 cnt <= 0;
                 cmd_tvalid <= '0';
-                start_fl <= '1';
             else
 
-                start_fl <= '0';
-                if (start_fl = '1') then
+                if (cmd_s_tvalid = '1' and cmd_s_tdata = '1') then
                     cmd_tvalid <= '1';
                 elsif (cmd_tvalid = '1' and cmd_tready = '1' and cnt = 127) then
                     cmd_tvalid <= '0';
