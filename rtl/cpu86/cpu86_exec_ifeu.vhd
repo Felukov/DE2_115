@@ -519,12 +519,40 @@ begin
             micro_tdata.alu_upd_fl <= upd_fl;
         end procedure;
 
-        procedure alu_put_in_b(bval : std_logic_vector) is begin
-            micro_tdata.alu_wb <= '0';
+        procedure update_sp(upd_when : boolean; sp_val, offset: std_logic_vector) is begin
+            micro_tdata.alu_code   <= ALU_OP_ADD;
+            micro_tdata.alu_a_val  <= sp_val;
+            micro_tdata.alu_b_val  <= offset;
+            micro_tdata.alu_dreg   <= SP;
+            micro_tdata.alu_dmask  <= "11";
+            if (upd_when) then
+                micro_tdata.alu_wb <= '1';
+            else
+                micro_tdata.alu_wb <= '0';
+            end if;
             micro_tdata.alu_upd_fl <= '0';
-            micro_tdata.alu_code <= ALU_OP_ADD;
-            micro_tdata.alu_a_val <= x"0000";
-            micro_tdata.alu_b_val <= bval;
+        end procedure;
+
+        procedure update_sp(sp_val: std_logic_vector; sp_offset : std_logic_vector) is begin
+            micro_tdata.alu_code   <= ALU_OP_ADD;
+            micro_tdata.alu_a_val  <= sp_val;
+            micro_tdata.alu_b_val  <= sp_offset;
+            micro_tdata.alu_dreg   <= SP;
+            micro_tdata.alu_dmask  <= "11";
+            micro_tdata.alu_wb     <= '1';
+            micro_tdata.alu_upd_fl <= '0';
+        end procedure;
+
+        procedure update_sp(sp_val: std_logic_vector) is begin
+            update_sp(sp_val, x"0000");
+        end procedure;
+
+        procedure alu_put_in_b(bval : std_logic_vector) is begin
+            micro_tdata.alu_wb     <= '0';
+            micro_tdata.alu_upd_fl <= '0';
+            micro_tdata.alu_code   <= ALU_OP_ADD;
+            micro_tdata.alu_a_val  <= x"0000";
+            micro_tdata.alu_b_val  <= bval;
         end procedure;
 
         procedure mem_read_word(seg, addr : std_logic_vector) is begin
@@ -1041,13 +1069,8 @@ begin
                     -- push IP
                     mem_write_imm(seg => interrupt_ss_seg_val, addr => sp_val, val => interrupt_next_ip, w => '1');
 
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => sp_val,
-                        bval => x"0000",
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    -- alu cmd
+                    update_sp(sp_val);
 
                 when 3 =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
@@ -1108,13 +1131,7 @@ begin
                     micro_tdata.jump_ip_mem <= '0';
 
                     -- upd SP
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => sp_val,
-                        bval => sp_offset,
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val, sp_offset);
 
                 when 2 =>
                     micro_tdata.cmd <= MICRO_MRD_OP or MICRO_ALU_OP;
@@ -1195,13 +1212,10 @@ begin
                     mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val);
 
                     -- alu cmd
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => rr_tdata.sp_val,
-                        bval => rr_tdata.sp_offset,
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(upd_when => rr_tdata.dreg /= SP,
+                        sp_val => rr_tdata.sp_val,
+                        offset => rr_tdata.sp_offset
+                    );
 
                 when STACKU_POPM =>
                     micro_tdata.cmd <= MICRO_MEM_OP or MICRO_ALU_OP;
@@ -1210,13 +1224,10 @@ begin
                     mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val);
 
                     -- alu cmd
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => rr_tdata.sp_val,
-                        bval => rr_tdata.sp_offset,
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(upd_when => rr_tdata.dreg /= SP,
+                        sp_val => rr_tdata.sp_val,
+                        offset => rr_tdata.sp_offset
+                    );
 
                 when STACKU_POPA =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
@@ -1231,13 +1242,7 @@ begin
                     mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.sreg_val, w => rr_tdata.w);
 
                     -- alu cmd
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => rr_tdata.sp_val,
-                        bval => x"0000",
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val => rr_tdata.sp_val);
 
                 when STACKU_PUSHM =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
@@ -1250,13 +1255,7 @@ begin
                     mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.data, w => rr_tdata.w);
 
                     -- alu cmd
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => rr_tdata.sp_val,
-                        bval => x"0000",
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val => rr_tdata.sp_val);
 
                 when STACKU_PUSHA =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
@@ -1285,13 +1284,7 @@ begin
                     micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
 
                     -- alu cmd
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => rr_tdata.sp_val,
-                        bval => x"0000",
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val => rr_tdata.sp_val);
 
                 when STACKU_PUSHA =>
                     if (micro_cnt = 1) then
@@ -1299,14 +1292,9 @@ begin
                     end if;
 
                     -- alu cmd
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => sp_val,
-                        bval => x"0000",
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val => sp_val);
 
+                    -- mem cmd
                     micro_tdata.mem_addr <= sp_val;
 
                     case micro_cnt is
@@ -1353,13 +1341,7 @@ begin
                         when 9 =>
                             micro_tdata.cmd <= MICRO_ALU_OP or MICRO_MEM_OP;
                             -- alu cmd
-                            alu_command_imm(
-                                cmd => ALU_OP_ADD,
-                                aval => sp_val,
-                                bval => sp_offset,
-                                dreg => SP,
-                                dmask => "11",
-                                upd_fl => '0');
+                            update_sp(sp_val => sp_val, sp_offset => sp_offset);
 
                         when 8 =>
                             micro_tdata.cmd <= MICRO_ALU_OP or MICRO_MRD_OP;
@@ -1378,7 +1360,7 @@ begin
                             micro_tdata.alu_dreg <= BP;
                         when 5 =>
                             micro_tdata.alu_wb <= '0';
-                            --micro_tdata.alu_dreg <= SP;
+                            --skip SP;
                         when 4 =>
                             micro_tdata.alu_wb <= '1';
                             micro_tdata.alu_dreg <= BX;
@@ -1708,13 +1690,7 @@ begin
             mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tuser(15 downto 0), w => rr_tdata.w);
 
             -- upd SP
-            alu_command_imm(
-                cmd => ALU_OP_ADD,
-                aval => rr_tdata.sp_val,
-                bval => x"0000",
-                dreg => SP,
-                dmask => "11",
-                upd_fl => '0');
+            update_sp(sp_val => rr_tdata.sp_val);
 
         end procedure;
 
@@ -1725,13 +1701,7 @@ begin
             mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tuser(15 downto 0), w => rr_tdata.w);
 
             -- upd SP
-            alu_command_imm(
-                cmd => ALU_OP_ADD,
-                aval => rr_tdata.sp_val,
-                bval => x"0000",
-                dreg => SP,
-                dmask => "11",
-                upd_fl => '0');
+            update_sp(sp_val => rr_tdata.sp_val);
 
             -- jump cmd
             micro_tdata.jump_cond <= j_never;
@@ -1797,13 +1767,7 @@ begin
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => rr_tuser_buf(15 downto 0), w => rr_tdata_buf.w);
 
                     -- upd SP
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => sp_val,
-                        bval => x"0000",
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val => sp_val);
 
                 when 3 =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
@@ -1833,13 +1797,7 @@ begin
             mem_read(seg => rr_tdata.seg_val, addr => rr_tdata.sp_val, w => rr_tdata.w);
 
             -- upd SP
-            alu_command_imm(
-                cmd => ALU_OP_ADD,
-                aval => rr_tdata.sp_val,
-                bval => rr_tdata.sp_offset,
-                dreg => SP,
-                dmask => "11",
-                upd_fl => '0');
+            update_sp(rr_tdata.sp_val, rr_tdata.sp_offset);
 
             -- jump cmd
             micro_tdata.jump_cond <= j_never;
@@ -1880,13 +1838,7 @@ begin
                     mem_read(seg => rr_tdata_buf.seg_val, addr => rr_tdata_buf.sp_val, w => rr_tdata_buf.w);
 
                     -- upd SP
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => sp_val,
-                        bval => rr_tdata_buf.data,
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val, rr_tdata_buf.data);
 
                 when others =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
@@ -1921,13 +1873,7 @@ begin
                     mem_read(seg => rr_tdata_buf.seg_val, addr => sp_val, w => rr_tdata_buf.w);
 
                     -- upd SP
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => sp_val,
-                        bval => sp_offset,
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val, sp_offset);
 
                     -- update jump cmd
                     micro_tdata.jump_cs_mem <= '0';
@@ -1973,13 +1919,7 @@ begin
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_ALU_OP;
 
                     -- upd SP
-                    alu_command_imm(
-                        cmd => ALU_OP_ADD,
-                        aval => sp_val,
-                        bval => rr_tdata_buf.data,
-                        dreg => SP,
-                        dmask => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val, rr_tdata_buf.data);
 
                     -- update jump cmd
                     micro_tdata.jump_cs_mem <= '1';
