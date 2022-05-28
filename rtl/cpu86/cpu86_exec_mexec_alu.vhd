@@ -177,11 +177,17 @@ begin
         case res_m_tdata.code is
             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
                 flags_of <= '0';
+            when ALU_OP_SUB | ALU_OP_SBB | ALU_OP_CMP =>
+                if res_m_tdata.w = '0' then
+                    flags_of <= (res_m_tdata.aval(7) xor res_m_tdata.rval(7)) and (res_m_tdata.aval(7) xor res_m_tdata.bval(7));
+                else
+                    flags_of <= (res_m_tdata.aval(15) xor res_m_tdata.rval(15)) and (res_m_tdata.aval(15) xor res_m_tdata.bval(15));
+                end if;
             when others =>
                 if res_m_tdata.w = '0' then
-                    flags_of <= not (res_m_tdata.aval(7) xor res_m_tdata.bval(7)) and (res_m_tdata.rval(7) xor res_m_tdata.aval(7));
+                    flags_of <= (res_m_tdata.rval(7) xor res_m_tdata.bval(7)) and (res_m_tdata.rval(7) xor res_m_tdata.aval(7));
                 else
-                    flags_of <= not (res_m_tdata.aval(15) xor res_m_tdata.bval(15)) and (res_m_tdata.rval(15) xor res_m_tdata.aval(15));
+                    flags_of <= (res_m_tdata.rval(15) xor res_m_tdata.bval(15)) and (res_m_tdata.rval(15) xor res_m_tdata.aval(15));
                 end if;
         end case;
 
