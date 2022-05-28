@@ -1383,28 +1383,11 @@ begin
 
                         else
                             case (alu_res_tdata.code) is
-                                when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
-                                    flags_wr_be(FLAG_15) <= '0';
-                                    flags_wr_be(FLAG_14) <= '0';
-                                    flags_wr_be(FLAG_13) <= '0';
-                                    flags_wr_be(FLAG_12) <= '0';
-                                    flags_wr_be(FLAG_OF) <= '1';
-                                    flags_wr_be(FLAG_DF) <= '0';
-                                    flags_wr_be(FLAG_IF) <= '0';
-                                    flags_wr_be(FLAG_TF) <= '0';
-                                    flags_wr_be(FLAG_SF) <= '1';
-                                    flags_wr_be(FLAG_ZF) <= '1';
-                                    flags_wr_be(FLAG_05) <= '0';
-                                    flags_wr_be(FLAG_AF) <= '1';
-                                    flags_wr_be(FLAG_03) <= '0';
-                                    flags_wr_be(FLAG_PF) <= '1';
-                                    flags_wr_be(FLAG_01) <= '0';
-                                    flags_wr_be(FLAG_CF) <= '1';
                                 when ALU_OP_INC | ALU_OP_DEC =>
-                                    flags_wr_be(FLAG_15) <= '0';
-                                    flags_wr_be(FLAG_14) <= '0';
-                                    flags_wr_be(FLAG_13) <= '0';
-                                    flags_wr_be(FLAG_12) <= '0';
+                                    flags_wr_be(FLAG_15) <= '1';
+                                    flags_wr_be(FLAG_14) <= '1';
+                                    flags_wr_be(FLAG_13) <= '1';
+                                    flags_wr_be(FLAG_12) <= '1';
                                     flags_wr_be(FLAG_OF) <= '1';
                                     flags_wr_be(FLAG_DF) <= '0';
                                     flags_wr_be(FLAG_IF) <= '0';
@@ -1418,11 +1401,10 @@ begin
                                     flags_wr_be(FLAG_01) <= '0';
                                     flags_wr_be(FLAG_CF) <= '0';
                                 when others =>
-                                    -- ALU_OP_ADD | ALU_OP_SUB
-                                    flags_wr_be(FLAG_15) <= '0';
-                                    flags_wr_be(FLAG_14) <= '0';
-                                    flags_wr_be(FLAG_13) <= '0';
-                                    flags_wr_be(FLAG_12) <= '0';
+                                    flags_wr_be(FLAG_15) <= '1';
+                                    flags_wr_be(FLAG_14) <= '1';
+                                    flags_wr_be(FLAG_13) <= '1';
+                                    flags_wr_be(FLAG_12) <= '1';
                                     flags_wr_be(FLAG_OF) <= '1';
                                     flags_wr_be(FLAG_DF) <= '0';
                                     flags_wr_be(FLAG_IF) <= '0';
@@ -1485,7 +1467,7 @@ begin
                                 flags_wr_be(FLAG_14) <= '0';
                                 flags_wr_be(FLAG_13) <= '0';
                                 flags_wr_be(FLAG_12) <= '0';
-                                flags_wr_be(FLAG_OF) <= '0';
+                                flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
                                 flags_wr_be(FLAG_TF) <= '0';
@@ -1519,7 +1501,7 @@ begin
                                 flags_wr_be(FLAG_14) <= '0';
                                 flags_wr_be(FLAG_13) <= '0';
                                 flags_wr_be(FLAG_12) <= '0';
-                                flags_wr_be(FLAG_OF) <= '0';
+                                flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
                                 flags_wr_be(FLAG_TF) <= '0';
