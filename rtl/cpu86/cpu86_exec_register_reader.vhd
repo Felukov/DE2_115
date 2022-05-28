@@ -101,6 +101,28 @@ end entity cpu86_exec_register_reader;
 
 architecture rtl of cpu86_exec_register_reader is
 
+    component vld_cpu86_exec_register_reader is
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+
+            vld_valid               : in std_logic;
+            vld_op                  : in std_logic_vector(4 downto 0);
+            vld_code                : in std_logic_vector(3 downto 0);
+            vld_cs                  : in std_logic_vector(15 downto 0);
+            vld_ip                  : in std_logic_vector(15 downto 0);
+            vld_ax                  : in std_logic_vector(15 downto 0);
+            vld_bx                  : in std_logic_vector(15 downto 0);
+            vld_cx                  : in std_logic_vector(15 downto 0);
+            vld_dx                  : in std_logic_vector(15 downto 0);
+            vld_bp                  : in std_logic_vector(15 downto 0);
+            vld_sp                  : in std_logic_vector(15 downto 0);
+            vld_si                  : in std_logic_vector(15 downto 0);
+            vld_di                  : in std_logic_vector(15 downto 0);
+            vld_fl                  : in std_logic_vector(15 downto 0)
+        );
+    end component;
+
     signal instr_tvalid             : std_logic;
     signal instr_tready             : std_logic;
     signal instr_tdata              : decoded_instr_t;
@@ -125,27 +147,64 @@ architecture rtl of cpu86_exec_register_reader is
 
     signal skip_next                : std_logic;
 
-    signal dbg_instr_hs_cnt         : integer := 0;
-
     signal ext_intr_tvalid          : std_logic;
     signal ext_intr_tready          : std_logic;
     signal ext_intr_tdata           : std_logic_vector(7 downto 0);
 
+    signal vld_valid                : std_logic;
+    signal vld_cs                   : std_logic_vector(15 downto 0);
+    signal vld_ip                   : std_logic_vector(15 downto 0);
+    signal vld_op                   : std_logic_vector(4 downto 0);
+    signal vld_code                 : std_logic_vector(3 downto 0);
+    signal vld_ax                   : std_logic_vector(15 downto 0);
+    signal vld_bx                   : std_logic_vector(15 downto 0);
+    signal vld_cx                   : std_logic_vector(15 downto 0);
+    signal vld_dx                   : std_logic_vector(15 downto 0);
+    signal vld_bp                   : std_logic_vector(15 downto 0);
+    signal vld_sp                   : std_logic_vector(15 downto 0);
+    signal vld_di                   : std_logic_vector(15 downto 0);
+    signal vld_si                   : std_logic_vector(15 downto 0);
+    signal vld_fl                   : std_logic_vector(15 downto 0);
+
 begin
 
-    instr_tvalid <= instr_s_tvalid;
-    instr_s_tready <= instr_tready;
-    instr_tdata <= instr_s_tdata;
-    instr_tuser <= instr_s_tuser;
+    -- i/o assigns
+    instr_tvalid      <= instr_s_tvalid;
+    instr_s_tready    <= instr_tready;
+    instr_tdata       <= instr_s_tdata;
+    instr_tuser       <= instr_s_tuser;
 
-    rr_m_tvalid <= rr_tvalid;
-    rr_tready <= rr_m_tready;
-    rr_m_tdata <= rr_tdata;
-    rr_m_tuser <= rr_tuser;
+    rr_m_tvalid       <= rr_tvalid;
+    rr_tready         <= rr_m_tready;
+    rr_m_tdata        <= rr_tdata;
+    rr_m_tuser        <= rr_tuser;
 
-    ext_intr_tvalid <= ext_intr_s_tvalid;
+    ext_intr_tvalid   <= ext_intr_s_tvalid;
     ext_intr_s_tready <= ext_intr_tready;
-    ext_intr_tdata <= ext_intr_s_tdata;
+    ext_intr_tdata    <= ext_intr_s_tdata;
+
+
+    -- module vld_cpu86_exec_register_reader instantiation
+    vld_cpu86_exec_register_reader_inst : vld_cpu86_exec_register_reader port map (
+        clk        => clk,
+        resetn     => resetn,
+
+        vld_valid  => vld_valid,
+        vld_cs     => vld_cs,
+        vld_ip     => vld_ip,
+        vld_op     => vld_op,
+        vld_code   => vld_code,
+        vld_ax     => vld_ax,
+        vld_bx     => vld_bx,
+        vld_cx     => vld_cx,
+        vld_dx     => vld_dx,
+        vld_bp     => vld_bp,
+        vld_sp     => vld_sp,
+        vld_di     => vld_di,
+        vld_si     => vld_si,
+        vld_fl     => vld_fl
+    );
+
 
     process (all) begin
 
@@ -153,39 +212,39 @@ begin
             when "01" =>
                 sreg_tdata(15 downto 8) <= (others => '0');
                 case instr_tdata.sreg is
-                    when AX => sreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
-                    when BX => sreg_tdata(7 downto 0) <= bx_s_tdata(7 downto 0);
-                    when CX => sreg_tdata(7 downto 0) <= cx_s_tdata(7 downto 0);
-                    when DX => sreg_tdata(7 downto 0) <= dx_s_tdata(7 downto 0);
-                    when FL => sreg_tdata(7 downto 0) <= flags_s_tdata(7 downto 0);
+                    when AX     => sreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
+                    when BX     => sreg_tdata(7 downto 0) <= bx_s_tdata(7 downto 0);
+                    when CX     => sreg_tdata(7 downto 0) <= cx_s_tdata(7 downto 0);
+                    when DX     => sreg_tdata(7 downto 0) <= dx_s_tdata(7 downto 0);
+                    when FL     => sreg_tdata(7 downto 0) <= flags_s_tdata(7 downto 0);
                     when others => sreg_tdata(7 downto 0) <= ax_s_tdata(7 downto 0);
                 end case;
 
             when "10" =>
                 sreg_tdata(15 downto 8) <= (others => '0');
                 case instr_tdata.sreg is
-                    when AX => sreg_tdata(7 downto 0) <= ax_s_tdata(15 downto 8);
-                    when BX => sreg_tdata(7 downto 0) <= bx_s_tdata(15 downto 8);
-                    when CX => sreg_tdata(7 downto 0) <= cx_s_tdata(15 downto 8);
-                    when DX => sreg_tdata(7 downto 0) <= dx_s_tdata(15 downto 8);
+                    when AX     => sreg_tdata(7 downto 0) <= ax_s_tdata(15 downto 8);
+                    when BX     => sreg_tdata(7 downto 0) <= bx_s_tdata(15 downto 8);
+                    when CX     => sreg_tdata(7 downto 0) <= cx_s_tdata(15 downto 8);
+                    when DX     => sreg_tdata(7 downto 0) <= dx_s_tdata(15 downto 8);
                     when others => sreg_tdata(7 downto 0) <= ax_s_tdata(15 downto 8);
                 end case;
 
             when others =>
                 case instr_tdata.sreg is
-                    when AX => sreg_tdata <= ax_s_tdata;
-                    when BX => sreg_tdata <= bx_s_tdata;
-                    when CX => sreg_tdata <= cx_s_tdata;
-                    when DX => sreg_tdata <= dx_s_tdata;
-                    when BP => sreg_tdata <= bp_s_tdata;
-                    when SI => sreg_tdata <= si_s_tdata;
-                    when DI => sreg_tdata <= di_s_tdata;
-                    when SP => sreg_tdata <= sp_s_tdata;
-                    when CS => sreg_tdata <= instr_tuser(31 downto 16);
-                    when SS => sreg_tdata <= ss_s_tdata;
-                    when DS => sreg_tdata <= ds_s_tdata;
-                    when ES => sreg_tdata <= es_s_tdata;
-                    when FL => sreg_tdata <= flags_s_tdata;
+                    when AX     => sreg_tdata <= ax_s_tdata;
+                    when BX     => sreg_tdata <= bx_s_tdata;
+                    when CX     => sreg_tdata <= cx_s_tdata;
+                    when DX     => sreg_tdata <= dx_s_tdata;
+                    when BP     => sreg_tdata <= bp_s_tdata;
+                    when SI     => sreg_tdata <= si_s_tdata;
+                    when DI     => sreg_tdata <= di_s_tdata;
+                    when SP     => sreg_tdata <= sp_s_tdata;
+                    when CS     => sreg_tdata <= instr_tuser(31 downto 16);
+                    when SS     => sreg_tdata <= ss_s_tdata;
+                    when DS     => sreg_tdata <= ds_s_tdata;
+                    when ES     => sreg_tdata <= es_s_tdata;
+                    when FL     => sreg_tdata <= flags_s_tdata;
                     when others => sreg_tdata <= ax_s_tdata;
                 end case;
         end case;
@@ -651,18 +710,34 @@ begin
         end if;
     end process;
 
-    dbg_instr_hs_cnt_proc : process (clk) begin
-
-        if (rising_edge(clk)) then
+    validator_proc : process (clk) begin
+        if rising_edge(clk) then
             if resetn = '0' then
-                dbg_instr_hs_cnt <= 0;
+                vld_valid <= '0';
             else
-                if (instr_tvalid = '1' and instr_tready = '1') then
-                    dbg_instr_hs_cnt <= dbg_instr_hs_cnt + 1;
+                if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+                    vld_valid <= '1';
+                else
+                    vld_valid <= '0';
                 end if;
             end if;
-        end if;
 
+            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+                vld_cs <= instr_tuser(USER_T_CS);
+                vld_ip <= instr_tuser(USER_T_IP);
+                vld_op <= std_logic_vector(to_unsigned(op_t'pos(instr_tdata.op), 5));
+                vld_code <= instr_tdata.code;
+                vld_ax <= ax_s_tdata;
+                vld_bx <= bx_s_tdata;
+                vld_cx <= cx_s_tdata;
+                vld_dx <= dx_s_tdata;
+                vld_bp <= bp_s_tdata;
+                vld_sp <= sp_s_tdata;
+                vld_di <= di_s_tdata;
+                vld_si <= si_s_tdata;
+                vld_fl <= flags_s_tdata;
+            end if;
+        end if;
     end process;
 
 end architecture;
