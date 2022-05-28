@@ -68,7 +68,6 @@ begin
                 reg_tdata <= INIT_VALUE;
                 hs_cnt <= 0;
             else
-                -- Resettable
                 if (unlk_s_tvalid = '1') then
                     reg_tvalid <= '1';
                 elsif (wr_s_tvalid = '1' and (hs_cnt = 1 or hs_cnt = 0)) then
@@ -86,17 +85,16 @@ begin
                     --     report "hs_cnt error: " & to_hstring(wr_s_tdata) severity error;
                     end if;
                 elsif (wr_s_tvalid = '0' and lock_s_tvalid = '1') then
-                        hs_cnt <= hs_cnt + 1;
+                    hs_cnt <= hs_cnt + 1;
                 else
                     hs_cnt <= hs_cnt;
                 end if;
 
-                -- Without reset
                 if (wr_s_tvalid = '1') then
                     case wr_s_tmask is
-                        when "11" => reg_tdata <= wr_s_tdata;
-                        when "01" => reg_tdata(DATA_WIDTH/2-1 downto 0) <= wr_s_tdata(DATA_WIDTH/2-1 downto 0);
-                        when "10" => reg_tdata(DATA_WIDTH-1 downto DATA_WIDTH/2) <= wr_s_tdata(DATA_WIDTH/2-1 downto 0);
+                        when "11"   => reg_tdata <= wr_s_tdata;
+                        when "01"   => reg_tdata(DATA_WIDTH/2-1 downto 0) <= wr_s_tdata(DATA_WIDTH/2-1 downto 0);
+                        when "10"   => reg_tdata(DATA_WIDTH-1 downto DATA_WIDTH/2) <= wr_s_tdata(DATA_WIDTH/2-1 downto 0);
                         when others => null;
                     end case;
                 end if;
