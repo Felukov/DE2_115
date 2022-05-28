@@ -163,7 +163,7 @@ begin
     micro_tready <= micro_m_tready;
     micro_m_tdata <= micro_tdata;
 
-    rr_tready <= '1' when div_intr_s_tvalid = '0' and bnd_intr_s_tvalid = '0' and
+    rr_tready <= '1' when div_intr_s_tvalid = '0' and bnd_intr_s_tvalid = '0' and halt_mode = '0' and
         jmp_lock_s_tvalid = '1' and
         (micro_tvalid = '0' or (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
@@ -357,7 +357,10 @@ begin
             if resetn = '0' then
                 halt_mode <= '0';
             else
-                if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = SYS and rr_tdata.code = SYS_HLT_OP) then
+                --if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = SYS and rr_tdata.code = SYS_HLT_OP) then
+                if (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') or
+                    (div_intr_s_tvalid = '1' and div_intr_s_tready = '1')
+                then
                     halt_mode <= '1';
                 end if;
             end if;
@@ -1010,13 +1013,7 @@ begin
                     -- push IP
                     mem_write_imm(seg => rr_tdata_buf.ss_seg_val, addr => sp_val, val => interrupt_next_ip, w => rr_tdata_buf.w);
                     -- upd SP
-                    alu_command_imm(
-                        cmd    => ALU_OP_ADD,
-                        aval   => sp_val,
-                        bval   => x"0000",
-                        dreg   => SP,
-                        dmask  => "11",
-                        upd_fl => '0');
+                    update_sp(sp_val);
 
                 when 3 =>
                     -- read CS interrupt handler
