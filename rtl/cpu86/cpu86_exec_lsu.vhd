@@ -63,17 +63,17 @@ architecture rtl of cpu86_exec_lsu is
 
     component axis_reg is
         generic (
-            DATA_WIDTH              : natural := 32
+            DATA_WIDTH          : natural := 32
         );
         port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
-            in_s_tvalid             : in std_logic;
-            in_s_tready             : out std_logic;
-            in_s_tdata              : in std_logic_vector (DATA_WIDTH-1 downto 0);
-            out_m_tvalid            : out std_logic;
-            out_m_tready            : in std_logic;
-            out_m_tdata             : out std_logic_vector (DATA_WIDTH-1 downto 0)
+            clk                 : in std_logic;
+            resetn              : in std_logic;
+            in_s_tvalid         : in std_logic;
+            in_s_tready         : out std_logic;
+            in_s_tdata          : in std_logic_vector (DATA_WIDTH-1 downto 0);
+            out_m_tvalid        : out std_logic;
+            out_m_tready        : in std_logic;
+            out_m_tdata         : out std_logic_vector (DATA_WIDTH-1 downto 0)
         );
     end component;
 
