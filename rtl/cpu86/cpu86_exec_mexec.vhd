@@ -100,11 +100,9 @@ entity cpu86_exec_mexec is
         dbg_m_tvalid            : out std_logic;
         dbg_m_tdata             : out std_logic_vector(31 downto 0);
 
-        div_intr_m_tvalid       : out std_logic;
-        div_intr_m_tdata        : out intr_t;
-
-        bnd_intr_m_tvalid       : out std_logic;
-        bnd_intr_m_tdata        : out intr_t;
+        m_axis_intr_tvalid      : out std_logic;
+        m_axis_intr_tdata       : out intr_t;
+        m_axis_intr_tuser       : out std_logic_vector(7 downto 0);
 
         event_jump              : out std_logic
     );
@@ -439,6 +437,12 @@ architecture rtl of cpu86_exec_mexec is
     signal op_cnt               : natural range 0 to 3;
     signal op_inc_hs            : std_logic;
     signal op_dec_hs            : std_logic;
+
+    signal div_intr_tvalid      : std_logic;
+    signal div_intr_tdata       : intr_t;
+
+    signal bnd_intr_tvalid      : std_logic;
+    signal bnd_intr_tdata       : intr_t;
 begin
 
     -- i/o assigns
@@ -448,6 +452,10 @@ begin
     m_axis_fl_wr_tdata  <= "1111" & flags_wr_tdata;
     m_axis_jump_tvalid  <= jmp_dout_tvalid;
     m_axis_jump_tdata   <= jmp_dout_tdata;
+
+    m_axis_intr_tvalid  <= '1' when div_intr_tvalid = '1' or bnd_intr_tvalid = '1' else '0';
+    m_axis_intr_tdata   <= div_intr_tdata when div_intr_tvalid = '1' else bnd_intr_tdata;
+    m_axis_intr_tuser   <= x"00" when div_intr_tvalid = '1' else x"05";
 
     mexec_alu_inst : cpu86_exec_mexec_alu port map (
         clk                     => clk,
@@ -616,11 +624,11 @@ begin
 
     flags_wr_tdata <= ((not flags_wr_be) and flags_tdata) or (flags_wr_be and flags_wr_vector);
 
-    div_intr_m_tvalid <= '1' when div_res_tvalid = '1' and div_res_tdata.overflow = '1' else '0';
-    div_intr_m_tdata(INTR_T_SS) <= div_res_tdata.ss_val;
-    div_intr_m_tdata(INTR_T_IP) <= div_res_tdata.ip_val;
-    div_intr_m_tdata(INTR_T_CS) <= div_res_tdata.cs_val;
-    div_intr_m_tdata(INTR_T_IP_NEXT) <= div_res_tdata.ip_next_val;
+    div_intr_tvalid                <= '1' when div_res_tvalid = '1' and div_res_tdata.overflow = '1' else '0';
+    div_intr_tdata(INTR_T_SS)      <= div_res_tdata.ss_val;
+    div_intr_tdata(INTR_T_IP)      <= div_res_tdata.ip_val;
+    div_intr_tdata(INTR_T_CS)      <= div_res_tdata.cs_val;
+    div_intr_tdata(INTR_T_IP_NEXT) <= div_res_tdata.ip_next_val;
 
     op_inc_hs <= alu_req_tvalid or one_req_tvalid or div_req_tvalid or mul_req_tvalid or bcd_req_tvalid or shf8_req_tvalid or shf16_req_tvalid or str_req_tvalid;
     op_dec_hs <= alu_res_tvalid or one_res_tvalid or div_res_tvalid or mul_res_tvalid or bcd_res_tvalid or shf8_res_tvalid or shf16_res_tvalid or str_res_tvalid;
@@ -1630,10 +1638,10 @@ begin
     flag_calc_proc : process (all) begin
 
         if (flags_src = RES_DATA) then
-            flags_wr_vector(11 downto 11) <= res_tdata.dval_lo(11 downto 11);
+            flags_wr_vector(FLAG_OF) <= res_tdata.dval_lo(FLAG_OF);
             flags_wr_vector(8 downto 1) <= res_tdata.dval_lo(8 downto 1);
         else
-            flags_wr_vector(11 downto 11) <= res_tuser(11 downto 11);
+            flags_wr_vector(FLAG_OF) <= res_tuser(FLAG_OF);
             flags_wr_vector(8 downto 1) <= res_tuser(8 downto 1);
         end if;
 
@@ -2053,7 +2061,7 @@ begin
     bound_check_process : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
-                bnd_intr_m_tvalid <= '0';
+                bnd_intr_tvalid <= '0';
                 bnd_wait_fifo <= '0';
             else
 
@@ -2069,12 +2077,12 @@ begin
 
                 if (bnd_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                     if (bnd_val < mem_buf_tdata or bnd_val > lsu_rd_s_tdata) then
-                        bnd_intr_m_tvalid <= '1';
+                        bnd_intr_tvalid <= '1';
                     else
-                        bnd_intr_m_tvalid <= '0';
+                        bnd_intr_tvalid <= '0';
                     end if;
                 else
-                    bnd_intr_m_tvalid <= '0';
+                    bnd_intr_tvalid <= '0';
                 end if;
 
             end if;
@@ -2084,10 +2092,10 @@ begin
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BND) = '1') then
-                bnd_intr_m_tdata(INTR_T_SS) <= micro_tdata.bnd_ss_val;
-                bnd_intr_m_tdata(INTR_T_CS) <= micro_tdata.bnd_cs_val;
-                bnd_intr_m_tdata(INTR_T_IP) <= micro_tdata.bnd_ip_val;
-                bnd_intr_m_tdata(INTR_T_IP_NEXT) <= micro_tdata.bnd_ip_val;
+                bnd_intr_tdata(INTR_T_SS) <= micro_tdata.bnd_ss_val;
+                bnd_intr_tdata(INTR_T_CS) <= micro_tdata.bnd_cs_val;
+                bnd_intr_tdata(INTR_T_IP) <= micro_tdata.bnd_ip_val;
+                bnd_intr_tdata(INTR_T_IP_NEXT) <= micro_tdata.bnd_ip_val;
             end if;
 
         end if;

@@ -47,13 +47,10 @@ entity cpu86_exec_ifeu is
         ext_intr_s_tready       : out std_logic;
         ext_intr_s_tdata        : in std_logic_vector(7 downto 0);
 
-        div_intr_s_tvalid       : in std_logic;
-        div_intr_s_tready       : out std_logic;
-        div_intr_s_tdata        : in intr_t;
-
-        bnd_intr_s_tvalid       : in std_logic;
-        bnd_intr_s_tready       : out std_logic;
-        bnd_intr_s_tdata        : in intr_t;
+        s_axis_intr_tvalid      : in std_logic;
+        s_axis_intr_tready      : out std_logic;
+        s_axis_intr_tdata       : in intr_t;
+        s_axis_intr_tuser       : in std_logic_vector;
 
         micro_m_tvalid          : out std_logic;
         micro_m_tready          : in std_logic;
@@ -153,24 +150,32 @@ architecture rtl of cpu86_exec_ifeu is
     signal interrupt_next_cs    : std_logic_vector(15 downto 0);
     signal interrupt_next_ip    : std_logic_vector(15 downto 0);
 
+    signal intr_tvalid          : std_logic;
+    signal intr_tready          : std_logic;
+    signal intr_tdata           : intr_t;
+    signal intr_tuser           : std_logic_vector(7 downto 0);
+
 begin
-    rr_tvalid <= rr_s_tvalid;
-    rr_s_tready <= rr_tready;
-    rr_tdata <= rr_s_tdata;
-    rr_tuser <= rr_s_tuser;
+    -- i/o assigns
+    rr_tvalid          <= rr_s_tvalid;
+    rr_s_tready        <= rr_tready;
+    rr_tdata           <= rr_s_tdata;
+    rr_tuser           <= rr_s_tuser;
 
-    micro_m_tvalid <= micro_tvalid;
-    micro_tready <= micro_m_tready;
-    micro_m_tdata <= micro_tdata;
+    micro_m_tvalid     <= micro_tvalid;
+    micro_tready       <= micro_m_tready;
+    micro_m_tdata      <= micro_tdata;
 
-    rr_tready <= '1' when div_intr_s_tvalid = '0' and bnd_intr_s_tvalid = '0' and halt_mode = '0' and
+    intr_tvalid        <= s_axis_intr_tvalid;
+    s_axis_intr_tready <= intr_tready;
+    intr_tdata         <= s_axis_intr_tdata;
+    intr_tuser         <= s_axis_intr_tuser;
+
+    rr_tready <= '1' when intr_tvalid = '0' and halt_mode = '0' and
         jmp_lock_s_tvalid = '1' and
         (micro_tvalid = '0' or (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
-    div_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and (micro_tvalid = '0' or
-        (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
-
-    bnd_intr_s_tready <= '1' when jmp_lock_s_tvalid = '1' and (micro_tvalid = '0' or
+    intr_tready <= '1' when jmp_lock_s_tvalid = '1' and (micro_tvalid = '0' or
         (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
@@ -357,10 +362,7 @@ begin
             if resetn = '0' then
                 halt_mode <= '0';
             else
-                --if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = SYS and rr_tdata.code = SYS_HLT_OP) then
-                if (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') or
-                    (div_intr_s_tvalid = '1' and div_intr_s_tready = '1')
-                then
+                if (intr_tvalid = '1' and intr_tready = '1') then
                     halt_mode <= '1';
                 end if;
             end if;
@@ -1963,9 +1965,7 @@ begin
                 micro_busy <= '0';
             else
 
-                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
-                then
+                if (intr_tvalid = '1' and intr_tready = '1') then
                     micro_tvalid <= '1';
                 elsif (rr_tvalid = '1' and rr_tready = '1') then
                     if (rr_tdata.fast_instr = '0' and (rep_mode = '0' or (rep_mode = '1' and rep_cx_cnt /= x"0000"))) then
@@ -1977,9 +1977,7 @@ begin
                     micro_tvalid <= '0';
                 end if;
 
-                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
-                then
+                if (intr_tvalid = '1' and intr_tready = '1') then
                     micro_cnt <= 6;
                 elsif (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.fast_instr = '0') then
                     micro_cnt <= micro_cnt_next;
@@ -1989,9 +1987,7 @@ begin
                     end if;
                 end if;
 
-                if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                   (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
-                then
+                if (intr_tvalid = '1' and intr_tready = '1') then
                     micro_busy <= '1';
                 elsif (rr_tvalid = '1' and rr_tready = '1') then
                     if (micro_cnt_next = 0) then
@@ -2017,9 +2013,7 @@ begin
                 sp_offset <= rr_tdata.sp_offset;
             end if;
 
-            if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
-            then
+            if (intr_tvalid = '1' and intr_tready = '1') then
                 sp_val <= rr_tdata_buf.sp_val;
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
@@ -2033,20 +2027,15 @@ begin
                 bp_val <= std_logic_vector(unsigned(bp_val) - to_unsigned(2, 16));
             end if;
 
-            if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
-                interrupt_no <= x"0000";
-            elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
-                interrupt_no <= x"0005";
+            if (intr_tvalid = '1' and intr_tready = '1') then
+                interrupt_no <= x"00" & intr_tuser;
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_no <= rr_tdata.data;
             end if;
 
-            if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
-                interrupt_next_cs <= div_intr_s_tdata(INTR_T_CS);
-                interrupt_next_ip <= div_intr_s_tdata(INTR_T_IP_NEXT);
-            elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
-                interrupt_next_cs <= bnd_intr_s_tdata(INTR_T_CS);
-                interrupt_next_ip <= bnd_intr_s_tdata(INTR_T_IP_NEXT);
+            if (intr_tvalid = '1' and intr_tready = '1') then
+                interrupt_next_cs <= intr_tdata(INTR_T_CS);
+                interrupt_next_ip <= intr_tdata(INTR_T_IP_NEXT);
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_next_cs <= rr_tuser(USER_T_CS);
                 if (rr_tdata.op = SYS and rr_tdata.code = SYS_EXT_INT_OP) then
@@ -2060,20 +2049,19 @@ begin
                 interrupt_flags <= rr_tdata.fl_tdata;
             end if;
 
-            if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
-                interrupt_ss_seg_val <= div_intr_s_tdata(INTR_T_SS);
-            elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
-                interrupt_ss_seg_val <= bnd_intr_s_tdata(INTR_T_SS);
+            if (intr_tvalid = '1' and intr_tready = '1') then
+                interrupt_ss_seg_val <= intr_tdata(INTR_T_SS);
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 interrupt_ss_seg_val <= rr_tdata.ss_seg_val;
             end if;
 
-            if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') then
+            if (intr_tvalid = '1' and intr_tready = '1') then
                 micro_op    <= SYS;
-                micro_code  <= SYS_DIV_INT_OP;
-            elsif (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1') then
-                micro_op    <= SYS;
-                micro_code  <= SYS_BND_INT_OP;
+                if (intr_tuser = x"00") then
+                    micro_code  <= SYS_DIV_INT_OP;
+                else
+                    micro_code  <= SYS_BND_INT_OP;
+                end if;
             elsif (rr_tvalid = '1' and rr_tready = '1') then
                 micro_op    <= rr_tdata.op;
                 micro_code  <= rr_tdata.code;
@@ -2106,9 +2094,7 @@ begin
                 micro_tdata.bpu_taken_ip <= rr_tdata.bpu_taken_ip;
             end if;
 
-            if (div_intr_s_tvalid = '1' and div_intr_s_tready = '1') or
-                (bnd_intr_s_tvalid = '1' and bnd_intr_s_tready = '1')
-            then
+            if (intr_tvalid = '1' and intr_tready = '1') then
                 initialize_signals;
                 do_ext_intr_0;
 
@@ -2248,38 +2234,5 @@ begin
             end if;
         end if;
     end process;
-
-    -- debug : process (clk)
-    -- begin
-    --     if rising_edge(clk) then
-    --         if (rr_s_tvalid = '1' and rr_s_tready = '1') then
-    --             report to_hstring(rr_s_tuser) & " - " & to_hstring(rr_s_tdata.sp_val);
-    --             -- "Test: " & to_string(active_test_id) & "; HS: " & to_string(memw_hs_cnt) &
-    --             --             "; Incorrect memory address. Expected: " & to_hstring(tb_req_taddr) & " / " & to_hstring(tb_req_data) &
-    --             --             ". Recieved: " & to_hstring(hw_req_taddr) & " / " & to_hstring(hw_req_tdata) & "|" & to_string(hw_req_tmask) severity error;
-    --         end if;
-
-
-    --     end if;
-    -- end process;
-
----procedure WRITE(L : inout LINE; VALUE : in integer; JUSTIFIED: in SIDE := right; FIELD: in WIDTH := 0);
-	-- RTL_SYNTHESIS OFF
-    -- p_dump  : process(clk)
-    --     file test_vector      : text open write_mode is "output_file.txt";
-    --     variable row          : line;
-    -- begin
-    --     if(resetn = '0') then
-    --     ------------------------------------
-    --     elsif(rising_edge(clk)) then
-
-    --         if (rr_s_tvalid = '1' and rr_s_tready = '1') then
-    --             hwrite(row, rr_s_tuser, right, 64);
-    --             hwrite(row, rr_s_tdata.sp_val, right, 15);
-    --             writeline(test_vector, row);
-    --         end if;
-    --     end if;
-    -- end process p_dump;
-	-- RTL_SYNTHESIS ON
 
 end architecture;

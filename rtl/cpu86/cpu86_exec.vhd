@@ -226,13 +226,10 @@ architecture rtl of cpu86_exec is
             rr_s_tdata              : in rr_instr_t;
             rr_s_tuser              : in user_t;
 
-            div_intr_s_tvalid       : in std_logic;
-            div_intr_s_tready       : out std_logic;
-            div_intr_s_tdata        : in intr_t;
-
-            bnd_intr_s_tvalid       : in std_logic;
-            bnd_intr_s_tready       : out std_logic;
-            bnd_intr_s_tdata        : in intr_t;
+            s_axis_intr_tvalid      : in std_logic;
+            s_axis_intr_tready      : out std_logic;
+            s_axis_intr_tdata       : in intr_t;
+            s_axis_intr_tuser       : in std_logic_vector(7 downto 0);
 
             micro_m_tvalid          : out std_logic;
             micro_m_tready          : in std_logic;
@@ -288,7 +285,7 @@ architecture rtl of cpu86_exec is
             lsu_rd_s_tready         : out std_logic;
             lsu_rd_s_tdata          : in std_logic_vector(15 downto 0);
 
-            flags_s_tdata           : in std_logic_vector(15 downto 0);
+            s_axis_fl_tdata         : in std_logic_vector(15 downto 0);
 
             ax_m_wr_tvalid          : out std_logic;
             ax_m_wr_tdata           : out std_logic_vector(15 downto 0);
@@ -320,8 +317,8 @@ architecture rtl of cpu86_exec is
             ss_m_wr_tvalid          : out std_logic;
             ss_m_wr_tdata           : out std_logic_vector(15 downto 0);
 
-            flags_m_wr_tvalid       : out std_logic;
-            flags_m_wr_tdata        : out std_logic_vector(15 downto 0);
+            m_axis_fl_wr_tvalid     : out std_logic;
+            m_axis_fl_wr_tdata      : out std_logic_vector(15 downto 0);
 
             jmp_lock_m_wr_tvalid    : out std_logic;
 
@@ -346,11 +343,9 @@ architecture rtl of cpu86_exec is
             dbg_m_tvalid            : out std_logic;
             dbg_m_tdata             : out std_logic_vector(31 downto 0);
 
-            div_intr_m_tvalid       : out std_logic;
-            div_intr_m_tdata        : out intr_t;
-
-            bnd_intr_m_tvalid       : out std_logic;
-            bnd_intr_m_tdata        : out intr_t;
+            m_axis_intr_tvalid      : out std_logic;
+            m_axis_intr_tdata       : out intr_t;
+            m_axis_intr_tuser       : out std_logic_vector(7 downto 0);
 
             event_jump              : out std_logic
         );
@@ -598,26 +593,20 @@ architecture rtl of cpu86_exec is
     signal mexec_dbg_tvalid         : std_logic;
     signal mexec_dbg_tdata          : std_logic_vector(31 downto 0);
 
-    signal div_intr_s_tvalid        : std_logic;
-    signal div_intr_s_tready        : std_logic;
-    signal div_intr_s_tdata         : intr_t;
+    signal intr_s_tvalid            : std_logic;
+    signal intr_s_tready            : std_logic;
+    signal intr_s_tdata             : intr_t;
+    signal intr_s_tuser             : std_logic_vector(7 downto 0);
 
-    signal div_intr_m_tvalid        : std_logic;
-    signal div_intr_m_tready        : std_logic;
-    signal div_intr_m_tdata         : intr_t;
+    signal intr_m_tvalid            : std_logic;
+    signal intr_m_tready            : std_logic;
+    signal intr_m_tdata             : intr_t;
+    signal intr_m_tuser             : std_logic_vector(7 downto 0);
 
     signal ext_intr_s_tready        : std_logic;
     signal ext_intr_m_tvalid        : std_logic;
     signal ext_intr_m_tready        : std_logic;
     signal ext_intr_m_tdata         : std_logic_vector(7 downto 0);
-
-    signal bnd_intr_s_tvalid        : std_logic;
-    signal bnd_intr_s_tready        : std_logic;
-    signal bnd_intr_s_tdata         : intr_t;
-
-    signal bnd_intr_m_tvalid        : std_logic;
-    signal bnd_intr_m_tready        : std_logic;
-    signal bnd_intr_m_tdata         : intr_t;
 
     signal masked_interrupt         : std_logic;
 
@@ -630,6 +619,7 @@ begin
     instr_tdata     <= instr_s_tdata;
     instr_tuser     <= instr_s_tuser;
     instr_hs        <= '1' when instr_tvalid = '1' and instr_tready = '1' else '0';
+
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_jmp_lock : cpu86_exec_reg generic map (
@@ -650,6 +640,7 @@ begin
         reg_m_tdata             => open
     );
 
+
     -- module cpu86_exec_reg instantiation
     cpu_reg_ds : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16,
@@ -668,6 +659,7 @@ begin
         reg_m_tvalid            => ds_tvalid,
         reg_m_tdata             => ds_tdata
     );
+
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_ss : cpu86_exec_reg generic map (
@@ -688,6 +680,7 @@ begin
         reg_m_tdata             => ss_tdata
     );
 
+
     -- module cpu86_exec_reg instantiation
     cpu_reg_es : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16,
@@ -706,6 +699,7 @@ begin
         reg_m_tvalid            => es_tvalid,
         reg_m_tdata             => es_tdata
     );
+
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_ax : cpu86_exec_reg generic map (
@@ -726,6 +720,7 @@ begin
         reg_m_tdata             => ax_tdata
     );
 
+
     -- module cpu86_exec_reg instantiation
     cpu_reg_bx : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16,
@@ -744,6 +739,7 @@ begin
         reg_m_tvalid            => bx_tvalid,
         reg_m_tdata             => bx_tdata
     );
+
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_cx : cpu86_exec_reg generic map (
@@ -764,6 +760,7 @@ begin
         reg_m_tdata             => cx_tdata
     );
 
+
     -- module cpu86_exec_reg instantiation
     cpu_reg_dx : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16,
@@ -782,6 +779,7 @@ begin
         reg_m_tvalid            => dx_tvalid,
         reg_m_tdata             => dx_tdata
     );
+
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_bp : cpu86_exec_reg generic map (
@@ -802,6 +800,7 @@ begin
         reg_m_tdata             => bp_tdata
     );
 
+
     -- module cpu86_exec_reg instantiation
     cpu_reg_sp : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16,
@@ -820,6 +819,7 @@ begin
         reg_m_tvalid            => sp_tvalid,
         reg_m_tdata             => sp_tdata
     );
+
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_di : cpu86_exec_reg generic map (
@@ -840,6 +840,7 @@ begin
         reg_m_tdata             => di_tdata
     );
 
+
     -- module cpu86_exec_reg instantiation
     cpu_reg_si : cpu86_exec_reg generic map (
         DATA_WIDTH              => 16,
@@ -858,6 +859,7 @@ begin
         reg_m_tvalid            => si_tvalid,
         reg_m_tdata             => si_tdata
     );
+
 
     -- module cpu86_exec_reg instantiation
     cpu_flags_inst : cpu86_exec_reg generic map (
@@ -880,19 +882,21 @@ begin
 
 
     -- module axis_reg instantiation
-    div_interrupt_reg_inst : axis_reg generic map (
-        DATA_WIDTH              => div_intr_s_tdata'length
+    interrupt_reg_inst : axis_reg generic map (
+        DATA_WIDTH                  => 72
     ) port map (
-        clk                     => clk,
-        resetn                  => resetn,
+        clk                         => clk,
+        resetn                      => resetn,
 
-        in_s_tvalid             => div_intr_s_tvalid,
-        in_s_tready             => div_intr_s_tready,
-        in_s_tdata              => div_intr_s_tdata,
+        in_s_tvalid                 => intr_s_tvalid,
+        in_s_tready                 => intr_s_tready,
+        in_s_tdata(71 downto 64)    => intr_s_tuser,
+        in_s_tdata(63 downto 0)     => intr_s_tdata,
 
-        out_m_tvalid            => div_intr_m_tvalid,
-        out_m_tready            => div_intr_m_tready,
-        out_m_tdata             => div_intr_m_tdata
+        out_m_tvalid                => intr_m_tvalid,
+        out_m_tready                => intr_m_tready,
+        out_m_tdata(71 downto 64)   => intr_m_tuser,
+        out_m_tdata(63 downto 0)    => intr_m_tdata
     );
 
 
@@ -912,21 +916,6 @@ begin
         out_m_tdata             => ext_intr_m_tdata
     );
 
-    -- module axis_reg instantiation
-    bnd_interrupt_reg_inst : axis_reg generic map (
-        DATA_WIDTH              => bnd_intr_s_tdata'length
-    ) port map (
-        clk                     => clk,
-        resetn                  => resetn,
-
-        in_s_tvalid             => bnd_intr_s_tvalid,
-        in_s_tready             => bnd_intr_s_tready,
-        in_s_tdata              => bnd_intr_s_tdata,
-
-        out_m_tvalid            => bnd_intr_m_tvalid,
-        out_m_tready            => bnd_intr_m_tready,
-        out_m_tdata             => bnd_intr_m_tdata
-    );
 
     -- module axis_fifo instantiation
     axis_fifo_inst_0 : axis_fifo_er generic map (
@@ -1047,13 +1036,10 @@ begin
         rr_s_tdata              => rr_tdata,
         rr_s_tuser              => rr_tuser,
 
-        div_intr_s_tvalid       => div_intr_m_tvalid,
-        div_intr_s_tready       => div_intr_m_tready,
-        div_intr_s_tdata        => div_intr_m_tdata,
-
-        bnd_intr_s_tvalid       => bnd_intr_m_tvalid,
-        bnd_intr_s_tready       => bnd_intr_m_tready,
-        bnd_intr_s_tdata        => bnd_intr_m_tdata,
+        s_axis_intr_tvalid      => intr_m_tvalid,
+        s_axis_intr_tready      => intr_m_tready,
+        s_axis_intr_tdata       => intr_m_tdata,
+        s_axis_intr_tuser       => intr_m_tuser,
 
         micro_m_tvalid          => micro_tvalid,
         micro_m_tready          => micro_tready,
@@ -1108,8 +1094,8 @@ begin
         lsu_rd_s_tready         => lsu_rd_tready,
         lsu_rd_s_tdata          => lsu_rd_tdata,
 
-        flags_s_tdata(15 downto 12) => "1111",
-        flags_s_tdata(11 downto  0) => fl_tdata(11 downto 0),
+        s_axis_fl_tdata(15 downto 12)   => "1111",
+        s_axis_fl_tdata(11 downto  0)   => fl_tdata(11 downto 0),
 
         ax_m_wr_tvalid          => mexec_ax_wr_tvalid,
         ax_m_wr_tdata           => mexec_ax_wr_tdata,
@@ -1145,8 +1131,8 @@ begin
 
         jmp_lock_m_wr_tvalid    => jmp_lock_wr_tvalid,
 
-        flags_m_wr_tvalid       => flags_wr_tvalid,
-        flags_m_wr_tdata        => flags_wr_tdata,
+        m_axis_fl_wr_tvalid     => flags_wr_tvalid,
+        m_axis_fl_wr_tdata      => flags_wr_tdata,
 
         lsu_req_m_tvalid        => lsu_req_tvalid,
         lsu_req_m_tready        => lsu_req_tready,
@@ -1166,11 +1152,9 @@ begin
         dbg_m_tvalid            => mexec_dbg_tvalid,
         dbg_m_tdata             => mexec_dbg_tdata,
 
-        div_intr_m_tvalid       => div_intr_s_tvalid,
-        div_intr_m_tdata        => div_intr_s_tdata,
-
-        bnd_intr_m_tvalid       => bnd_intr_s_tvalid,
-        bnd_intr_m_tdata        => bnd_intr_s_tdata,
+        m_axis_intr_tvalid      => intr_s_tvalid,
+        m_axis_intr_tdata       => intr_s_tdata,
+        m_axis_intr_tuser       => intr_s_tuser,
 
         event_jump              => event_jump
     );
