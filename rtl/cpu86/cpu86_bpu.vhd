@@ -105,6 +105,7 @@ architecture rtl of cpu86_bpu is
 
     signal jump_s_tvalid            : std_logic;
     signal jump_s_tdata             : cpu86_jump_t;
+
     signal jump_m_tvalid            : std_logic;
     signal jump_m_tdata             : std_logic_vector(31 downto 0);
 
@@ -113,7 +114,12 @@ architecture rtl of cpu86_bpu is
     signal bpu_wr_idx               : natural range 0 to BPU_ITEM_CNT-1;
     signal bpu_rd_idx               : natural range 0 to BPU_ITEM_CNT-1;
     signal bpu_item_wr_hit          : std_logic_vector(BPU_ITEM_CNT-1 downto 0);
-    --signal bpu_item_wr_hit_any      : std_logic;
+    signal bpu_item_wr_hit_any      : std_logic;
+
+    signal d_jump_s_tvalid          : std_logic;
+    signal d_jump_s_tdata           : cpu86_jump_t;
+    signal d_bpu_item_wr_hit        : std_logic_vector(BPU_ITEM_CNT-1 downto 0);
+    signal d_bpu_item_wr_hit_any    : std_logic;
 
     signal bpu_item_rd_hit          : std_logic_vector(BPU_ITEM_CNT-1 downto 0);
     signal bpu_item_rd_hit_idx      : std_logic_vector(BPU_ITEM_IDX_WIDTH-1 downto 0);  --natural range 0 to BPU_ITEM_CNT-1;
@@ -191,7 +197,7 @@ begin
     instr_s_tdata           <= slv_to_decoded_instr_t(instr_s_payload(DECODED_INSTR_T_WIDTH+USER_T_WIDTH-1 downto USER_T_WIDTH));
     instr_s_tuser           <= instr_s_payload(USER_T_WIDTH-1 downto 0);
 
-    bpu_item_rd_tdata       <= bpu_item_rd_hit & bpu_item_rd_hit_idx; -- std_logic_vector(to_unsigned(bpu_item_rd_hit_idx, BPU_ITEM_IDX_WIDTH));
+    bpu_item_rd_tdata       <= bpu_item_rd_hit & bpu_item_rd_hit_idx;
     d_bpu_item_rd_hit       <= d_bpu_item_rd_tdata(BPU_ITEM_CNT+BPU_ITEM_IDX_WIDTH-1 downto BPU_ITEM_IDX_WIDTH);
     d_bpu_item_rd_hit_idx   <= to_integer(unsigned(d_bpu_item_rd_tdata(BPU_ITEM_IDX_WIDTH-1 downto 0)));
 
@@ -343,9 +349,26 @@ begin
         bpu_item_rd_hit_pos(4) or bpu_item_rd_hit_pos(5) or
         bpu_item_rd_hit_pos(6) or bpu_item_rd_hit_pos(7);
 
-    --bpu_item_wr_hit_any <= '1' when bpu_item_wr_hit /= "00000000" else '0';
+    bpu_item_wr_hit_any <= '1' when bpu_item_wr_hit /= "00000000" else '0';
 
     d_bpu_item_rd_hit_any <= '1' when d_bpu_item_rd_hit /= "00000000" else '0';
+
+    process (clk) begin
+        if rising_edge(clk) then
+            -- Resettable logic
+            if (resetn = '0') then
+                d_jump_s_tvalid       <= '0';
+                d_bpu_item_wr_hit     <= (others => '0');
+                d_bpu_item_wr_hit_any <= '0';
+            else
+                d_jump_s_tvalid       <= jump_s_tvalid;
+                d_bpu_item_wr_hit     <= bpu_item_wr_hit;
+                d_bpu_item_wr_hit_any <= bpu_item_wr_hit_any;
+            end if;
+            -- Without reset
+            d_jump_s_tdata <= jump_s_tdata;
+        end if;
+    end process;
 
     process (clk) begin
         if rising_edge(clk) then
@@ -357,7 +380,7 @@ begin
             else
 
                 for i in 0 to BPU_ITEM_CNT-1 loop
-                    if (jump_s_tvalid = '1' and jump_s_tdata.bypass = '0' and ((bpu_item_wr_hit(i) = '1') or (jump_s_tdata.first = '1' and i = next_free_bpu_item_idx))) then
+                    if (d_jump_s_tvalid = '1' and d_jump_s_tdata.bypass = '0' and ((d_bpu_item_wr_hit(i) = '1') or (d_bpu_item_wr_hit_any = '0' and i = next_free_bpu_item_idx))) then
                         bpu_items(i).valid <= '1';
                     end if;
                 end loop;
@@ -366,25 +389,25 @@ begin
 
             -- Without reset
             for i in 0 to BPU_ITEM_CNT-1 loop
-                if (jump_s_tvalid = '1' and jump_s_tdata.bypass = '0' and ((bpu_item_wr_hit(i) = '1') or (jump_s_tdata.first = '1' and i = next_free_bpu_item_idx))) then
-                    bpu_items(i).inst_cs <= jump_s_tdata.inst_cs;
-                    bpu_items(i).inst_ip <= jump_s_tdata.inst_ip;
+                if (d_jump_s_tvalid = '1' and d_jump_s_tdata.bypass = '0' and ((d_bpu_item_wr_hit(i) = '1') or (d_bpu_item_wr_hit_any = '0' and i = next_free_bpu_item_idx))) then
+                    bpu_items(i).inst_cs <= d_jump_s_tdata.inst_cs;
+                    bpu_items(i).inst_ip <= d_jump_s_tdata.inst_ip;
 
-                    if (jump_s_tdata.taken = '1') then
-                        bpu_items(i).jump_cs <= jump_s_tdata.jump_cs;
-                        bpu_items(i).jump_ip <= jump_s_tdata.jump_ip;
+                    if (d_jump_s_tdata.taken = '1') then
+                        bpu_items(i).jump_cs <= d_jump_s_tdata.jump_cs;
+                        bpu_items(i).jump_ip <= d_jump_s_tdata.jump_ip;
                     end if;
 
-                    if (jump_s_tdata.first = '1') then
-                        if (jump_s_tdata.taken = '1') then
+                    if (d_jump_s_tdata.first = '1') then
+                        if (d_jump_s_tdata.taken = '1') then
                             bpu_items(i).saturated_cnt <= 1;
                         else
                             bpu_items(i).saturated_cnt <= 0;
                         end if;
                     else
-                        if (jump_s_tdata.taken = '1' and bpu_items(i).saturated_cnt < 3) then
+                        if (d_jump_s_tdata.taken = '1' and bpu_items(i).saturated_cnt < 3) then
                             bpu_items(i).saturated_cnt <= bpu_items(i).saturated_cnt + 1;
-                        elsif (jump_s_tdata.taken = '0' and bpu_items(i).saturated_cnt > 0) then
+                        elsif (d_jump_s_tdata.taken = '0' and bpu_items(i).saturated_cnt > 0) then
                             bpu_items(i).saturated_cnt <= bpu_items(i).saturated_cnt - 1;
                         end if;
                     end if;
@@ -401,7 +424,7 @@ begin
             if resetn = '0' then
                 next_free_bpu_item_idx <= 0;
             else
-                if (jump_s_tvalid = '1' and jump_s_tdata.bypass = '0' and jump_s_tdata.first = '1') then
+                if (d_jump_s_tvalid = '1' and d_jump_s_tdata.bypass = '0' and d_bpu_item_wr_hit_any = '0') then
                     next_free_bpu_item_idx <= (next_free_bpu_item_idx + 1) mod BPU_ITEM_CNT;
                 end if;
             end if;
