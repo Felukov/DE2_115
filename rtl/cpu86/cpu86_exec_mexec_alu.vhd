@@ -75,14 +75,15 @@ begin
     xor_next <= req_s_tdata.aval xor req_s_tdata.bval;
 
     alu_res_next_proc: process (all) begin
-        res_tdata_next.wb <= req_s_tdata.wb;
-        res_tdata_next.code <= req_s_tdata.code;
-        res_tdata_next.w <= req_s_tdata.w;
-        res_tdata_next.dreg <= req_s_tdata.dreg;
-        res_tdata_next.dmask <= req_s_tdata.dmask;
+        res_tdata_next.wb     <= req_s_tdata.wb;
+        res_tdata_next.code   <= req_s_tdata.code;
+        res_tdata_next.w      <= req_s_tdata.w;
+        res_tdata_next.dreg   <= req_s_tdata.dreg;
+        res_tdata_next.dmask  <= req_s_tdata.dmask;
         res_tdata_next.upd_fl <= req_s_tdata.upd_fl;
-        res_tdata_next.aval <= req_s_tdata.aval;
-        res_tdata_next.bval <= req_s_tdata.bval;
+        res_tdata_next.aval   <= req_s_tdata.aval;
+        res_tdata_next.bval   <= req_s_tdata.bval;
+
         case (req_s_tdata.code) is
             when ALU_OP_ADC =>
                 res_tdata_next.dval <= adc_next(15 downto 0);
@@ -134,7 +135,6 @@ begin
 
         flags_pf <= not (res_m_tdata.rval(7) xor res_m_tdata.rval(6) xor res_m_tdata.rval(5) xor res_m_tdata.rval(4) xor
                          res_m_tdata.rval(3) xor res_m_tdata.rval(2) xor res_m_tdata.rval(1) xor res_m_tdata.rval(0));
-        flags_af <= res_m_tdata.aval(4) xor res_m_tdata.bval(4) xor res_m_tdata.rval(4);
 
         case res_m_tdata.code is
             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
@@ -167,7 +167,6 @@ begin
             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
                 flags_cf <= '0';
             when others =>
-                --ALU_OP_ADD | ALU_OP_SUB
                 if res_m_tdata.w = '0' then
                     flags_cf <= res_m_tdata.aval(8) xor res_m_tdata.bval(8) xor res_m_tdata.rval(8);
                 else
@@ -178,27 +177,18 @@ begin
         case res_m_tdata.code is
             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
                 flags_of <= '0';
-
-            when ALU_OP_SUB | ALU_OP_DEC | ALU_OP_SBB | ALU_OP_CMP =>
-                if res_m_tdata.w = '0' then
-                    flags_of <= (res_m_tdata.aval(7) xor res_m_tdata.bval(7)) and (res_m_tdata.rval(7) xor res_m_tdata.aval(7));
-                else
-                    flags_of <= (res_m_tdata.aval(15) xor res_m_tdata.bval(15)) and (res_m_tdata.rval(15) xor res_m_tdata.aval(15));
-                end if;
-
-            when others => --ALU_OP_ADD
+            when others =>
                 if res_m_tdata.w = '0' then
                     flags_of <= not (res_m_tdata.aval(7) xor res_m_tdata.bval(7)) and (res_m_tdata.rval(7) xor res_m_tdata.aval(7));
                 else
                     flags_of <= not (res_m_tdata.aval(15) xor res_m_tdata.bval(15)) and (res_m_tdata.rval(15) xor res_m_tdata.aval(15));
                 end if;
-
         end case;
 
-        res_m_tuser(FLAG_15) <= '0';
-        res_m_tuser(FLAG_14) <= '0';
-        res_m_tuser(FLAG_13) <= '0';
-        res_m_tuser(FLAG_12) <= '0';
+        res_m_tuser(FLAG_15) <= '1';
+        res_m_tuser(FLAG_14) <= '1';
+        res_m_tuser(FLAG_13) <= '1';
+        res_m_tuser(FLAG_12) <= '1';
         res_m_tuser(FLAG_OF) <= flags_of;
         res_m_tuser(FLAG_DF) <= '0';
         res_m_tuser(FLAG_IF) <= '0';
