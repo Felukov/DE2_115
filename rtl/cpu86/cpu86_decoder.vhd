@@ -1284,6 +1284,7 @@ begin
                         when "001" => instr_tdata.code <= ALU_OP_DEC;
                         when others => null;
                     end case;
+                    upd_lock(LOCK_DREG or LOCK_FL);
                 when x"FF" =>
                     instr_tdata.w <= '1';
                     case u8_tdata(5 downto 3) is
