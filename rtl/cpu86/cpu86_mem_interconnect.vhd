@@ -87,8 +87,6 @@ architecture rtl of cpu86_mem_interconnect is
     signal fifo_m_tdata         : std_logic_vector(1 downto 0);
 
     signal exec_mem_req_read    : std_logic;
-    signal exec_mem_req_write   : std_logic;
-    signal fetcher_mem_req_read : std_logic;
 
 begin
 
@@ -108,35 +106,67 @@ begin
     );
 
     -- Assigns
-    exec_mem_req_read      <= '1' when exec_mem_req_tvalid = '1' and mem_req_m_tready = '1' and exec_mem_req_tdata(57) = '0' else '0';
-    exec_mem_req_write     <= '1' when exec_mem_req_tvalid = '1' and mem_req_m_tready = '1' and exec_mem_req_tdata(57) = '1' else '0';
-    fetcher_mem_req_read   <= '1' when fetcher_mem_req_tvalid = '1' and mem_req_m_tready = '1' else '0';
+    exec_mem_req_read       <= '1' when exec_mem_req_tdata(57) = '0' else '0';
 
-    fetcher_mem_req_tready <= '1' when fifo_s_tready = '1' and exec_mem_req_tvalid = '0' and mem_req_m_tready = '1' else '0';
-    exec_mem_req_tready    <= '1' when fifo_s_tready = '1' and mem_req_m_tready = '1' else '0';
+    fetcher_mem_req_tready  <= '1' when exec_mem_req_tvalid = '0' and fifo_s_tready = '1' and
+        (mem_req_m_tvalid = '0' or mem_req_m_tready = '1') else '0';
 
-    fifo_s_tdata(1)        <= '1' when fetcher_mem_req_read = '1' and exec_mem_req_read = '0' and exec_mem_req_write = '0' else '0';
-    fifo_s_tdata(0)        <= '1' when exec_mem_req_read = '1' else '0';
+    exec_mem_req_tready     <= '1' when fifo_s_tready = '1' and
+        (mem_req_m_tvalid = '0' or mem_req_m_tready = '1') else '0';
 
-    mem_req_m_tvalid       <= '1' when exec_mem_req_tvalid = '1' or fetcher_mem_req_tvalid = '1' else '0';
+    fetcher_mem_res_tvalid  <= '1' when mem_rd_s_tvalid = '1' and fifo_m_tdata(1) = '1' else '0';
+    fetcher_mem_res_tdata   <= mem_rd_s_tdata;
 
-    fifo_s_tvalid          <= '1' when (exec_mem_req_read = '1') or (fetcher_mem_req_read = '1' and exec_mem_req_read = '0' and exec_mem_req_write = '0') else '0';
+    exec_mem_res_tvalid     <= '1' when mem_rd_s_tvalid = '1' and fifo_m_tdata(0) = '1' else '0';
+    exec_mem_res_tdata      <= mem_rd_s_tdata;
 
-    fetcher_mem_res_tvalid <= '1' when mem_rd_s_tvalid = '1' and fifo_m_tdata(1) = '1' else '0';
-    fetcher_mem_res_tdata  <= mem_rd_s_tdata;
+    -- register memory request
+    process (clk) begin
+        if rising_edge(clk) then
+            -- resettable
+            if resetn = '0' then
+                mem_req_m_tvalid <= '0';
+            else
+                if (exec_mem_req_tvalid = '1' or fetcher_mem_req_tvalid = '1') and (fifo_s_tready = '1') then
+                    mem_req_m_tvalid <= '1';
+                elsif (mem_req_m_tready = '1') then
+                    mem_req_m_tvalid <= '0';
+                end if;
+            end if;
+            -- not resettable logic
+            if (exec_mem_req_tvalid = '1' and exec_mem_req_tready = '1') then
+                mem_req_m_tdata <= exec_mem_req_tdata;
+            elsif (fetcher_mem_req_tvalid = '1' and fetcher_mem_req_tready = '1') then
+                mem_req_m_tdata(63 downto 62) <= (others => '0');
+                mem_req_m_tdata(61 downto 58) <= "0000";
+                mem_req_m_tdata(57)           <= '0';
+                mem_req_m_tdata(56 downto 32) <= "00000" & fetcher_mem_req_tdata;
+                mem_req_m_tdata(31 downto 0)  <= (others => '0');
+            end if;
+        end if;
+    end process;
 
-    exec_mem_res_tvalid    <= '1' when mem_rd_s_tvalid = '1' and fifo_m_tdata(0) = '1' else '0';
-    exec_mem_res_tdata     <= mem_rd_s_tdata;
+    -- register where to send response into the queue
+    process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                fifo_s_tvalid <= '0';
+            else
+                if ((exec_mem_req_tvalid = '1' and exec_mem_req_tready = '1' and exec_mem_req_read = '1') or
+                    (fetcher_mem_req_tvalid = '1' and fetcher_mem_req_tready = '1')) then
+                    fifo_s_tvalid <= '1';
+                else
+                    fifo_s_tvalid <= '0';
+                end if;
+            end if;
 
-    process (all) begin
-        if (exec_mem_req_tvalid = '1') then
-            mem_req_m_tdata <= exec_mem_req_tdata;
-        else
-            mem_req_m_tdata(63 downto 62) <= (others => '0');
-            mem_req_m_tdata(61 downto 58) <= "0000";
-            mem_req_m_tdata(57)           <= '0';
-            mem_req_m_tdata(56 downto 32) <= "00000" & fetcher_mem_req_tdata;
-            mem_req_m_tdata(31 downto 0)  <= (others => '0');
+            if (exec_mem_req_tvalid = '1' and exec_mem_req_tready = '1' and exec_mem_req_read = '1') then
+                fifo_s_tdata(1) <= '0';
+                fifo_s_tdata(0) <= '1';
+            elsif (fetcher_mem_req_tvalid = '1' and fetcher_mem_req_tready = '1') then
+                fifo_s_tdata(1) <= '1';
+                fifo_s_tdata(0) <= '0';
+            end if;
         end if;
     end process;
 
