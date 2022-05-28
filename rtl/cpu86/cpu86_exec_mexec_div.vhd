@@ -185,12 +185,12 @@ begin
                 div_s_tuser(DIV_USER_T_D_LO_ZERO) <= '0';
             end if;
 
-            div_s_tuser(DIV_USER_T_CODE) <= req_s_tdata.code;
-            div_s_tuser(DIV_USER_T_W) <= req_s_tdata.w;
-            div_s_tuser(DIV_USER_T_DREG) <= std_logic_vector(to_unsigned(reg_t'pos(req_s_tdata.dreg), 4));
-            div_s_tuser(DIV_USER_T_SS) <= req_s_tdata.ss_val;
-            div_s_tuser(DIV_USER_T_IP) <= req_s_tdata.cs_val;
-            div_s_tuser(DIV_USER_T_CS) <= req_s_tdata.ip_val;
+            div_s_tuser(DIV_USER_T_CODE)    <= req_s_tdata.code;
+            div_s_tuser(DIV_USER_T_W)       <= req_s_tdata.w;
+            div_s_tuser(DIV_USER_T_DREG)    <= std_logic_vector(to_unsigned(reg_t'pos(req_s_tdata.dreg), 4));
+            div_s_tuser(DIV_USER_T_SS)      <= req_s_tdata.ss_val;
+            div_s_tuser(DIV_USER_T_IP)      <= req_s_tdata.cs_val;
+            div_s_tuser(DIV_USER_T_CS)      <= req_s_tdata.ip_val;
             div_s_tuser(DIV_USER_T_IP_NEXT) <= req_s_tdata.ip_next_val;
 
             if (req_s_tdata.code = DIVU_IDIV) then
@@ -220,7 +220,7 @@ begin
             if (div_m_tvalid = '1') then
 
                 res_m_tdata.code <= div_m_tuser(DIV_USER_T_CODE);
-                res_m_tdata.w <= div_m_tuser(DIV_USER_T_W);
+                res_m_tdata.w    <= div_m_tuser(DIV_USER_T_W);
                 res_m_tdata.dreg <= reg_t'val(to_integer(unsigned(div_m_tuser(DIV_USER_T_DREG))));
 
                 if (div_m_tuser(DIV_USER_T_SIGN_D) = '1' xor div_m_tuser(DIV_USER_T_SIGN_N) = '1') then
@@ -234,22 +234,20 @@ begin
                 else
                     res_m_tdata.rval <= div_m_tdata(15 downto 0);
                 end if;
-                res_m_tdata.ss_val <= div_m_tuser(DIV_USER_T_SS);
-                res_m_tdata.cs_val <= div_m_tuser(DIV_USER_T_IP);
-                res_m_tdata.ip_val <= div_m_tuser(DIV_USER_T_CS);
+
+                res_m_tdata.ss_val      <= div_m_tuser(DIV_USER_T_SS);
+                res_m_tdata.cs_val      <= div_m_tuser(DIV_USER_T_IP);
+                res_m_tdata.ip_val      <= div_m_tuser(DIV_USER_T_CS);
                 res_m_tdata.ip_next_val <= div_m_tuser(DIV_USER_T_IP_NEXT);
 
                 if (div_m_tuser(DIV_USER_T_W) = '0') then
-
-                    if (res_m_tdata.code = DIVU_IDIV) then
-
+                    if (div_m_tuser(DIV_USER_T_CODE) = DIVU_IDIV) then
                         if div_m_tdata(43 downto 32) > x"07F" or div_m_tuser(DIV_USER_T_D_LO_ZERO) = '1' then
                             res_m_tdata.overflow <= '1';
                         else
                             res_m_tdata.overflow <= '0';
                         end if;
-
-                    elsif (res_m_tdata.code = DIVU_DIV) then
+                    elsif (div_m_tuser(DIV_USER_T_CODE) = DIVU_DIV) then
 
                         if div_m_tdata(43 downto 32) > x"0FF" or div_m_tuser(DIV_USER_T_D_LO_ZERO) = '1' then
                             res_m_tdata.overflow <= '1';
@@ -259,19 +257,14 @@ begin
                     else
                         res_m_tdata.overflow <= '0';
                     end if;
-
                 else
-
-                    if (res_m_tdata.code = DIVU_IDIV) then
-
+                    if (div_m_tuser(DIV_USER_T_CODE) = DIVU_IDIV) then
                         if div_m_tdata(51 downto 32) > x"07FFF" or (div_m_tuser(DIV_USER_T_D_LO_ZERO) = '1' and div_m_tuser(DIV_USER_T_D_HI_ZERO) = '1') then
                             res_m_tdata.overflow <= '1';
                         else
                             res_m_tdata.overflow <= '0';
                         end if;
-
-                    elsif (res_m_tdata.code = DIVU_DIV) then
-
+                    elsif (div_m_tuser(DIV_USER_T_CODE) = DIVU_DIV) then
                         if div_m_tdata(51 downto 32) > x"0FFFF" or (div_m_tuser(DIV_USER_T_D_LO_ZERO) = '1' and div_m_tuser(DIV_USER_T_D_HI_ZERO) = '1') then
                             res_m_tdata.overflow <= '1';
                         else
@@ -280,7 +273,6 @@ begin
                     else
                         res_m_tdata.overflow <= '0';
                     end if;
-
                 end if;
 
             end if;
