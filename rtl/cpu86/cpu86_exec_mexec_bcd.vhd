@@ -101,7 +101,7 @@ begin
                 when BCDU_AAS =>
                     calc_0_tdata(7 downto 4) <= x"0";
                     if (unsigned(req_s_tdata.sval(3 downto 0)) > to_unsigned(9, 4)) or (req_s_tuser(FLAG_AF) = '1') then
-                        calc_0_tdata(3 downto 0) <= std_logic_vector(unsigned(req_s_tdata.sval(3 downto 0)) - to_unsigned(6, 4));
+                        calc_0_tdata( 3 downto 0) <= std_logic_vector(unsigned(req_s_tdata.sval( 3 downto 0)) - to_unsigned(6, 4));
                         calc_0_tdata(15 downto 8) <= std_logic_vector(unsigned(req_s_tdata.sval(15 downto 8)) - to_unsigned(1, 8));
                         calc_0_fl_af <= '1';
                         calc_0_fl_cf <= '1';
