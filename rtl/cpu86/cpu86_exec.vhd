@@ -408,6 +408,12 @@ architecture rtl of cpu86_exec is
 
     signal exec_resetn              : std_logic;
 
+    signal instr_tvalid             : std_logic;
+    signal instr_tready             : std_logic;
+    signal instr_tdata              : slv_decoded_instr_t;
+    signal instr_tuser              : user_t;
+    signal instr_hs                 : std_logic;
+
     signal jmp_lock_tvalid          : std_logic;
     signal jmp_lock_lock_tvalid     : std_logic;
     signal jmp_lock_wr_tvalid       : std_logic;
@@ -483,8 +489,8 @@ architecture rtl of cpu86_exec is
     signal di_wr_tvalid             : std_logic;
     signal di_wr_tdata              : std_logic_vector(15 downto 0);
 
-    signal flags_tvalid             : std_logic;
-    signal flags_tdata              : std_logic_vector(15 downto 0);
+    signal fl_tvalid                : std_logic;
+    signal fl_tdata                 : std_logic_vector(15 downto 0);
     signal flags_lock_tvalid        : std_logic;
     signal flags_wr_tvalid          : std_logic;
     signal flags_wr_tdata           : std_logic_vector(15 downto 0);
@@ -618,6 +624,12 @@ architecture rtl of cpu86_exec is
     signal event_jump               : std_logic;
 
 begin
+    -- i/o assigns
+    instr_tvalid    <= instr_s_tvalid;
+    instr_s_tready  <= instr_tready;
+    instr_tdata     <= instr_s_tdata;
+    instr_tuser     <= instr_s_tuser;
+    instr_hs        <= '1' when instr_tvalid = '1' and instr_tready = '1' else '0';
 
     -- module cpu86_exec_reg instantiation
     cpu_reg_jmp_lock : cpu86_exec_reg generic map (
@@ -862,8 +874,8 @@ begin
         lock_s_tvalid           => flags_lock_tvalid,
         unlk_s_tvalid           => event_jump,
 
-        reg_m_tvalid            => flags_tvalid,
-        reg_m_tdata             => flags_tdata
+        reg_m_tvalid            => fl_tvalid,
+        reg_m_tdata             => fl_tdata
     );
 
 
@@ -924,14 +936,15 @@ begin
         clk                     => clk,
         resetn                  => exec_resetn,
 
-        s_axis_fifo_tvalid      => instr_s_tvalid,
-        s_axis_fifo_tready      => instr_s_tready,
-        s_axis_fifo_tdata       => instr_s_tdata,
+        s_axis_fifo_tvalid      => instr_tvalid,
+        s_axis_fifo_tready      => instr_tready,
+        s_axis_fifo_tdata       => instr_tdata,
 
         m_axis_fifo_tvalid      => instr_m_tvalid,
         m_axis_fifo_tready      => instr_m_tready,
         m_axis_fifo_tdata       => fifo_instr_m_tdata
     );
+
 
     -- module axis_fifo instantiation
     axis_fifo_inst_1 : axis_fifo_er generic map (
@@ -941,9 +954,9 @@ begin
         clk                     => clk,
         resetn                  => exec_resetn,
 
-        s_axis_fifo_tvalid      => instr_s_tvalid and instr_s_tready,
+        s_axis_fifo_tvalid      => instr_hs,
         s_axis_fifo_tready      => open,
-        s_axis_fifo_tdata       => instr_s_tuser,
+        s_axis_fifo_tdata       => instr_tuser,
 
         m_axis_fifo_tvalid      => open,
         m_axis_fifo_tready      => instr_m_tready,
@@ -1010,8 +1023,10 @@ begin
         di_s_tdata              => di_tdata,
         di_m_lock_tvalid        => di_lock_tvalid,
 
-        flags_s_tvalid          => flags_tvalid,
-        flags_s_tdata           => flags_tdata,
+        flags_s_tvalid              => fl_tvalid,
+        flags_s_tdata(15 downto 12) => "1111",
+        flags_s_tdata(11 downto  0) => fl_tdata(11 downto 0),
+
         flags_m_lock_tvalid     => flags_lock_tvalid,
 
         rr_m_tvalid             => rr_tvalid,
@@ -1093,7 +1108,8 @@ begin
         lsu_rd_s_tready         => lsu_rd_tready,
         lsu_rd_s_tdata          => lsu_rd_tdata,
 
-        flags_s_tdata           => flags_tdata,
+        flags_s_tdata(15 downto 12) => "1111",
+        flags_s_tdata(11 downto  0) => fl_tdata(11 downto 0),
 
         ax_m_wr_tvalid          => mexec_ax_wr_tvalid,
         ax_m_wr_tdata           => mexec_ax_wr_tdata,
@@ -1245,7 +1261,7 @@ begin
     req_m_tvalid <= jump_tvalid;
     req_m_tdata <= jump_tdata;
 
-    masked_interrupt <= '1' when interrupt_valid = '1' and flags_tdata(FLAG_IF) = '1' else '0';
+    masked_interrupt <= '1' when interrupt_valid = '1' and fl_tdata(FLAG_IF) = '1' else '0';
     interrupt_ack <= '1' when masked_interrupt = '1' and ext_intr_s_tready = '1' else '0';
 
     --cs, ip, ds, es, ss, ax, bx, dx, cx, bp, di, si, sp, Flags8
@@ -1263,6 +1279,6 @@ begin
     dbg_m_tdata( 4*16-1 downto  3*16) <= di_tdata;
     dbg_m_tdata( 3*16-1 downto  2*16) <= si_tdata;
     dbg_m_tdata( 2*16-1 downto  1*16) <= sp_tdata;
-    dbg_m_tdata( 1*16-1 downto  0*16) <= flags_tdata;
+    dbg_m_tdata( 1*16-1 downto  0*16) <= fl_tdata;
 
 end architecture;
