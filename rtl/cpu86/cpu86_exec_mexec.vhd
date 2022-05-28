@@ -43,7 +43,7 @@ entity cpu86_exec_mexec is
         lsu_rd_s_tready         : out std_logic;
         lsu_rd_s_tdata          : in std_logic_vector(15 downto 0);
 
-        flags_s_tdata           : in std_logic_vector(15 downto 0);
+        s_axis_fl_tdata         : in std_logic_vector(15 downto 0);
 
         ax_m_wr_tvalid          : out std_logic;
         ax_m_wr_tdata           : out std_logic_vector(15 downto 0);
@@ -74,8 +74,8 @@ entity cpu86_exec_mexec is
         ss_m_wr_tvalid          : out std_logic;
         ss_m_wr_tdata           : out std_logic_vector(15 downto 0);
 
-        flags_m_wr_tvalid       : out std_logic;
-        flags_m_wr_tdata        : out std_logic_vector(15 downto 0);
+        m_axis_fl_wr_tvalid     : out std_logic;
+        m_axis_fl_wr_tdata      : out std_logic_vector(15 downto 0);
 
         m_axis_jump_tvalid      : out std_logic;
         m_axis_jump_tdata       : out cpu86_jump_t;
@@ -369,11 +369,14 @@ architecture rtl of cpu86_exec_mexec is
     signal lsu_req_twidth       : std_logic;
     signal lsu_req_tdata        : std_logic_vector(15 downto 0);
 
-    signal flags_wr_be          : std_logic_vector(15 downto 0);
+    signal flags_tdata          : std_logic_vector(11 downto 0);
+    signal flags_wr_tvalid      : std_logic;
+    signal flags_wr_tdata       : std_logic_vector(11 downto 0);
+    signal flags_wr_be          : std_logic_vector(11 downto 0);
     signal flags_wr_new_val     : std_logic;
     signal flags_toggle_cf      : std_logic;
     signal flags_src            : flag_src_t;
-    signal flags_wr_vector      : std_logic_vector(15 downto 0);
+    signal flags_wr_vector      : std_logic_vector(11 downto 0);
 
     signal mem_buf_tdata        : std_logic_vector(15 downto 0);
     signal mexec_busy           : std_logic;
@@ -439,8 +442,12 @@ architecture rtl of cpu86_exec_mexec is
 begin
 
     -- i/o assigns
-    m_axis_jump_tvalid <= jmp_dout_tvalid;
-    m_axis_jump_tdata  <= jmp_dout_tdata;
+    flags_tdata         <= s_axis_fl_tdata(11 downto 0);
+
+    m_axis_fl_wr_tvalid <= flags_wr_tvalid;
+    m_axis_fl_wr_tdata  <= "1111" & flags_wr_tdata;
+    m_axis_jump_tvalid  <= jmp_dout_tvalid;
+    m_axis_jump_tdata   <= jmp_dout_tdata;
 
     mexec_alu_inst : cpu86_exec_mexec_alu port map (
         clk                     => clk,
@@ -448,7 +455,7 @@ begin
 
         req_s_tvalid            => alu_req_tvalid,
         req_s_tdata             => alu_req_tdata,
-        req_s_tuser             => flags_s_tdata(FLAG_CF),
+        req_s_tuser             => flags_tdata(FLAG_CF),
 
         res_m_tvalid            => alu_res_tvalid,
         res_m_tdata             => alu_res_tdata,
@@ -497,7 +504,7 @@ begin
 
         req_s_tvalid            => bcd_req_tvalid,
         req_s_tdata             => bcd_req_tdata,
-        req_s_tuser             => flags_s_tdata,
+        req_s_tuser             => "1111" & flags_tdata,
 
         res_m_tvalid            => bcd_res_tvalid,
         res_m_tdata             => bcd_res_tdata,
@@ -512,7 +519,7 @@ begin
 
         req_s_tvalid            => shf8_req_tvalid,
         req_s_tdata             => shf8_req_tdata,
-        req_s_tuser             => flags_s_tdata,
+        req_s_tuser             => "1111" & flags_tdata,
 
         res_m_tvalid            => shf8_res_tvalid,
         res_m_tdata             => shf8_res_tdata,
@@ -527,7 +534,7 @@ begin
 
         req_s_tvalid            => shf16_req_tvalid,
         req_s_tdata             => shf16_req_tdata,
-        req_s_tuser             => flags_s_tdata,
+        req_s_tuser             => "1111" & flags_tdata,
 
         res_m_tvalid            => shf16_res_tvalid,
         res_m_tdata             => shf16_res_tdata,
@@ -607,7 +614,7 @@ begin
     str_lsu_rd_tvalid <= lsu_rd_s_tvalid;
     str_lsu_rd_tdata <= lsu_rd_s_tdata;
 
-    flags_m_wr_tdata <= ((not flags_wr_be) and flags_s_tdata) or (flags_wr_be and flags_wr_vector);
+    flags_wr_tdata <= ((not flags_wr_be) and flags_tdata) or (flags_wr_be and flags_wr_vector);
 
     div_intr_m_tvalid <= '1' when div_res_tvalid = '1' and div_res_tdata.overflow = '1' else '0';
     div_intr_m_tdata(INTR_T_SS) <= div_res_tdata.ss_val;
@@ -1341,25 +1348,25 @@ begin
     flags_upd_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
-                flags_m_wr_tvalid <= '0';
+                flags_wr_tvalid <= '0';
                 flags_wr_be <= (others => '0');
             else
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_FLG) = '1') then
-                    flags_m_wr_tvalid <= '1';
+                    flags_wr_tvalid <= '1';
                 elsif ((alu_res_tvalid = '1' and alu_res_tdata.upd_fl = '1') or
                        mul_res_tvalid = '1' or one_res_tvalid = '1' or bcd_res_tvalid = '1' or
                        shf8_res_tvalid = '1' or shf16_res_tvalid = '1' or
                        (div_res_tvalid = '1' and div_res_tdata.code = DIVU_AAM) or
                        (str_res_tvalid = '1' and (str_res_tdata.code = CMPS_OP or str_res_tdata.code = SCAS_OP))) then
-                    flags_m_wr_tvalid <= '1';
+                    flags_wr_tvalid <= '1';
                 else
-                    flags_m_wr_tvalid <= '0';
+                    flags_wr_tvalid <= '0';
                 end if;
 
                 case flags_wr_selector is
                     when "000000001" =>
-                        for i in 0 to 15 loop
+                        for i in 0 to 11 loop
                             if (micro_tdata.flg_no = std_logic_vector(to_unsigned(i, 4))) then
                                 flags_wr_be(i) <= '1';
                             else
@@ -1369,7 +1376,7 @@ begin
                     when "000000010" =>
                         if (alu_res_tdata.dreg = FL) then
 
-                            for i in 15 downto 8 loop
+                            for i in 11 downto 8 loop
                                 flags_wr_be(i) <= alu_res_tdata.dmask(1);
                             end loop;
 
@@ -1384,10 +1391,6 @@ begin
                         else
                             case (alu_res_tdata.code) is
                                 when ALU_OP_INC | ALU_OP_DEC =>
-                                    flags_wr_be(FLAG_15) <= '1';
-                                    flags_wr_be(FLAG_14) <= '1';
-                                    flags_wr_be(FLAG_13) <= '1';
-                                    flags_wr_be(FLAG_12) <= '1';
                                     flags_wr_be(FLAG_OF) <= '1';
                                     flags_wr_be(FLAG_DF) <= '0';
                                     flags_wr_be(FLAG_IF) <= '0';
@@ -1401,10 +1404,6 @@ begin
                                     flags_wr_be(FLAG_01) <= '0';
                                     flags_wr_be(FLAG_CF) <= '0';
                                 when others =>
-                                    flags_wr_be(FLAG_15) <= '1';
-                                    flags_wr_be(FLAG_14) <= '1';
-                                    flags_wr_be(FLAG_13) <= '1';
-                                    flags_wr_be(FLAG_12) <= '1';
                                     flags_wr_be(FLAG_OF) <= '1';
                                     flags_wr_be(FLAG_DF) <= '0';
                                     flags_wr_be(FLAG_IF) <= '0';
@@ -1422,10 +1421,6 @@ begin
                     when "000000100" =>
                         case (one_res_tdata.code) is
                             when ONE_OP_NEG =>
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1443,10 +1438,6 @@ begin
                         end case;
                     when "000001000" =>
                         if (div_res_tdata.code = DIVU_AAM) then
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '0';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1463,10 +1454,6 @@ begin
                     when "000010000" =>
                         case (bcd_res_tdata.code) is
                             when BCDU_AAA | BCDU_AAS =>
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1480,10 +1467,6 @@ begin
                                 flags_wr_be(FLAG_01) <= '0';
                                 flags_wr_be(FLAG_CF) <= '1';
                             when BCDU_AAD =>
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '0';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1497,10 +1480,6 @@ begin
                                 flags_wr_be(FLAG_01) <= '0';
                                 flags_wr_be(FLAG_CF) <= '0';
                             when BCDU_DAA | BCDU_DAS =>
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1519,10 +1498,6 @@ begin
                     when "000100000" =>
                         case (shf8_res_tdata.code) is
                             when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1536,10 +1511,6 @@ begin
                                 flags_wr_be(FLAG_01) <= '0';
                                 flags_wr_be(FLAG_CF) <= '1';
                             when SHF_OP_SHL | SHF_OP_SAR | SHF_OP_SHR =>
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1558,10 +1529,6 @@ begin
                     when "001000000" =>
                         case (shf16_res_tdata.code) is
                             when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCL | SHF_OP_RCR =>
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1575,10 +1542,6 @@ begin
                                 flags_wr_be(FLAG_01) <= '0';
                                 flags_wr_be(FLAG_CF) <= '1';
                             when SHF_OP_SHL | SHF_OP_SAR | SHF_OP_SHR =>
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1595,10 +1558,6 @@ begin
                                 flags_wr_be <= (others => '0');
                         end case;
                     when "010000000" =>
-                        flags_wr_be(FLAG_15) <= '0';
-                        flags_wr_be(FLAG_14) <= '0';
-                        flags_wr_be(FLAG_13) <= '0';
-                        flags_wr_be(FLAG_12) <= '0';
                         flags_wr_be(FLAG_OF) <= '1';
                         flags_wr_be(FLAG_DF) <= '0';
                         flags_wr_be(FLAG_IF) <= '0';
@@ -1614,10 +1573,6 @@ begin
                     when "100000000" =>
                         case (str_res_tdata.code) is
                             when SCAS_OP | CMPS_OP =>
-                                flags_wr_be(FLAG_15) <= '0';
-                                flags_wr_be(FLAG_14) <= '0';
-                                flags_wr_be(FLAG_13) <= '0';
-                                flags_wr_be(FLAG_12) <= '0';
                                 flags_wr_be(FLAG_OF) <= '1';
                                 flags_wr_be(FLAG_DF) <= '0';
                                 flags_wr_be(FLAG_IF) <= '0';
@@ -1675,10 +1630,10 @@ begin
     flag_calc_proc : process (all) begin
 
         if (flags_src = RES_DATA) then
-            flags_wr_vector(15 downto 11) <= res_tdata.dval_lo(15 downto 11);
+            flags_wr_vector(11 downto 11) <= res_tdata.dval_lo(11 downto 11);
             flags_wr_vector(8 downto 1) <= res_tdata.dval_lo(8 downto 1);
         else
-            flags_wr_vector(15 downto 11) <= res_tuser(15 downto 11);
+            flags_wr_vector(11 downto 11) <= res_tuser(11 downto 11);
             flags_wr_vector(8 downto 1) <= res_tuser(8 downto 1);
         end if;
 
@@ -1693,7 +1648,7 @@ begin
                 flags_wr_vector(FLAG_IF) <= res_tuser(FLAG_IF);
             when others =>
                 if (flags_toggle_cf = '1') then
-                    flags_wr_vector(FLAG_CF) <= not flags_s_tdata(FLAG_CF);
+                    flags_wr_vector(FLAG_CF) <= not flags_tdata(FLAG_CF);
                 else
                     flags_wr_vector(FLAG_CF) <= flags_wr_new_val;
                 end if;
@@ -1861,112 +1816,112 @@ begin
                             jmp_take <= '1';
 
                         when j_ja =>
-                            if (flags_s_tdata(FLAG_ZF) = '0' and flags_s_tdata(FLAG_CF) = '0') then
+                            if (flags_tdata(FLAG_ZF) = '0' and flags_tdata(FLAG_CF) = '0') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jae =>
-                            if (flags_s_tdata(FLAG_CF) = '0') then
+                            if (flags_tdata(FLAG_CF) = '0') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jb =>
-                            if (flags_s_tdata(FLAG_CF) = '1') then
+                            if (flags_tdata(FLAG_CF) = '1') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jbe =>
-                            if (flags_s_tdata(FLAG_ZF) = '1' or flags_s_tdata(FLAG_CF) = '1') then
+                            if (flags_tdata(FLAG_ZF) = '1' or flags_tdata(FLAG_CF) = '1') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_je =>
-                            if (flags_s_tdata(FLAG_ZF) = '1') then
+                            if (flags_tdata(FLAG_ZF) = '1') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jne =>
-                            if (flags_s_tdata(FLAG_ZF) = '0') then
+                            if (flags_tdata(FLAG_ZF) = '0') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jg =>
-                            if (flags_s_tdata(FLAG_ZF) = '0' and flags_s_tdata(FLAG_SF) = flags_s_tdata(FLAG_OF)) then
+                            if (flags_tdata(FLAG_ZF) = '0' and flags_tdata(FLAG_SF) = flags_tdata(FLAG_OF)) then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jge =>
-                            if (flags_s_tdata(FLAG_SF) = flags_s_tdata(FLAG_OF)) then
+                            if (flags_tdata(FLAG_SF) = flags_tdata(FLAG_OF)) then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jl =>
-                            if (flags_s_tdata(FLAG_SF) /= flags_s_tdata(FLAG_OF)) then
+                            if (flags_tdata(FLAG_SF) /= flags_tdata(FLAG_OF)) then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jle =>
-                            if (flags_s_tdata(FLAG_ZF) = '1' or flags_s_tdata(FLAG_SF) /= flags_s_tdata(FLAG_OF)) then
+                            if (flags_tdata(FLAG_ZF) = '1' or flags_tdata(FLAG_SF) /= flags_tdata(FLAG_OF)) then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jno =>
-                            if (flags_s_tdata(FLAG_OF) = '0') then
+                            if (flags_tdata(FLAG_OF) = '0') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jo =>
-                            if (flags_s_tdata(FLAG_OF) = '1') then
+                            if (flags_tdata(FLAG_OF) = '1') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jnp =>
-                            if (flags_s_tdata(FLAG_PF) = '0') then
+                            if (flags_tdata(FLAG_PF) = '0') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jp =>
-                            if (flags_s_tdata(FLAG_PF) = '1') then
+                            if (flags_tdata(FLAG_PF) = '1') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_jns =>
-                            if (flags_s_tdata(FLAG_SF) = '0') then
+                            if (flags_tdata(FLAG_SF) = '0') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
                             end if;
 
                         when j_js =>
-                            if (flags_s_tdata(FLAG_SF) = '1') then
+                            if (flags_tdata(FLAG_SF) = '1') then
                                 jmp_take <= '1';
                             else
                                 jmp_take <= '0';
@@ -1999,13 +1954,13 @@ begin
                                     jmp_take <= '0';
                                 end if;
                             when cx_ne_0_and_zf =>
-                                if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_s_tdata(FLAG_ZF) = '1' then
+                                if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_tdata(FLAG_ZF) = '1' then
                                     jmp_take <= '1';
                                 else
                                     jmp_take <= '0';
                                 end if;
                             when cx_ne_0_and_nzf =>
-                                if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_s_tdata(FLAG_ZF) = '0' then
+                                if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_tdata(FLAG_ZF) = '0' then
                                     jmp_take <= '1';
                                 else
                                     jmp_take <= '0';
