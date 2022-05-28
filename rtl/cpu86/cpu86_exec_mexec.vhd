@@ -1716,21 +1716,27 @@ begin
         end if;
     end process;
 
-    jump_control_proc: process (clk) begin
+    jump_control_proc: process (clk)
+        procedure jump_if (expr : boolean) is begin
+            if (expr) then
+                jmp_take <= '1';
+            else
+                jmp_take <= '0';
+            end if;
+        end procedure;
+    begin
         if rising_edge(clk) then
-
             if resetn = '0' then
-                jmp_cond <= j_never;
+                jmp_cond        <= j_never;
                 jmp_wait_mem_cs <= '0';
                 jmp_wait_mem_ip <= '0';
-                jmp_bpu_first <= '0';
-                jmp_bpu_taken <= '0';
-                jmp_tvalid <= '0';
-                jmp_take <= '0';
-                jmp_wait_alu <= '0';
-                jmp_busy <= '0';
+                jmp_bpu_first   <= '0';
+                jmp_bpu_taken   <= '0';
+                jmp_tvalid      <= '0';
+                jmp_take        <= '0';
+                jmp_wait_alu    <= '0';
+                jmp_busy        <= '0';
             else
-
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
                     jmp_cond <= micro_tdata.jump_cond;
                 end if;
@@ -1812,128 +1818,25 @@ begin
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
                     case micro_tdata.jump_cond is
-                        when j_always =>
-                            jmp_take <= '1';
-
-                        when j_ja =>
-                            if (flags_tdata(FLAG_ZF) = '0' and flags_tdata(FLAG_CF) = '0') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jae =>
-                            if (flags_tdata(FLAG_CF) = '0') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jb =>
-                            if (flags_tdata(FLAG_CF) = '1') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jbe =>
-                            if (flags_tdata(FLAG_ZF) = '1' or flags_tdata(FLAG_CF) = '1') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_je =>
-                            if (flags_tdata(FLAG_ZF) = '1') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jne =>
-                            if (flags_tdata(FLAG_ZF) = '0') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jg =>
-                            if (flags_tdata(FLAG_ZF) = '0' and flags_tdata(FLAG_SF) = flags_tdata(FLAG_OF)) then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jge =>
-                            if (flags_tdata(FLAG_SF) = flags_tdata(FLAG_OF)) then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jl =>
-                            if (flags_tdata(FLAG_SF) /= flags_tdata(FLAG_OF)) then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jle =>
-                            if (flags_tdata(FLAG_ZF) = '1' or flags_tdata(FLAG_SF) /= flags_tdata(FLAG_OF)) then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jno =>
-                            if (flags_tdata(FLAG_OF) = '0') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jo =>
-                            if (flags_tdata(FLAG_OF) = '1') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jnp =>
-                            if (flags_tdata(FLAG_PF) = '0') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jp =>
-                            if (flags_tdata(FLAG_PF) = '1') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_jns =>
-                            if (flags_tdata(FLAG_SF) = '0') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-
-                        when j_js =>
-                            if (flags_tdata(FLAG_SF) = '1') then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-                        when cx_eq_0 =>
-                            if micro_tdata.jump_cx = x"0000" then
-                                jmp_take <= '1';
-                            else
-                                jmp_take <= '0';
-                            end if;
-                        when others =>
-                            jmp_take <= '0';
+                        when j_always   => jmp_take <= '1';
+                        when j_ja       => jump_if(flags_tdata(FLAG_ZF) = '0' and flags_tdata(FLAG_CF) = '0');
+                        when j_jae      => jump_if(flags_tdata(FLAG_CF) = '0');
+                        when j_jb       => jump_if(flags_tdata(FLAG_CF) = '1');
+                        when j_jbe      => jump_if(flags_tdata(FLAG_ZF) = '1' or flags_tdata(FLAG_CF) = '1');
+                        when j_je       => jump_if(flags_tdata(FLAG_ZF) = '1');
+                        when j_jne      => jump_if(flags_tdata(FLAG_ZF) = '0');
+                        when j_jg       => jump_if(flags_tdata(FLAG_ZF) = '0' and flags_tdata(FLAG_SF) = flags_tdata(FLAG_OF));
+                        when j_jge      => jump_if(flags_tdata(FLAG_SF) = flags_tdata(FLAG_OF));
+                        when j_jl       => jump_if(flags_tdata(FLAG_SF) /= flags_tdata(FLAG_OF));
+                        when j_jle      => jump_if(flags_tdata(FLAG_ZF) = '1' or flags_tdata(FLAG_SF) /= flags_tdata(FLAG_OF));
+                        when j_jno      => jump_if(flags_tdata(FLAG_OF) = '0');
+                        when j_jo       => jump_if(flags_tdata(FLAG_OF) = '1');
+                        when j_jnp      => jump_if(flags_tdata(FLAG_PF) = '0');
+                        when j_jp       => jump_if(flags_tdata(FLAG_PF) = '1');
+                        when j_jns      => jump_if(flags_tdata(FLAG_SF) = '0');
+                        when j_js       => jump_if(flags_tdata(FLAG_SF) = '1');
+                        when cx_eq_0    => jump_if(micro_tdata.jump_cx = x"0000");
+                        when others     => jmp_take <= '0';
                     end case;
 
                 elsif (jmp_busy = '1') then
@@ -1945,28 +1848,11 @@ begin
                         end if;
                     elsif (jmp_wait_alu = '1' and alu_res_tvalid = '1') then
                         case jmp_cond is
-                            when j_always =>
-                                jmp_take <= '1';
-                            when cx_ne_0 =>
-                                if alu_res_tdata.dval(15 downto 0) /= x"0000" then
-                                    jmp_take <= '1';
-                                else
-                                    jmp_take <= '0';
-                                end if;
-                            when cx_ne_0_and_zf =>
-                                if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_tdata(FLAG_ZF) = '1' then
-                                    jmp_take <= '1';
-                                else
-                                    jmp_take <= '0';
-                                end if;
-                            when cx_ne_0_and_nzf =>
-                                if alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_tdata(FLAG_ZF) = '0' then
-                                    jmp_take <= '1';
-                                else
-                                    jmp_take <= '0';
-                                end if;
-                            when others =>
-                                jmp_take <= '0';
+                            when j_always        => jmp_take <= '1';
+                            when cx_ne_0         => jump_if(alu_res_tdata.dval(15 downto 0) /= x"0000");
+                            when cx_ne_0_and_zf  => jump_if(alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_tdata(FLAG_ZF) = '1');
+                            when cx_ne_0_and_nzf => jump_if(alu_res_tdata.dval(15 downto 0) /= x"0000" and flags_tdata(FLAG_ZF) = '0');
+                            when others          => jmp_take <= '0';
                         end case;
                     end if;
                 end if;
