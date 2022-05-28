@@ -116,7 +116,6 @@ begin
 
         flags_of_1 <= rval(DATA_WIDTH-1) xor sval(DATA_WIDTH-1);
 
-
         if (use_of_1 = '1') then
             flags_of <= flags_of_1;
         else
@@ -159,7 +158,6 @@ begin
                         when SHF_OP_ROR =>
                             flags_of_n <= req_s_tdata.sval(DATA_WIDTH-1) xor req_s_tdata.sval(0);
                         when SHF_OP_RCR =>
-
                             if req_s_tdata.sval(DATA_WIDTH-1) = '0' then
                                 flags_of_n <= req_s_tuser(FLAG_OF);
                             else
