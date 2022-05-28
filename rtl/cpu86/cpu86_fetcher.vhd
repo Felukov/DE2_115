@@ -72,13 +72,29 @@ architecture rtl of cpu86_fetcher is
         );
     end component;
 
+    component axis_reg is
+        generic (
+            DATA_WIDTH          : natural := 32
+        );
+        port (
+            clk                 : in std_logic;
+            resetn              : in std_logic;
+            in_s_tvalid         : in std_logic;
+            in_s_tready         : out std_logic;
+            in_s_tdata          : in std_logic_vector (DATA_WIDTH-1 downto 0);
+            out_m_tvalid        : out std_logic;
+            out_m_tready        : in std_logic;
+            out_m_tdata         : out std_logic_vector (DATA_WIDTH-1 downto 0)
+        );
+    end component;
+
     signal cmd_tvalid           : std_logic;
     signal cmd_tready           : std_logic;
     signal cmd_tdata            : std_logic_vector(19 downto 0);
 
-    signal max_hs_cnt           : natural range 0 to 32;
-    signal mem_hs_cnt           : natural range 0 to 32;
-    signal skip_hs_cnt          : natural range 0 to 32;
+    signal max_hs_cnt           : natural range 0 to 63;
+    signal mem_hs_cnt           : natural range 0 to 63;
+    signal skip_hs_cnt          : natural range 0 to 63;
 
     signal jmp_req_tvalid       : std_logic;
     signal jmp_req_tdata        : std_logic_vector(31 downto 0);
@@ -114,20 +130,32 @@ architecture rtl of cpu86_fetcher is
 
 begin
     -- i/o assigns
-    jmp_req_tvalid          <= s_axis_jump_tvalid;
-    jmp_req_tdata           <= s_axis_jump_tdata;
+    jmp_req_tvalid      <= s_axis_jump_tvalid;
+    jmp_req_tdata       <= s_axis_jump_tdata;
 
-    mem_rd_tvalid           <= s_axis_mem_data_tvalid;
-    mem_rd_tdata            <= s_axis_mem_data_tdata;
+    mem_rd_tvalid       <= s_axis_mem_data_tvalid;
+    mem_rd_tdata        <= s_axis_mem_data_tdata;
 
-    m_axis_mem_req_tvalid   <= cmd_tvalid;
-    cmd_tready              <= m_axis_mem_req_tready;
-    m_axis_mem_req_tdata    <= cmd_tdata;
+    m_axis_data_tvalid  <= fifo_1_m_tvalid;
+    fifo_1_m_tready     <= m_axis_data_tready;
+    m_axis_data_tdata   <= fifo_1_m_tdata(31 downto 0);
+    m_axis_data_tuser   <= fifo_1_m_tdata(63 downto 32);
 
-    m_axis_data_tvalid      <= fifo_1_m_tvalid;
-    fifo_1_m_tready         <= m_axis_data_tready;
-    m_axis_data_tdata       <= fifo_1_m_tdata(31 downto 0);
-    m_axis_data_tuser       <= fifo_1_m_tdata(63 downto 32);
+    -- module axis_reg instantiation
+    axis_reg_mem_req_inst : axis_reg generic map (
+        DATA_WIDTH      => 20
+    ) port map (
+        clk             => clk,
+        resetn          => resetn,
+
+        in_s_tvalid     => cmd_tvalid,
+        in_s_tready     => cmd_tready,
+        in_s_tdata      => cmd_tdata,
+
+        out_m_tvalid    => m_axis_mem_req_tvalid,
+        out_m_tready    => m_axis_mem_req_tready,
+        out_m_tdata     => m_axis_mem_req_tdata
+    );
 
 
     -- module axis_fifo instantiation
@@ -145,6 +173,7 @@ begin
         fifo_m_tdata    => fifo_0_m_tdata
     );
 
+
     -- module axis_fifo instantiation
     axis_fifo_inst_1 : axis_fifo generic map (
         FIFO_DEPTH      => 32,
@@ -159,6 +188,7 @@ begin
         fifo_m_tready   => fifo_1_m_tready,
         fifo_m_tdata    => fifo_1_m_tdata
     );
+
 
     -- assigns
     fifo_resetn     <= '0' when resetn = '0' or jmp_req_tvalid = '1' else '1';
@@ -210,9 +240,9 @@ begin
 
                 if (jmp_req_tvalid = '1') then
                     if (mem_inc_hs = '1' and mem_dec_hs = '0') then
-                        skip_hs_cnt <= (mem_hs_cnt + 1) mod 32;
+                        skip_hs_cnt <= (mem_hs_cnt + 1) mod 64;
                     elsif (mem_inc_hs = '0' and mem_dec_hs = '1') then
-                        skip_hs_cnt <= (mem_hs_cnt - 1) mod 32;
+                        skip_hs_cnt <= (mem_hs_cnt - 1) mod 64;
                     else
                         skip_hs_cnt <= mem_hs_cnt;
                     end if;
