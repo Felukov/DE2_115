@@ -889,8 +889,8 @@ begin
                 when x"A7" => set_op(STR, CMPS_OP,       '1', LOCK_SI or LOCK_DI or LOCK_FL, WAIT_SI or WAIT_DI or WAIT_ES or WAIT_DS or WAIT_FL);
                 when x"AA" => set_op(STR, STOS_OP,       '0', LOCK_DI,                       WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
                 when x"AB" => set_op(STR, STOS_OP,       '1', LOCK_DI,                       WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
-                when x"AC" => set_op(STR, LODS_OP,       '0', LOCK_AX or LOCK_DI,            WAIT_AX or WAIT_SI or WAIT_DS or WAIT_FL);
-                when x"AD" => set_op(STR, LODS_OP,       '1', LOCK_AX or LOCK_DI,            WAIT_AX or WAIT_SI or WAIT_DS or WAIT_FL);
+                when x"AC" => set_op(STR, LODS_OP,       '0', LOCK_AX or LOCK_SI,            WAIT_AX or WAIT_SI or WAIT_DS or WAIT_FL);
+                when x"AD" => set_op(STR, LODS_OP,       '1', LOCK_AX or LOCK_SI,            WAIT_AX or WAIT_SI or WAIT_DS or WAIT_FL);
                 when x"AE" => set_op(STR, SCAS_OP,       '0', LOCK_DI or LOCK_FL,            WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
                 when x"AF" => set_op(STR, SCAS_OP,       '1', LOCK_DI or LOCK_FL,            WAIT_AX or WAIT_DI or WAIT_ES or WAIT_FL);
 

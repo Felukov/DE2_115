@@ -650,13 +650,12 @@ begin
             micro_tdata.mul_code <= rr_tdata.code;
             micro_tdata.mul_w <= rr_tdata.w;
             micro_tdata.mul_dreg <= rr_tdata.dreg;
-            micro_tdata.mul_dmask <= rr_tdata.dmask;
             micro_tdata.mul_a_val <= rr_tdata.sreg_val;
 
             case rr_tdata.dir is
                 when M2R =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
-                    mem_read_word(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next);
+                    mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
 
                 when others =>
                     micro_tdata.cmd <= MICRO_MUL_OP;

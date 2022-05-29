@@ -273,7 +273,6 @@ architecture rtl of cpu86_exec_mexec is
         w           => '0',
         wb          => '0',
         dreg        => AX,
-        dmask       => "00",
         aval        => (others => '0'),
         bval        => (others => '0')
     );
@@ -764,7 +763,6 @@ begin
                 mul_req_tdata.aval <= micro_tdata.mul_a_val;
                 mul_req_tdata.bval <= micro_tdata.mul_b_val;
                 mul_req_tdata.dreg <= micro_tdata.mul_dreg;
-                mul_req_tdata.dmask <= micro_tdata.mul_dmask;
             elsif (mul_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 mul_req_tdata.aval <= lsu_rd_s_tdata;
             end if;
@@ -1093,7 +1091,7 @@ begin
                     res_tuser <= shf16_res_tuser;
                 when "00100000" =>
                     res_tdata.code <= mul_res_tdata.code;
-                    res_tdata.dmask <= mul_res_tdata.dmask;
+                    res_tdata.dmask <= "11";
                     res_tdata.dval_lo <= mul_res_tdata.dval(15 downto 0);
                     if ((mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX)) then
                         res_tdata.dval_hi <= mul_res_tdata.dval(31 downto 16);
@@ -1259,7 +1257,7 @@ begin
             elsif (mul_res_tvalid = '1' and mul_res_tdata.dreg = AX) or
                   (mul_res_tvalid = '1' and mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX) then
                 ax_m_wr_tdata <= mul_res_tdata.dval(15 downto 0);
-                ax_m_wr_tmask <= mul_res_tdata.dmask;
+                ax_m_wr_tmask <= "11";
             elsif (div_res_tvalid = '1' and div_res_tdata.overflow = '0') then
                 ax_m_wr_tmask <= "11";
                 if (div_res_tdata.code = DIVU_AAM) then
@@ -1297,7 +1295,7 @@ begin
                 cx_m_wr_tmask <= alu_res_tdata.dmask;
             elsif (mul_res_tvalid = '1' and mul_res_tdata.dreg = CX) then
                 cx_m_wr_tdata <= mul_res_tdata.dval(15 downto 0);
-                cx_m_wr_tmask <= mul_res_tdata.dmask;
+                cx_m_wr_tmask <= "11";
             elsif (one_res_tvalid = '1' and one_res_tdata.wb = '1' and one_res_tdata.dreg = CX) then
                 cx_m_wr_tdata <= one_res_tdata.dval(15 downto 0);
                 cx_m_wr_tmask <= one_res_tdata.dmask;

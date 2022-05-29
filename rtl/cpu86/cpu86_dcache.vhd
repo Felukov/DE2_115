@@ -90,7 +90,7 @@ architecture rtl of cpu86_dcache is
     signal dcache_twidth        : std_logic;
     signal dcache_tdata         : std_logic_vector(15 downto 0);
     signal dcache_thit          : std_logic;
-    signal dcache_tcache        : std_logic_vector(15 downto 0);
+    signal dcache_q             : std_logic_vector(15 downto 0);
 
     signal bram_we              : std_logic;
     signal bram_addr            : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
@@ -119,7 +119,7 @@ begin
         we              => bram_we,
         wdata           => dcache_s_tdata,
         re              => bram_re,
-        q               => dcache_tcache
+        q               => dcache_q
     );
 
     bram_addr       <= dcache_s_taddr(CACHE_LINE_WIDTH downto 1);
@@ -136,7 +136,7 @@ begin
     dcache_m_twidth <= dcache_twidth;
     dcache_m_tdata  <= dcache_tdata;
     dcache_m_thit   <= dcache_thit;
-    dcache_m_tcache <= dcache_tcache;
+    dcache_m_tcache <= dcache_q when dcache_twidth = '1' else x"00" & dcache_q(7 downto 0) ;
 
     dcache_thit     <= '1' when dcache_valid = '1' and dcache_tag = m_tag and dcache_taddr(0) = '0' else '0';
     s_index         <= to_integer(unsigned(dcache_s_taddr(CACHE_LINE_WIDTH downto 1)));

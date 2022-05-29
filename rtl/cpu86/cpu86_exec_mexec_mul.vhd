@@ -128,7 +128,6 @@ begin
             mul_res_0_tdata.code <= mul_0_tdata.code;
             mul_res_0_tdata.w <= mul_0_tdata.w;
             mul_res_0_tdata.dreg <= mul_0_tdata.dreg;
-            mul_res_0_tdata.dmask <= mul_0_tdata.dmask;
             mul_res_0_tdata.aval <= mul_0_tdata.aval;
             mul_res_0_tdata.bval <= mul_0_tdata.bval;
 
