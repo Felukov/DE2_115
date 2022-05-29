@@ -1623,7 +1623,7 @@ begin
 
         procedure do_jmp_1 is begin
 
-            case rr_tdata.code is
+            case rr_tdata_buf.code is
                 when JMP_RM16 =>
                     micro_tdata.cmd <= MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
 
