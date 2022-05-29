@@ -420,12 +420,6 @@ begin
                     when others         => micro_cnt_next <= 0;
                 end case;
 
-            when ONEU =>
-                case rr_tdata.dir is
-                    when M2M            => micro_cnt_next <= 1;
-                    when others         => micro_cnt_next <= 0;
-                end case;
-
             when SHFU =>
                 case rr_tdata.dir is
                     when I2M            => micro_cnt_next <= 1;
@@ -729,32 +723,6 @@ begin
 
         procedure do_div_cmd_1 is begin
             micro_tdata.cmd <= MICRO_DIV_OP or MICRO_MRD_OP or MICRO_UNLK_OP;
-        end procedure;
-
-        procedure do_one_cmd_0 is begin
-            micro_tdata.one_code <= rr_tdata.code;
-            micro_tdata.one_w <= rr_tdata.w;
-            micro_tdata.one_dreg <= rr_tdata.dreg;
-            micro_tdata.one_dmask <= rr_tdata.dmask;
-            micro_tdata.one_ival <= rr_tdata.data;
-            micro_tdata.one_sval <= rr_tdata.sreg_val;
-
-            case rr_tdata.dir is
-                when M2M =>
-                    micro_tdata.cmd <= MICRO_MEM_OP;
-                    mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
-                    micro_tdata.one_wb <= '0';
-
-                when others =>
-                    micro_tdata.cmd <= MICRO_ONE_OP;
-                    micro_tdata.one_wb <= '1';
-            end case;
-
-        end procedure;
-
-        procedure do_one_cmd_1 is begin
-            micro_tdata.cmd <= MICRO_MEM_OP or MICRO_ONE_OP or MICRO_MRD_OP;
-            mem_write_one(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
         end procedure;
 
         procedure do_bcd_cmd is begin
@@ -2113,7 +2081,6 @@ begin
 
                 case (rr_tdata.op) is
                     when ALU        => do_alu_cmd_0;
-                    when ONEU       => do_one_cmd_0;
                     when MULU       => do_mul_cmd_0;
                     when DIVU       => do_div_cmd_0;
                     when BCDU       => do_bcd_cmd;
@@ -2166,7 +2133,6 @@ begin
             elsif (micro_tvalid = '1' and micro_tready = '1') then
                 case micro_op is
                     when ALU    => do_alu_cmd_1;
-                    when ONEU   => do_one_cmd_1;
                     when MULU   => do_mul_cmd_1;
                     when DIVU   => do_div_cmd_1;
                     when SHFU   => do_shf_cmd_1;

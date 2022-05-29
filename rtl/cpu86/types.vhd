@@ -6,11 +6,58 @@ use ieee.numeric_std.all;
 package cpu86_types is
 
     type reg_t is (
-        AX, DX, CX, BX, BP, SI, DI, SP, ES, CS, SS, DS, FL
+        AX, -- 0000
+        DX, -- 0001
+        CX, -- 0010
+        BX, -- 0011
+        BP, -- 0100
+        SI, -- 0101
+        DI, -- 0110
+        SP, -- 0111
+        ES, -- 1000
+        CS, -- 1001
+        SS, -- 1010
+        DS, -- 1011
+        FL  -- 1100
     );
 
     attribute enum_encoding : string;
-    attribute enum_encoding of reg_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1001 1010 1011 1100 1101";
+    attribute enum_encoding of reg_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1000 1001 1010 1011 1100";
+
+    type reg_idx_2_int_t is array(reg_t) of natural;
+    type int_2_reg_idx_t is array(0 to 12) of reg_t;
+
+    constant reg_idx_2_slv_c : reg_idx_2_int_t := (
+        AX => 0,
+        DX => 1,
+        CX => 2,
+        BX => 3,
+        BP => 4,
+        SI => 5,
+        DI => 6,
+        SP => 7,
+        ES => 8,
+        CS => 9,
+        SS => 10,
+        DS => 11,
+        FL => 12
+    );
+
+    constant slv_2_reg_idx_t : int_2_reg_idx_t := (
+        0  => AX,
+        1  => DX,
+        2  => CX,
+        3  => BX,
+        4  => BP,
+        5  => SI,
+        6  => DI,
+        7  => SP,
+        8  => ES,
+        9  => CS,
+        10 => SS,
+        11 => DS,
+        12 => FL
+    );
 
     type ea_t is (
         BX_SI_DISP, BX_DI_DISP, BP_SI_DISP, BP_DI_DISP, SI_DISP, DI_DISP, BP_DISP, BX_DISP, DIRECT, XLAT
@@ -44,18 +91,24 @@ package cpu86_types is
         XCHG,     -- 10000
         SYS,      -- 10001
         LFP,      -- 10010
-        ONEU,     -- 10011
-        SHFU,     -- 10100
-        BCDU,     -- 10101
-        IO,       -- 10110
-        ILLEGAL   -- 10111
+        SHFU,     -- 10011
+        BCDU,     -- 10100
+        IO,       -- 10101
+        ILLEGAL   -- 10110
     );
 
-    attribute enum_encoding of op_t : type is "00000 00001 00010 00011 00100 00101 00110 00111 01000 01001 01010 01011 01100 01101 01110 01111 10000 10001 10010 10011 10100 10101 10110 10111";
+    attribute enum_encoding of op_t : type is "00000 00001 00010 00011 00100 00101 00110 00111 01000 01001 01010 01011 01100 01101 01110 01111 10000 10001 10010 10011 10100 10101 10110";
 
     type mem_data_src_t is (
-        MEM_DATA_SRC_IMM, MEM_DATA_SRC_ALU, MEM_DATA_SRC_ONE, MEM_DATA_SRC_SHF, MEM_DATA_SRC_FIFO, MEM_DATA_SRC_IO
+        MEM_DATA_SRC_IMM,   -- 000
+        MEM_DATA_SRC_ALU,   -- 001
+        MEM_DATA_SRC_ONE,   -- 010
+        MEM_DATA_SRC_SHF,   -- 011
+        MEM_DATA_SRC_FIFO,  -- 100
+        MEM_DATA_SRC_IO     -- 101
     );
+
+    attribute enum_encoding of mem_data_src_t : type is "000 001 010 011 100 101";
 
     type io_data_src_t is (
         IO_DATA_SRC_IMM, IO_DATA_SRC_FIFO
@@ -77,9 +130,8 @@ package cpu86_types is
     constant ALU_OP_INC     : std_logic_vector (3 downto 0) := "1000";
     constant ALU_OP_DEC     : std_logic_vector (3 downto 0) := "1001";
     constant ALU_OP_TST     : std_logic_vector (3 downto 0) := "1010";
-
-    constant ONE_OP_NOT     : std_logic_vector (3 downto 0) := "0000";
-    constant ONE_OP_NEG     : std_logic_vector (3 downto 0) := "0001";
+    constant ALU_OP_NOT     : std_logic_vector (3 downto 0) := "1011";
+    constant ALU_OP_NEG     : std_logic_vector (3 downto 0) := "1100";
 
     constant SHF_OP_ROL     : std_logic_vector (3 downto 0) := "0000";
     constant SHF_OP_ROR     : std_logic_vector (3 downto 0) := "0001";
@@ -392,7 +444,6 @@ package cpu86_types is
         mul_code        : std_logic_vector(3 downto 0);
         mul_w           : std_logic;
         mul_dreg        : reg_t;
-        mul_dmask       : std_logic_vector(1 downto 0);
         mul_a_val       : std_logic_vector(15 downto 0);
         mul_b_val       : std_logic_vector(15 downto 0);
 
@@ -537,7 +588,6 @@ package cpu86_types is
         w               : std_logic;
         wb              : std_logic;
         dreg            : reg_t;
-        dmask           : std_logic_vector(1 downto 0);
         aval            : std_logic_vector(15 downto 0);
         bval            : std_logic_vector(15 downto 0);
     end record;
@@ -546,7 +596,6 @@ package cpu86_types is
         code            : std_logic_vector(3 downto 0);
         w               : std_logic;
         dreg            : reg_t;
-        dmask           : std_logic_vector(1 downto 0);
         aval            : std_logic_vector(15 downto 0);
         bval            : std_logic_vector(15 downto 0);
         dval            : std_logic_vector(31 downto 0); --dest

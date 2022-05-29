@@ -54,6 +54,8 @@ architecture rtl of cpu86_exec_mexec_alu is
     signal and_next         : std_logic_vector(15 downto 0);
     signal or_next          : std_logic_vector(15 downto 0);
     signal xor_next         : std_logic_vector(15 downto 0);
+    signal not_next         : std_logic_vector(15 downto 0);
+    signal neg_next         : std_logic_vector(16 downto 0);
     signal res_tdata_next   : alu_res_t;
 
     signal flags_cf         : std_logic;
@@ -73,6 +75,11 @@ begin
     and_next <= req_s_tdata.aval and req_s_tdata.bval;
     or_next  <= req_s_tdata.aval or  req_s_tdata.bval;
     xor_next <= req_s_tdata.aval xor req_s_tdata.bval;
+    neg_next <= std_logic_vector(unsigned(to_unsigned(0, 17)) - unsigned('0' & req_s_tdata.aval));
+
+    not_next_gen : for i in 0 to 15 generate
+        not_next(i) <= not req_s_tdata.aval(i);
+    end generate;
 
     alu_res_next_proc: process (all) begin
         res_tdata_next.wb     <= req_s_tdata.wb;
@@ -113,6 +120,12 @@ begin
             when ALU_OP_CMP =>
                 res_tdata_next.dval <= req_s_tdata.aval;
                 res_tdata_next.rval <= sub_next;
+            when ALU_OP_NOT =>
+                res_tdata_next.dval <= not_next;
+                res_tdata_next.rval <= '0' & not_next;
+            when ALU_OP_NEG =>
+                res_tdata_next.dval <= neg_next(15 downto 0);
+                res_tdata_next.rval <= neg_next;
             when others =>
                 res_tdata_next.dval <= add_next(15 downto 0);
                 res_tdata_next.rval <= add_next;
@@ -139,6 +152,8 @@ begin
         case res_m_tdata.code is
             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
                 flags_af <= '0';
+            when ALU_OP_NEG =>
+                flags_af <= res_m_tdata.aval(4) xor res_m_tdata.rval(4);
             when others =>
                 flags_af <= res_m_tdata.aval(4) xor res_m_tdata.bval(4) xor res_m_tdata.rval(4);
         end case;
@@ -177,7 +192,7 @@ begin
         case res_m_tdata.code is
             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
                 flags_of <= '0';
-            when ALU_OP_SUB | ALU_OP_SBB | ALU_OP_CMP =>
+            when ALU_OP_SUB | ALU_OP_SBB | ALU_OP_CMP | ALU_OP_NEG =>
                 if res_m_tdata.w = '0' then
                     flags_of <= (res_m_tdata.aval(7) xor res_m_tdata.rval(7)) and (res_m_tdata.aval(7) xor res_m_tdata.bval(7));
                 else

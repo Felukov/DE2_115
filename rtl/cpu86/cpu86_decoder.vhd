@@ -1195,8 +1195,8 @@ begin
             case u8_tdata(5 downto 3) is
                 when "000" => decode_f6_one_op(ALU, ALU_OP_TST);
                 when "001" => null;
-                when "010" => decode_f6_one_op(ONEU, ONE_OP_NOT);
-                when "011" => decode_f6_one_op(ONEU, ONE_OP_NEG);
+                when "010" => decode_f6_one_op(ALU, ALU_OP_NOT);
+                when "011" => decode_f6_one_op(ALU, ALU_OP_NEG);
                 when "100" => decode_f6_f7_mul_op(MUL_AXDX, w);
                 when "101" => decode_f6_f7_mul_op(IMUL_AXDX, w);
                 when "110" => decode_f6_f7_div_op(DIVU_DIV, w);
@@ -1210,8 +1210,8 @@ begin
             case u8_tdata(5 downto 3) is
                 when "000" => decode_f7_one_op(ALU, ALU_OP_TST);
                 when "001" => null;
-                when "010" => decode_f7_one_op(ONEU, ONE_OP_NOT);
-                when "011" => decode_f7_one_op(ONEU, ONE_OP_NEG);
+                when "010" => decode_f7_one_op(ALU, ALU_OP_NOT);
+                when "011" => decode_f7_one_op(ALU, ALU_OP_NEG);
                 when "100" => decode_f6_f7_mul_op(MUL_AXDX, w);
                 when "101" => decode_f6_f7_mul_op(IMUL_AXDX, w);
                 when "110" => decode_f6_f7_div_op(DIVU_DIV, w);
