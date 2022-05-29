@@ -4,8 +4,10 @@
 
 #include "cpu86_e8086_tb.h"
 #include "hdl_mem_model.h"
+#include "hdl_io_model.h"
 #include "e8086/e8086.h"
 #include "e8086_memory.h"
+#include "e8086_io.h"
 #include "e8086_cpu.h"
 
 #define TEST_IN_PROGRESS 0
@@ -54,9 +56,12 @@ void c_tb_set_test(int test_idx){
     hdl_mem_clear();
     hdl_mem_load_from_file(filename);
 
+    hdl_io_clear();
+
     // initializing e8086 simulator memory
     e8086_mem_clear();
     e8086_mem_load_from_file(filename);
+    e8086_io_clear();
 
     // resetting e8086 simulator cpu
     e8086_cpu_reset();

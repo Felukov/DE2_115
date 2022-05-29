@@ -77,6 +77,8 @@ module vld_cpu86_exec_register_reader (
     bit [15:0]      dut_fl;
     string          instr_str;
 
+    int             error_cnt = 0;
+
     always_ff @(posedge clk) begin
         if (resetn == 1'b0) begin
             check_event <= 1'b0;
@@ -134,13 +136,20 @@ module vld_cpu86_exec_register_reader (
             if (resetn == 1'b1 && check_event == 1'b1) begin
                 if (sim_ip != dut_ip) begin
                     $error("IP mismatch");
+                    error_cnt++;
                 end
 
                 if (sim_cs != dut_cs) begin
                     $error("CS mismatch");
+                    error_cnt++;
                 end
 
                 check_xchg();
+
+                if (error_cnt > 100) begin
+                    $display("too many errors");
+                    $stop();
+                end
             end
         end
     end
@@ -149,6 +158,7 @@ module vld_cpu86_exec_register_reader (
         if (dut_op == XCHG) begin
             if (dut_ax != sim_ax) begin
                 $error("AX mismatch");
+                error_cnt++;
             end
         end
     endtask;

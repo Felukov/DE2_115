@@ -46,6 +46,20 @@ module cpu86_e8086_tb ();
         .m_axis_res_tdata           (mem_res_tdata)
     );
 
+    // module cpu86_e8086_io instantiation
+    cpu86_e8086_io cpu86_e8086_io_inst(
+        // clk & reset
+        .clk                        (clk),
+        .resetn                     (resetn),
+        // s_axis_req
+        .s_axis_req_tvalid          (io_req_tvalid),
+        .s_axis_req_tready          (io_req_tready),
+        .s_axis_req_tdata           (io_req_tdata),
+        // m_axis_res
+        .m_axis_res_tvalid          (io_res_tvalid),
+        .m_axis_res_tdata           (io_res_tdata)
+    );
+
 
     // module cpu86 instantiation
     cpu86 cpu86_inst (
@@ -74,9 +88,6 @@ module cpu86_e8086_tb ();
     );
 
 
-    assign io_req_tready = 1'b0;
-    assign io_res_tvalid = 1'b0;
-    assign io_res_tdata = '{default:'0};
     assign interrupt_valid = 1'b0;
 
 
