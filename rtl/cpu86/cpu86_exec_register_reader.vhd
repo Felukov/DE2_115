@@ -152,6 +152,7 @@ architecture rtl of cpu86_exec_register_reader is
     signal ext_intr_tdata           : std_logic_vector(7 downto 0);
 
     signal vld_valid                : std_logic;
+    signal vld_skip_next            : std_logic;
     signal vld_cs                   : std_logic_vector(15 downto 0);
     signal vld_ip                   : std_logic_vector(15 downto 0);
     signal vld_op                   : std_logic_vector(4 downto 0);
@@ -714,11 +715,24 @@ begin
         if rising_edge(clk) then
             if resetn = '0' then
                 vld_valid <= '0';
+                vld_skip_next <= '0';
             else
                 if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
-                    vld_valid <= '1';
+                    if (vld_skip_next = '0') then
+                        vld_valid <= '1';
+                    else
+                        vld_valid <= '0';
+                    end if;
                 else
                     vld_valid <= '0';
+                end if;
+
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.op = REP) then
+                        vld_skip_next <= '1';
+                    else
+                        vld_skip_next <= '0';
+                    end if;
                 end if;
             end if;
 
