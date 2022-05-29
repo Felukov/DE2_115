@@ -1395,6 +1395,9 @@ begin
                 when x"A2" | x"A3" =>
                     instr_tdata.dir <= R2M;
 
+                when x"A8" | x"A9" =>
+                    instr_tdata.dir <= I2R;
+
                 when x"E9" | x"EA" | x"EB" =>
                     instr_tdata.dir <= I2R;
 
@@ -1419,7 +1422,13 @@ begin
 
         procedure decode_dir_f6_f7 is begin
             case u8_tdata(5 downto 3) is
-                when "000" | "001" | "010" | "011" =>
+                when "000" =>
+                    if (u8_tdata(7 downto 6) = "11") then
+                        instr_tdata.dir <= I2R;
+                    else
+                        instr_tdata.dir <= I2M;
+                    end if;
+                when "001" | "010" | "011" =>
                     if (u8_tdata(7 downto 6) = "11") then
                         instr_tdata.dir <= R2R;
                     else

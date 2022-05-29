@@ -1408,6 +1408,10 @@ begin
                             case (alu_res_tdata.code) is
                                 when ALU_OP_INC => flags_wr_be <= UPD_OF or UPD_SF or UPD_ZF or UPD_AF or UPD_PF;
                                 when ALU_OP_DEC => flags_wr_be <= UPD_OF or UPD_SF or UPD_ZF or UPD_AF or UPD_PF;
+                                when ALU_OP_AND => flags_wr_be <= UPD_OF or UPD_SF or UPD_ZF or UPD_PF or UPD_CF;
+                                when ALU_OP_OR  => flags_wr_be <= UPD_OF or UPD_SF or UPD_ZF or UPD_PF or UPD_CF;
+                                when ALU_OP_XOR => flags_wr_be <= UPD_OF or UPD_SF or UPD_ZF or UPD_PF or UPD_CF;
+                                when ALU_OP_TST => flags_wr_be <= UPD_OF or UPD_SF or UPD_ZF or UPD_PF or UPD_CF;
                                 when others     => flags_wr_be <= UPD_OF or UPD_SF or UPD_ZF or UPD_AF or UPD_PF or UPD_CF;
                             end case;
                         end if;

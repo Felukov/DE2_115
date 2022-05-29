@@ -1499,7 +1499,7 @@ begin
                     micro_tdata.alu_wb <= '1';
                     micro_tdata.alu_code <= ALU_OP_ADD;
                     micro_tdata.alu_upd_fl <= '0';
-                    micro_tdata.alu_a_val <= rr_tdata.sreg_val;
+                    micro_tdata.alu_a_val <= (rr_tdata.sreg_val and x"00D5") or (x"0002");
                     micro_tdata.alu_b_val <= x"0000";
                     micro_tdata.alu_dreg <= rr_tdata.dreg;
                     micro_tdata.alu_dmask <= rr_tdata.dmask;
