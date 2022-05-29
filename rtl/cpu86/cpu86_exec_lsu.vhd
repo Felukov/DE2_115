@@ -253,7 +253,7 @@ begin
     req_buf_tready  <= '1' when (mem_req_tvalid = '0' or (mem_req_tvalid = '1' and mem_req_tready = '1')) else '0';
     fifo_0_m_tready <= mem_rd_s_tvalid;
 
-    fifo_0_s_tvalid <= '1' when (req_buf_tvalid = '1' and req_buf_tready = '1') or
+    fifo_0_s_tvalid <= '1' when (req_buf_tvalid = '1' and req_buf_tready = '1' and req_buf_tcmd = '0') or
         (lsu_req_tvalid = '1' and lsu_req_tready = '1' and lsu_req_s_tcmd = '0' and dcache_s_tvalid = '0') else '0';
 
     fifo_0_s_tdata <= req_buf_tag & '1' & req_buf_twidth & req_buf_taddr(1 downto 0) when req_buf_tvalid = '1'
