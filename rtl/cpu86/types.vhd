@@ -141,6 +141,10 @@ package cpu86_types is
     constant SHF_OP_SHR     : std_logic_vector (3 downto 0) := "0101";
     constant SHF_OP_SAR     : std_logic_vector (3 downto 0) := "0110";
 
+    constant SHF_BY_IMM8    : std_logic_vector (7 downto 0) := x"01";
+    constant SHF_BY_1       : std_logic_vector (7 downto 0) := x"02";
+    constant SHF_BY_CL      : std_logic_vector (7 downto 0) := x"04";
+
     constant STACKU_POPM    : std_logic_vector (3 downto 0) := "0000";
     constant STACKU_POPR    : std_logic_vector (3 downto 0) := "0001";
     constant STACKU_POPA    : std_logic_vector (3 downto 0) := "0100";
@@ -287,7 +291,7 @@ package cpu86_types is
         data            : std_logic_vector(15 downto 0);
         disp            : std_logic_vector(15 downto 0);
         fl              : fl_action_t;
-        imm8            : std_logic_vector(7 downto 0);
+        data_ex         : std_logic_vector(7 downto 0);
         bpu_taken       : std_logic;
         bpu_first       : std_logic;
         bpu_taken_cs    : std_logic_vector(15 downto 0);
@@ -330,6 +334,7 @@ package cpu86_types is
     type rr_instr_t is record
         op              : op_t;
         code            : std_logic_vector(3 downto 0);
+        fast_instr      : std_logic;
         w               : std_logic;
         fl              : fl_action_t;
         dir             : direction_t;
@@ -340,7 +345,7 @@ package cpu86_types is
         data            : std_logic_vector(15 downto 0);
         disp            : std_logic_vector(15 downto 0);
         level           : natural range 0 to 63;
-        fast_instr      : std_logic;
+        data_ex         : std_logic_vector(7 downto 0);
 
         bpu_first       : std_logic;
         bpu_taken       : std_logic;
@@ -367,38 +372,35 @@ package cpu86_types is
         ea_val          : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 14;
+    constant MICRO_OP_CMD_WIDTH : natural := 13;
     constant MICRO_OP_CMD_MEM   : natural := 0;
     constant MICRO_OP_CMD_ALU   : natural := 1;
     constant MICRO_OP_CMD_JMP   : natural := 2;
     constant MICRO_OP_CMD_FLG   : natural := 3;
     constant MICRO_OP_CMD_MUL   : natural := 4;
     constant MICRO_OP_CMD_DBG   : natural := 5;
-    constant MICRO_OP_CMD_ONE   : natural := 6;
-    constant MICRO_OP_CMD_BCD   : natural := 7;
-    constant MICRO_OP_CMD_SHF   : natural := 8;
-    constant MICRO_OP_CMD_DIV   : natural := 9;
-    constant MICRO_OP_CMD_BND   : natural := 10;
-    constant MICRO_OP_CMD_STR   : natural := 11;
-    constant MICRO_OP_CMD_MRD   : natural := 12;
-    constant MICRO_OP_CMD_UNLK  : natural := 13;
+    constant MICRO_OP_CMD_BCD   : natural := 6;
+    constant MICRO_OP_CMD_SHF   : natural := 7;
+    constant MICRO_OP_CMD_DIV   : natural := 8;
+    constant MICRO_OP_CMD_BND   : natural := 9;
+    constant MICRO_OP_CMD_STR   : natural := 10;
+    constant MICRO_OP_CMD_MRD   : natural := 11;
+    constant MICRO_OP_CMD_UNLK  : natural := 12;
 
-    constant MICRO_UNLK_OP      : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "10000000000000";
-    constant MICRO_MRD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "01000000000000";
-    constant MICRO_STR_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00100000000000";
-    constant MICRO_BND_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00010000000000";
-    constant MICRO_DIV_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00001000000000";
-    constant MICRO_SHF_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000100000000";
-    constant MICRO_BCD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000010000000";
-    constant MICRO_ONE_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000001000000";
-    constant MICRO_DBG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000100000";
-    constant MICRO_MUL_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000010000";
-    constant MICRO_FLG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000001000";
-    constant MICRO_JMP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000000100";
-    constant MICRO_ALU_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000000010";
-    constant MICRO_MEM_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000000001";
-    constant MICRO_NOP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "00000000000000";
-
+    constant MICRO_UNLK_OP      : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "1000000000000";
+    constant MICRO_MRD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0100000000000";
+    constant MICRO_STR_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0010000000000";
+    constant MICRO_BND_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0001000000000";
+    constant MICRO_DIV_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000100000000";
+    constant MICRO_SHF_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000010000000";
+    constant MICRO_BCD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000001000000";
+    constant MICRO_DBG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000100000";
+    constant MICRO_MUL_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000010000";
+    constant MICRO_FLG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000001000";
+    constant MICRO_JMP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000100";
+    constant MICRO_ALU_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000010";
+    constant MICRO_MEM_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000001";
+    constant MICRO_NOP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000000";
 
     type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
     type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
@@ -428,7 +430,6 @@ package cpu86_types is
 
     type micro_op_t is record
         cmd             : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0);
-        --unlk_fl         : std_logic;
         alu_code        : std_logic_vector(3 downto 0);
         alu_w           : std_logic;
         alu_dreg        : reg_t;
@@ -463,15 +464,8 @@ package cpu86_types is
         bnd_ip_val      : std_logic_vector(15 downto 0);
         bnd_ip_next_val : std_logic_vector(15 downto 0);
 
-        one_code        : std_logic_vector(3 downto 0);
-        one_w           : std_logic;
-        one_dreg        : reg_t;
-        one_dmask       : std_logic_vector(1 downto 0);
-        one_sval        : std_logic_vector(15 downto 0);
-        one_ival        : std_logic_vector(15 downto 0);
-        one_wb          : std_logic;
-
         shf_code        : std_logic_vector(3 downto 0);
+        shf_code_ex     : std_logic_vector(2 downto 0);
         shf_w           : std_logic;
         shf_dreg        : reg_t;
         shf_dmask       : std_logic_vector(1 downto 0);
@@ -627,27 +621,9 @@ package cpu86_types is
         ip_next_val     : std_logic_vector(15 downto 0);
     end record;
 
-    type one_req_t is record
-        code            : std_logic_vector(3 downto 0);
-        w               : std_logic;
-        wb              : std_logic;
-        dreg            : reg_t;
-        dmask           : std_logic_vector(1 downto 0);
-        sval            : std_logic_vector(15 downto 0);
-        ival            : std_logic_vector(15 downto 0);
-    end record;
-
-    type one_res_t is record
-        code            : std_logic_vector(3 downto 0);
-        wb              : std_logic;
-        w               : std_logic;
-        dreg            : reg_t;
-        dmask           : std_logic_vector(1 downto 0);
-        dval            : std_logic_vector(15 downto 0);
-    end record;
-
     type shf_req_t is record
         code            : std_logic_vector(3 downto 0);
+        code_ex         : std_logic_vector(2 downto 0);
         w               : std_logic;
         wb              : std_logic;
         dreg            : reg_t;
@@ -658,6 +634,7 @@ package cpu86_types is
 
     type shf_res_t is record
         code            : std_logic_vector(3 downto 0);
+        code_ex         : std_logic_vector(2 downto 0);
         wb              : std_logic;
         w               : std_logic;
         dreg            : reg_t;
@@ -698,7 +675,7 @@ package body cpu86_types is
     subtype  DECODED_INSTR_T_BPU_TAKEN_IP   is natural range 111 downto 96;
     constant DECODED_INSTR_T_BPU_TAKEN      :  natural := 95;
     constant DECODED_INSTR_T_BPU_FIRST      :  natural := 94;
-    subtype  DECODED_INSTR_T_IMM8           is natural range 93 downto 86;
+    subtype  DECODED_INSTR_T_DATA_EX        is natural range 93 downto 86;
     constant DECODED_INSTR_T_WAIT_AX        :  natural := 85;
     constant DECODED_INSTR_T_WAIT_BX        :  natural := 84;
     constant DECODED_INSTR_T_WAIT_CX        :  natural := 83;
@@ -744,7 +721,7 @@ package body cpu86_types is
         v(DECODED_INSTR_T_BPU_TAKEN)    := d.bpu_taken;
         v(DECODED_INSTR_T_BPU_FIRST)    := d.bpu_first;
 
-        v(DECODED_INSTR_T_IMM8)         := d.imm8;
+        v(DECODED_INSTR_T_DATA_EX)      := d.data_ex;
         v(DECODED_INSTR_T_WAIT_AX)      := d.wait_ax;
         v(DECODED_INSTR_T_WAIT_BX)      := d.wait_bx;
         v(DECODED_INSTR_T_WAIT_CX)      := d.wait_cx;
@@ -798,7 +775,7 @@ package body cpu86_types is
         d.bpu_taken     := t(DECODED_INSTR_T_BPU_TAKEN);
         d.bpu_first     := t(DECODED_INSTR_T_BPU_FIRST);
 
-        d.imm8          := t(DECODED_INSTR_T_IMM8);
+        d.data_ex       := t(DECODED_INSTR_T_DATA_EX);
         d.wait_ax       := t(DECODED_INSTR_T_WAIT_AX);
         d.wait_bx       := t(DECODED_INSTR_T_WAIT_BX);
         d.wait_cx       := t(DECODED_INSTR_T_WAIT_CX);

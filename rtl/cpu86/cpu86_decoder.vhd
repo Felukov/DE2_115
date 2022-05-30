@@ -66,7 +66,7 @@ architecture rtl of cpu86_decoder is
         disp8,          --1001
         disp_low,       --1010
         disp_high,      --1011
-        imm8            --1100
+        data_ext        --1100
     );
 
     attribute enum_encoding : string;
@@ -298,7 +298,7 @@ begin
                                     instr_tvalid <= '0';
 
                                 when x"C8" =>
-                                    decode_chain(data_low, data_high, imm8, first_byte);
+                                    decode_chain(data_low, data_high, data_ext, first_byte);
                                     instr_tvalid <= '0';
 
                                 when x"9A" | x"EA" =>
@@ -434,7 +434,7 @@ begin
                         when disp8      => shift_chain; next_is_new_instruction;
                         when disp_low   => shift_chain; next_is_new_instruction;
                         when disp_high  => shift_chain; next_is_new_instruction;
-                        when imm8       => shift_chain; next_is_new_instruction;
+                        when data_ext   => shift_chain; next_is_new_instruction;
                         when others     => null;
 
                     end case;
@@ -2280,7 +2280,19 @@ begin
             end if;
 
             if (u8_tvalid = '1' and u8_tready = '1') then
-                instr_tdata.imm8 <= u8_tdata;
+                if (byte_pos_chain(0) = first_byte) then
+                    case u8_tdata is
+                        when x"C0"  => instr_tdata.data_ex <= SHF_BY_IMM8; -- shift by imm8
+                        when x"C1"  => instr_tdata.data_ex <= SHF_BY_IMM8; -- shift by imm8
+                        when x"D0"  => instr_tdata.data_ex <= SHF_BY_1; -- shift by 1
+                        when x"D1"  => instr_tdata.data_ex <= SHF_BY_1; -- shift by 1
+                        when x"D2"  => instr_tdata.data_ex <= SHF_BY_CL; -- shift by CL
+                        when x"D3"  => instr_tdata.data_ex <= SHF_BY_CL; -- shift by CL
+                        when others => instr_tdata.data_ex <= x"00";
+                    end case;
+                elsif (byte_pos_chain(0) = data_ext) then
+                    instr_tdata.data_ex <= u8_tdata;
+                end if;
             end if;
 
             instr_tdata.bpu_taken <= '0';

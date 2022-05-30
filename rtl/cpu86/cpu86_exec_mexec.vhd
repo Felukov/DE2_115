@@ -844,27 +844,29 @@ begin
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' and micro_tdata.shf_w  = '0') then
-                shf8_req_tdata.code <= micro_tdata.shf_code;
-                shf8_req_tdata.w <= micro_tdata.shf_w;
-                shf8_req_tdata.wb <= micro_tdata.shf_wb;
-                shf8_req_tdata.sval <= micro_tdata.shf_sval;
-                shf8_req_tdata.ival <= micro_tdata.shf_ival;
-                shf8_req_tdata.dreg <= micro_tdata.shf_dreg;
-                shf8_req_tdata.dmask <= micro_tdata.shf_dmask;
+                shf8_req_tdata.code     <= micro_tdata.shf_code;
+                shf8_req_tdata.code_ex  <= micro_tdata.shf_code_ex;
+                shf8_req_tdata.w        <= micro_tdata.shf_w;
+                shf8_req_tdata.wb       <= micro_tdata.shf_wb;
+                shf8_req_tdata.sval     <= micro_tdata.shf_sval;
+                shf8_req_tdata.ival     <= micro_tdata.shf_ival;
+                shf8_req_tdata.dreg     <= micro_tdata.shf_dreg;
+                shf8_req_tdata.dmask    <= micro_tdata.shf_dmask;
             elsif (shf8_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
-                shf8_req_tdata.sval <= lsu_rd_s_tdata;
+                shf8_req_tdata.sval     <= lsu_rd_s_tdata;
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_SHF) = '1' and micro_tdata.shf_w  = '1') then
-                shf16_req_tdata.code <= micro_tdata.shf_code;
-                shf16_req_tdata.w <= micro_tdata.shf_w;
-                shf16_req_tdata.wb <= micro_tdata.shf_wb;
-                shf16_req_tdata.sval <= micro_tdata.shf_sval;
-                shf16_req_tdata.ival <= micro_tdata.shf_ival;
-                shf16_req_tdata.dreg <= micro_tdata.shf_dreg;
-                shf16_req_tdata.dmask <= micro_tdata.shf_dmask;
+                shf16_req_tdata.code    <= micro_tdata.shf_code;
+                shf16_req_tdata.code_ex <= micro_tdata.shf_code_ex;
+                shf16_req_tdata.w       <= micro_tdata.shf_w;
+                shf16_req_tdata.wb      <= micro_tdata.shf_wb;
+                shf16_req_tdata.sval    <= micro_tdata.shf_sval;
+                shf16_req_tdata.ival    <= micro_tdata.shf_ival;
+                shf16_req_tdata.dreg    <= micro_tdata.shf_dreg;
+                shf16_req_tdata.dmask   <= micro_tdata.shf_dmask;
             elsif (shf16_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
-                shf16_req_tdata.sval <= lsu_rd_s_tdata;
+                shf16_req_tdata.sval    <= lsu_rd_s_tdata;
             end if;
 
         end if;

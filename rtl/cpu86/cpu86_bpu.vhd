@@ -252,7 +252,7 @@ begin
                 instr_m_tdata.data          <= instr_s_tdata.data;
                 instr_m_tdata.disp          <= instr_s_tdata.disp;
                 instr_m_tdata.fl            <= instr_s_tdata.fl;
-                instr_m_tdata.imm8          <= instr_s_tdata.imm8;
+                instr_m_tdata.data_ex       <= instr_s_tdata.data_ex;
                 instr_m_tdata.wait_ax       <= instr_s_tdata.wait_ax;
                 instr_m_tdata.wait_bx       <= instr_s_tdata.wait_bx;
                 instr_m_tdata.wait_cx       <= instr_s_tdata.wait_cx;

@@ -52,9 +52,7 @@ architecture rtl of cpu86_exec_mexec_shf is
     signal sval         : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rval         : std_logic_vector(16 downto 0);
     signal rval_next    : std_logic_vector(16 downto 0);
-    signal use_of_1     : std_logic;
-    signal flags_of_1   : std_logic;
-    signal flags_of_n   : std_logic;
+    signal rval_prev    : std_logic;
     signal flags_of     : std_logic;
     signal flags_pf     : std_logic;
     signal flags_zf     : std_logic;
@@ -112,15 +110,47 @@ begin
         end if;
 
         flags_sf <= rval(DATA_WIDTH-1);
-        flags_cf <= rval(DATA_WIDTH);
 
-        flags_of_1 <= rval(DATA_WIDTH-1) xor sval(DATA_WIDTH-1);
+        case res_m_tdata.code_ex is
+            when SHF_BY_IMM8(2 downto 0) =>
+                case res_m_tdata.code is
+                    when SHF_OP_ROL => flags_of <= sval(DATA_WIDTH-2) xor sval(DATA_WIDTH-1);
+                    when SHF_OP_ROR => flags_of <= rval(DATA_WIDTH-2) xor sval(DATA_WIDTH-1);
+                    when SHF_OP_RCL => flags_of <= sval(DATA_WIDTH-2) xor sval(DATA_WIDTH-1);
+                    when SHF_OP_RCR => flags_of <= rval(DATA_WIDTH-2) xor sval(DATA_WIDTH-1);
+                    when SHF_OP_SHL => flags_of <= sval(DATA_WIDTH-2) xor sval(DATA_WIDTH-1);
+                    when SHF_OP_SHR => flags_of <= sval(DATA_WIDTH-1);
+                    when others     => flags_of <= '0'; -- SHF_OP_SAR
+                end case;
+            when others =>
+                -- shift by 1, shift by CL
+                flags_of <= rval(DATA_WIDTH-1) xor sval(DATA_WIDTH-1);
+        end case;
 
-        if (use_of_1 = '1') then
-            flags_of <= flags_of_1;
-        else
-            flags_of <= flags_of_n;
-        end if;
+        case res_m_tdata.code_ex is
+            when SHF_BY_IMM8(2 downto 0) | SHF_BY_CL(2 downto 0) =>
+                case res_m_tdata.code is
+                    when SHF_OP_ROL => flags_cf <= rval(0);
+                    when SHF_OP_ROR => flags_cf <= rval(DATA_WIDTH-1);
+                    when SHF_OP_RCL => flags_cf <= rval(DATA_WIDTH);
+                    when SHF_OP_RCR => flags_cf <= rval(DATA_WIDTH);
+                    when SHF_OP_SHL => flags_cf <= rval(DATA_WIDTH);
+                    when SHF_OP_SHR => flags_cf <= rval_prev;
+                    when others     => flags_cf <= rval_prev; -- SHF_OP_SAR
+                end case;
+            when others =>
+                -- shift by 1
+                case res_m_tdata.code is
+                    when SHF_OP_ROL => flags_cf <= sval(DATA_WIDTH-1);
+                    when SHF_OP_ROR => flags_cf <= sval(0);
+                    when SHF_OP_RCL => flags_cf <= sval(DATA_WIDTH-1);
+                    when SHF_OP_RCR => flags_cf <= sval(0);
+                    when SHF_OP_SHL => flags_cf <= sval(DATA_WIDTH-1);
+                    when SHF_OP_SHR => flags_cf <= sval(0);
+                    when others     => flags_cf <= sval(0); -- SHF_OP_SAR
+                end case;
+        end case;
+
 
     end process;
 
@@ -130,43 +160,11 @@ begin
             if resetn = '0' then
                 res_m_tvalid <= '0';
                 shf_cnt <= 0;
-                use_of_1 <= '0';
-                flags_of_n <= '0';
             else
-
                 if (req_s_tvalid = '1') then
                     shf_cnt <= to_integer(unsigned(req_s_tdata.ival(4 downto 0)));
                 elsif (shf_cnt > 0) then
                     shf_cnt <= shf_cnt - 1;
-                end if;
-
-                if (req_s_tvalid = '1') then
-                    case res_m_tdata.code is
-                        when SHF_OP_ROL | SHF_OP_ROR | SHF_OP_RCR | SHF_OP_RCL =>
-                            if (req_s_tdata.ival(4 downto 0) = "0001") then
-                                use_of_1 <= '1';
-                            else
-                                use_of_1 <= '0';
-                            end if;
-                        when others =>
-                            use_of_1 <= '1';
-                    end case;
-                end if;
-
-                if (req_s_tvalid = '1') then
-                    case res_m_tdata.code is
-                        when SHF_OP_ROR =>
-                            flags_of_n <= req_s_tdata.sval(DATA_WIDTH-1) xor req_s_tdata.sval(0);
-                        when SHF_OP_RCR =>
-                            if req_s_tdata.sval(DATA_WIDTH-1) = '0' then
-                                flags_of_n <= req_s_tuser(FLAG_OF);
-                            else
-                                flags_of_n <= not req_s_tuser(FLAG_OF);
-                            end if;
-                        when SHF_OP_ROL | SHF_OP_RCL =>
-                            flags_of_n <= req_s_tdata.sval(DATA_WIDTH-2) xor req_s_tdata.sval(DATA_WIDTH-1);
-                        when others => null;
-                    end case;
                 end if;
 
                 if (req_s_tvalid = '1') then
@@ -190,12 +188,13 @@ begin
             end if;
 
             if (req_s_tvalid = '1') then
-                res_m_tdata.code <= req_s_tdata.code;
-                res_m_tdata.w <= req_s_tdata.w;
-                res_m_tdata.wb <= req_s_tdata.wb;
-                res_m_tdata.dreg <= req_s_tdata.dreg;
-                res_m_tdata.dmask <= req_s_tdata.dmask;
-                res_m_tdata.dval <= req_s_tdata.sval;
+                res_m_tdata.code     <= req_s_tdata.code;
+                res_m_tdata.code_ex  <= req_s_tdata.code_ex;
+                res_m_tdata.w        <= req_s_tdata.w;
+                res_m_tdata.wb       <= req_s_tdata.wb;
+                res_m_tdata.dreg     <= req_s_tdata.dreg;
+                res_m_tdata.dmask    <= req_s_tdata.dmask;
+                res_m_tdata.dval     <= req_s_tdata.sval;
 
                 for i in 16 downto DATA_WIDTH loop
                     rval(i) <= req_s_tuser(FLAG_CF);
@@ -209,6 +208,10 @@ begin
 
                 res_m_tdata.dval(DATA_WIDTH-1 downto 0) <= rval_next(DATA_WIDTH-1 downto 0);
 
+            end if;
+
+            if (shf_cnt = 1) then
+                rval_prev <= rval(0);
             end if;
 
         end if;

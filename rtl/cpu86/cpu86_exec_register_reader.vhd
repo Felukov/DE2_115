@@ -633,7 +633,8 @@ begin
                 rr_tdata.sreg       <= instr_tdata.sreg;
 
                 rr_tdata.disp       <= instr_tdata.disp;
-                rr_tdata.level      <= to_integer(unsigned(instr_tdata.imm8(4 downto 0))) + 2;
+                rr_tdata.level      <= to_integer(unsigned(instr_tdata.data_ex(4 downto 0))) + 2;
+                rr_tdata.data_ex    <= instr_tdata.data_ex;
 
                 rr_tdata.sreg_val   <= sreg_tdata;
                 rr_tdata.dreg_val   <= dreg_tdata;
@@ -659,7 +660,6 @@ begin
                     rr_tdata.sp_offset <= x"0002";
                     rr_tdata.sp_val <= sp_s_tdata;
                 end if;
-
             elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
                 rr_tdata.sp_val <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
                 rr_tdata.sp_offset <= x"FFFE";

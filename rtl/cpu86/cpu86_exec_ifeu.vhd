@@ -919,27 +919,36 @@ begin
         end procedure;
 
         procedure do_shf_cmd_0 is begin
-            micro_tdata.shf_code <= rr_tdata.code;
-            micro_tdata.shf_w <= rr_tdata.w;
-            micro_tdata.shf_dreg <= rr_tdata.dreg;
-            micro_tdata.shf_dmask <= rr_tdata.dmask;
-            micro_tdata.shf_sval <= rr_tdata.sreg_val;
+            micro_tdata.shf_code    <= rr_tdata.code;
+            micro_tdata.shf_code_ex <= rr_tdata.data_ex(2 downto 0);
+            micro_tdata.shf_w       <= rr_tdata.w;
+            micro_tdata.shf_dreg    <= rr_tdata.dreg;
+            micro_tdata.shf_dmask   <= rr_tdata.dmask;
+            micro_tdata.shf_sval    <= rr_tdata.sreg_val;
 
             case rr_tdata.dir is
                 when I2M =>
-                    micro_tdata.cmd <= MICRO_MEM_OP;
-                    micro_tdata.shf_wb <= '0';
-                    mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
+                    micro_tdata.cmd      <= MICRO_MEM_OP;
+                    micro_tdata.shf_wb   <= '0';
                     micro_tdata.shf_ival <= rr_tdata.data;
+
+                    mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
 
                 when I2R =>
-                    micro_tdata.cmd <= MICRO_SHF_OP;
-                    micro_tdata.shf_wb <= '1';
+                    micro_tdata.cmd      <= MICRO_SHF_OP;
+                    micro_tdata.shf_wb   <= '1';
                     micro_tdata.shf_ival <= rr_tdata.data;
 
+                when R2M =>
+                    micro_tdata.cmd      <= MICRO_MEM_OP;
+                    micro_tdata.shf_wb   <= '0';
+                    micro_tdata.shf_ival <= x"00" & rr_tdata.cx_tdata(7 downto 0);
+
+                    mem_read(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next, w => rr_tdata.w);
+
                 when R2R =>
-                    micro_tdata.cmd <= MICRO_SHF_OP;
-                    micro_tdata.shf_wb <= '1';
+                    micro_tdata.cmd      <= MICRO_SHF_OP;
+                    micro_tdata.shf_wb   <= '1';
                     micro_tdata.shf_ival <= x"00" & rr_tdata.cx_tdata(7 downto 0);
 
                 when others => null;
