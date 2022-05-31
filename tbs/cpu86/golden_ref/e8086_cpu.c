@@ -44,7 +44,7 @@ void e8086_cpu_reset(){
     e86_reset(cpu8086);
     e86_set_cs(cpu8086, 0x0000);
     e86_set_ip(cpu8086, 0x0400);
-    e86_set_flags(cpu8086, 0x0202);
+    e86_set_flags(cpu8086, 0xF202);
 
 }
 
@@ -108,6 +108,10 @@ void e8086_cpu_exec() {
     disasm_str(instr_str, &op);
 
     e86_execute(cpu8086);
+    while (cpu8086->prefix & E86_PREFIX_KEEP) {
+        e86_execute(cpu8086);
+    }
+
     ax_val = (unsigned int)e86_get_ax(cpu8086);
     bx_val = (unsigned int)e86_get_bx(cpu8086);
     cx_val = (unsigned int)e86_get_cx(cpu8086);

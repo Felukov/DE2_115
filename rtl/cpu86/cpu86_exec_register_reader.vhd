@@ -119,7 +119,9 @@ architecture rtl of cpu86_exec_register_reader is
             vld_sp                  : in std_logic_vector(15 downto 0);
             vld_si                  : in std_logic_vector(15 downto 0);
             vld_di                  : in std_logic_vector(15 downto 0);
-            vld_fl                  : in std_logic_vector(15 downto 0)
+            vld_fl                  : in std_logic_vector(15 downto 0);
+            vld_sreg                : in std_logic_vector(3 downto 0);
+            vld_dreg                : in std_logic_vector(3 downto 0)
         );
     end component;
 
@@ -157,6 +159,8 @@ architecture rtl of cpu86_exec_register_reader is
     signal vld_ip                   : std_logic_vector(15 downto 0);
     signal vld_op                   : std_logic_vector(4 downto 0);
     signal vld_code                 : std_logic_vector(3 downto 0);
+    signal vld_sreg                 : std_logic_vector(3 downto 0);
+    signal vld_dreg                 : std_logic_vector(3 downto 0);
     signal vld_ax                   : std_logic_vector(15 downto 0);
     signal vld_bx                   : std_logic_vector(15 downto 0);
     signal vld_cx                   : std_logic_vector(15 downto 0);
@@ -203,7 +207,9 @@ begin
         vld_sp     => vld_sp,
         vld_di     => vld_di,
         vld_si     => vld_si,
-        vld_fl     => vld_fl
+        vld_fl     => vld_fl,
+        vld_sreg   => vld_sreg,
+        vld_dreg   => vld_dreg
     );
 
 
@@ -749,6 +755,8 @@ begin
                 vld_sp <= sp_s_tdata;
                 vld_di <= di_s_tdata;
                 vld_si <= si_s_tdata;
+                vld_sreg <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.sreg), 4));
+                vld_dreg <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.dreg), 4));
                 vld_fl <= flags_s_tdata;
             end if;
         end if;

@@ -1164,18 +1164,18 @@ begin
 
         procedure do_str_cmd is begin
             micro_tdata.cmd <= MICRO_STR_OP;
-
-            micro_tdata.str_code <= rr_tdata.code;
-            micro_tdata.str_rep <= rep_mode;
-            micro_tdata.str_rep_nz <= rep_nz;
+            -- str cmd
+            micro_tdata.str_code      <= rr_tdata.code;
+            micro_tdata.str_rep       <= rep_mode;
+            micro_tdata.str_rep_nz    <= rep_nz;
             micro_tdata.str_direction <= rr_tdata.fl_tdata(FLAG_DF);
-            micro_tdata.str_w <= rr_tdata.w;
-            micro_tdata.str_ax_val <= rr_tdata.sreg_val;
-            micro_tdata.str_cx_val <= rep_cx_cnt;
-            micro_tdata.str_es_val <= rr_tdata.es_seg_val;
-            micro_tdata.str_di_val <= rr_tdata.di_tdata;
-            micro_tdata.str_ds_val <= rr_tdata.seg_val;
-            micro_tdata.str_si_val <= rr_tdata.si_tdata;
+            micro_tdata.str_w         <= rr_tdata.w;
+            micro_tdata.str_ax_val    <= rr_tdata.sreg_val;
+            micro_tdata.str_cx_val    <= rep_cx_cnt;
+            micro_tdata.str_es_val    <= rr_tdata.es_seg_val;
+            micro_tdata.str_di_val    <= rr_tdata.di_tdata;
+            micro_tdata.str_ds_val    <= rr_tdata.seg_val;
+            micro_tdata.str_si_val    <= rr_tdata.si_tdata;
         end procedure;
 
         procedure do_stack_cmd_0 is begin
@@ -1221,6 +1221,8 @@ begin
 
                 when STACKU_PUSHM =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
+
+                    -- memory cmd
                     mem_read_word(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next);
 
                 when STACKU_PUSHI =>
@@ -1235,12 +1237,13 @@ begin
                 when STACKU_PUSHA =>
                     micro_tdata.cmd <= MICRO_MEM_OP;
 
-                    micro_tdata.mem_cmd <= '1';
-                    micro_tdata.mem_width <= rr_tdata.w;
-                    micro_tdata.mem_seg <= rr_tdata.ss_seg_val;
-                    micro_tdata.mem_addr <= rr_tdata.sp_val;
+                    -- memory cmd
+                    micro_tdata.mem_cmd      <= '1';
+                    micro_tdata.mem_width    <= rr_tdata.w;
+                    micro_tdata.mem_seg      <= rr_tdata.ss_seg_val;
+                    micro_tdata.mem_addr     <= rr_tdata.sp_val;
                     micro_tdata.mem_data_src <= MEM_DATA_SRC_IMM;
-                    micro_tdata.mem_data <= rr_tdata_buf.sreg_val;
+                    micro_tdata.mem_data     <= rr_tdata.ax_tdata;
 
                 when others => null;
             end case;
