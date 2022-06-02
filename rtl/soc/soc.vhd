@@ -35,6 +35,13 @@ entity soc is
         clk                         : in std_logic;
         resetn                      : in std_logic;
 
+        m_axis_sdram_req_tvalid     : out std_logic;
+        m_axis_sdram_req_tready     : in std_logic;
+        m_axis_sdram_req_tdata      : out std_logic_vector(63 downto 0);
+
+        s_axis_sdram_res_tvalid     : in std_logic;
+        s_axis_sdram_res_tdata      : in std_logic_vector(31 downto 0);
+
         LEDG                        : out std_logic_vector(8 downto 0);
         SW                          : in std_logic_vector(17 downto 0);
 
@@ -111,6 +118,42 @@ architecture rtl of soc is
             interrupt_ack           : out std_logic
         );
     end component cpu86;
+
+    component soc_mmu is
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+
+            s_axis_io_req_tvalid    : in std_logic;
+            s_axis_io_req_tready    : out std_logic;
+            s_axis_io_req_tdata     : in std_logic_vector(39 downto 0);
+
+            m_axis_io_res_tvalid    : out std_logic;
+            m_axis_io_res_tready    : in std_logic;
+            m_axis_io_res_tdata     : out std_logic_vector(15 downto 0);
+
+            s_axis_mem_req_tvalid   : in std_logic;
+            s_axis_mem_req_tready   : out std_logic;
+            s_axis_mem_req_tdata    : in std_logic_vector(63 downto 0);
+
+            m_axis_mem_res_tvalid   : out std_logic;
+            m_axis_mem_res_tdata    : out std_logic_vector(31 downto 0);
+
+            m_axis_sdram_req_tvalid : out std_logic;
+            m_axis_sdram_req_tready : in std_logic;
+            m_axis_sdram_req_tdata  : out std_logic_vector(63 downto 0);
+
+            s_axis_sdram_res_tvalid : in std_logic;
+            s_axis_sdram_res_tdata  : in std_logic_vector(31 downto 0);
+
+            m_axis_bram_req_tvalid  : out std_logic;
+            m_axis_bram_req_tready  : in std_logic;
+            m_axis_bram_req_tdata   : out std_logic_vector(63 downto 0);
+
+            s_axis_bram_res_tvalid  : in std_logic;
+            s_axis_bram_res_tdata   : in std_logic_vector(31 downto 0)
+        );
+    end component soc_mmu;
 
     component soc_io_interconnect is
         port (
@@ -360,6 +403,18 @@ architecture rtl of soc is
     signal mem_res_tvalid           : std_logic;
     signal mem_res_tdata            : std_logic_vector(31 downto 0);
 
+    signal sdram_req_tvalid         : std_logic;
+    signal sdram_req_tready         : std_logic;
+    signal sdram_req_tdata          : std_logic_vector(63 downto 0);
+    signal sdram_res_tvalid         : std_logic;
+    signal sdram_res_tdata          : std_logic_vector(31 downto 0);
+
+    signal bram_req_tvalid          : std_logic;
+    signal bram_req_tready          : std_logic;
+    signal bram_req_tdata           : std_logic_vector(63 downto 0);
+    signal bram_res_tvalid          : std_logic;
+    signal bram_res_tdata           : std_logic_vector(31 downto 0);
+
     signal io_req_tvalid            : std_logic;
     signal io_req_tready            : std_logic;
     signal io_req_tdata             : std_logic_vector(39 downto 0);
@@ -387,8 +442,8 @@ architecture rtl of soc is
     signal wr_s_tdata               : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd_s_tvalid              : std_logic;
     signal rd_s_taddr               : std_logic_vector(ADDR_WIDTH-1 downto 0);
-    signal rd_m_tvalid              : std_logic;
-    signal rd_m_tdata               : std_logic_vector(DATA_WIDTH-1 downto 0);
+    -- signal rd_m_tvalid              : std_logic;
+    -- signal rd_m_tdata               : std_logic_vector(DATA_WIDTH-1 downto 0);
 
     signal sw_0_req_tvalid          : std_logic;
     signal sw_0_req_tready          : std_logic;
@@ -432,6 +487,13 @@ architecture rtl of soc is
     signal uart_rd_tready           : std_logic;
     signal uart_rd_tdata            : std_logic_vector(15 downto 0);
 
+    signal mmu_req_tvalid           : std_logic;
+    signal mmu_req_tready           : std_logic;
+    signal mmu_req_tdata            : std_logic_vector(39 downto 0);
+    signal mmu_rd_tvalid            : std_logic;
+    signal mmu_rd_tready            : std_logic;
+    signal mmu_rd_tdata             : std_logic_vector(15 downto 0);
+
     signal led_reg                  : std_logic_vector(7 downto 0);
 
     signal event_timer              : std_logic;
@@ -460,8 +522,8 @@ begin
         rd_s_taddr              => rd_s_taddr,
         rd_s_tuser              => x"00000000",
 
-        rd_m_tvalid             => rd_m_tvalid,
-        rd_m_tdata              => rd_m_tdata,
+        rd_m_tvalid             => bram_res_tvalid,
+        rd_m_tdata              => bram_res_tdata,
         rd_m_tuser              => open
     );
 
@@ -488,6 +550,41 @@ begin
         interrupt_valid         => interrupt_valid,
         interrupt_data          => interrupt_data,
         interrupt_ack           => interrupt_ack
+    );
+
+    -- Module soc_mmu instantiation
+    soc_mmu_inst : soc_mmu port map (
+        clk                     => clk,
+        resetn                  => resetn,
+
+        s_axis_io_req_tvalid    => mmu_req_tvalid,
+        s_axis_io_req_tready    => mmu_req_tready,
+        s_axis_io_req_tdata     => mmu_req_tdata,
+
+        m_axis_io_res_tvalid    => mmu_rd_tvalid,
+        m_axis_io_res_tready    => mmu_rd_tready,
+        m_axis_io_res_tdata     => mmu_rd_tdata,
+
+        s_axis_mem_req_tvalid   => mem_req_tvalid,
+        s_axis_mem_req_tready   => mem_req_tready,
+        s_axis_mem_req_tdata    => mem_req_tdata,
+
+        m_axis_mem_res_tvalid   => mem_res_tvalid,
+        m_axis_mem_res_tdata    => mem_res_tdata,
+
+        m_axis_sdram_req_tvalid => sdram_req_tvalid,
+        m_axis_sdram_req_tready => sdram_req_tready,
+        m_axis_sdram_req_tdata  => sdram_req_tdata,
+
+        s_axis_sdram_res_tvalid => sdram_res_tvalid,
+        s_axis_sdram_res_tdata  => sdram_res_tdata,
+
+        m_axis_bram_req_tvalid  => bram_req_tvalid,
+        m_axis_bram_req_tready  => bram_req_tready,
+        m_axis_bram_req_tdata   => bram_req_tdata,
+
+        s_axis_bram_res_tvalid  => bram_res_tvalid,
+        s_axis_bram_res_tdata   => bram_res_tdata
     );
 
     -- Module soc_io_interconnect instantiation
@@ -572,13 +669,13 @@ begin
         s_axis_uart_res_tvalid      => uart_rd_tvalid,
         s_axis_uart_res_tready      => uart_rd_tready,
         s_axis_uart_res_tdata       => uart_rd_tdata,
-        -- uart
-        m_axis_mmu_req_tvalid       => open,
-        m_axis_mmu_req_tready       => '1',
-        m_axis_mmu_req_tdata        => open,
-        s_axis_mmu_res_tvalid       => '0',
-        s_axis_mmu_res_tready       => open,
-        s_axis_mmu_res_tdata        => x"0000",
+        -- mmu
+        m_axis_mmu_req_tvalid       => mmu_req_tvalid,
+        m_axis_mmu_req_tready       => mmu_req_tready,
+        m_axis_mmu_req_tdata        => mmu_req_tdata,
+        s_axis_mmu_res_tvalid       => mmu_rd_tvalid,
+        s_axis_mmu_res_tready       => mmu_rd_tready,
+        s_axis_mmu_res_tdata        => mmu_rd_tdata,
         -- port_61
         m_axis_port_61_req_tvalid   => port_61_req_tvalid,
         m_axis_port_61_req_tready   => port_61_req_tready,
@@ -739,18 +836,25 @@ begin
     -- Assigns
     LEDG <= ledg_out(8 downto 0);
 
-    mem_req_tready <= '1';
+    -- bram wiring
+    wr_s_tvalid                     <= '1' when bram_req_tvalid = '1' and bram_req_tdata(57) = '1' else '0';
+    bram_req_tready                 <= '1';
+    wr_s_taddr                      <= bram_req_tdata(ADDR_WIDTH - 1 + 32 downto 32);
+    wr_s_tmask                      <= bram_req_tdata(61 downto 58);
+    wr_s_tdata                      <= bram_req_tdata(31 downto 0);
 
-    wr_s_tvalid <= '1' when mem_req_tvalid = '1' and mem_req_tdata(57) = '1' else '0';
-    wr_s_taddr <= mem_req_tdata(ADDR_WIDTH - 1 + 32 downto 32);
-    wr_s_tmask <= mem_req_tdata(61 downto 58);
-    wr_s_tdata <= mem_req_tdata(31 downto 0);
+    rd_s_tvalid                     <= '1' when bram_req_tvalid = '1' and bram_req_tdata(57) = '0' else '0';
+    rd_s_taddr                      <= bram_req_tdata(ADDR_WIDTH - 1 + 32 downto 32);
 
-    rd_s_tvalid <= '1' when mem_req_tvalid = '1' and mem_req_tdata(57) = '0' else '0';
-    rd_s_taddr <= mem_req_tdata(ADDR_WIDTH - 1 + 32 downto 32);
+    -- sdram wiring
+    m_axis_sdram_req_tvalid         <= sdram_req_tvalid;
+    sdram_req_tready                <= m_axis_sdram_req_tready;
+    m_axis_sdram_req_tdata          <= sdram_req_tdata;
+    sdram_res_tvalid                <= s_axis_sdram_res_tvalid;
+    sdram_res_tdata                 <= s_axis_sdram_res_tdata;
 
-    mem_res_tvalid <= rd_m_tvalid;
-    mem_res_tdata <= rd_m_tdata;
+    -- mem_res_tvalid <= rd_m_tvalid;
+    -- mem_res_tdata <= rd_m_tdata;
 
     interrupt_vector(15 downto 1)   <= (others => '0');
     interrupt_vector(0)             <= event_irq;
