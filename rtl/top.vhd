@@ -77,21 +77,7 @@ architecture rtl of top is
         );
     end component sync_resets;
 
-    component sdram_tester is
-        port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
-
-            cmd_s_tvalid            : in std_logic;
-            cmd_s_tdata             : in std_logic;
-
-            cmd_m_tvalid            : out std_logic;
-            cmd_m_tready            : in std_logic;
-            cmd_m_tdata             : out std_logic_vector(63 downto 0)
-        );
-    end component;
-
-    component axis_sdram is
+    component sdram_system is
         port (
             clk                     : in std_logic;
             resetn                  : in std_logic;
@@ -120,7 +106,6 @@ architecture rtl of top is
             vid_clk                     : in std_logic;
             vid_resetn                  : in std_logic;
 
-            VGA_CLK                     : out std_logic;
             VGA_BLANK_N                 : out std_logic;
             VGA_SYNC_N                  : out std_logic;
             VGA_HS                      : out std_logic;
@@ -168,6 +153,13 @@ architecture rtl of top is
             clk                     : in std_logic;
             resetn                  : in std_logic;
 
+            m_axis_sdram_req_tvalid : out std_logic;
+            m_axis_sdram_req_tready : in std_logic;
+            m_axis_sdram_req_tdata  : out std_logic_vector(63 downto 0);
+
+            s_axis_sdram_res_tvalid : in std_logic;
+            s_axis_sdram_res_tdata  : in std_logic_vector(31 downto 0);
+
             SW                      : in std_logic_vector(17 downto 0);
             LEDG                    : out std_logic_vector(8 downto 0);
 
@@ -196,12 +188,11 @@ architecture rtl of top is
 
     signal led_ff                   : std_logic_vector(17 downto 0);
 
-    signal cmd_tvalid               : std_logic;
-    signal cmd_tready               : std_logic;
-    signal cmd_tdata                : std_logic_vector(63 downto 0);
-
-    signal rd_tvalid                : std_logic;
-    signal rd_tdata                 : std_logic_vector(31 downto 0);
+    signal sdram_req_tvalid         : std_logic;
+    signal sdram_req_tready         : std_logic;
+    signal sdram_req_tdata          : std_logic_vector(63 downto 0);
+    signal sdram_res_tvalid         : std_logic;
+    signal sdram_res_tdata          : std_logic_vector(31 downto 0);
 
     signal timer_tvalid             : std_logic;
 
@@ -222,7 +213,7 @@ begin
         locked              => clk_100_locked
     );
 
-     vga_pll_inst : vga_pll port map (
+    vga_pll_inst : vga_pll port map (
         inclk0              => CLOCK2_50,
         c0                  => vga_pll_clk,
         locked              => vga_pll_locked
@@ -254,28 +245,16 @@ begin
         detection_m_tdata   => btn0_tdata
     );
 
-    sdram_tester_inst : sdram_tester port map (
+    sdram_system_inst : sdram_system port map (
         clk                 => clk_100,
         resetn              => clk_100_resetn,
 
-        cmd_s_tvalid        => btn0_tvalid,
-        cmd_s_tdata         => btn0_tdata,
+        s_axis_req_tvalid   => sdram_req_tvalid,
+        s_axis_req_tready   => sdram_req_tready,
+        s_axis_req_tdata    => sdram_req_tdata,
 
-        cmd_m_tvalid        => cmd_tvalid,
-        cmd_m_tready        => cmd_tready,
-        cmd_m_tdata         => cmd_tdata
-    );
-
-    axis_sdram_inst : axis_sdram port map (
-        clk                 => clk_100,
-        resetn              => clk_100_resetn,
-
-        s_axis_req_tvalid   => cmd_tvalid,
-        s_axis_req_tready   => cmd_tready,
-        s_axis_req_tdata    => cmd_tdata,
-
-        m_axis_res_tvalid   => rd_tvalid,
-        m_axis_res_tdata    => rd_tdata,
+        m_axis_res_tvalid   => sdram_res_tvalid,
+        m_axis_res_tdata    => sdram_res_tdata,
 
         DRAM_ADDR           => DRAM_ADDR,
         DRAM_BA             => DRAM_BA,
@@ -291,7 +270,6 @@ begin
     video_system_inst : video_system port map (
         vid_clk             => vga_pll_clk,
         vid_resetn          => vga_pll_resetn,
-        VGA_CLK             => open,
         VGA_BLANK_N         => VGA_BLANK_N,
         VGA_SYNC_N          => VGA_SYNC_N,
         VGA_HS              => VGA_HS,
@@ -310,36 +288,43 @@ begin
 
     VGA_CLK <= oddr_dout(0);
 
-    -- soc_inst : soc port map (
-    --     clk                 => clk_100,
-    --     resetn              => clk_100_resetn,
+    soc_inst : soc port map (
+        clk                     => clk_100,
+        resetn                  => clk_100_resetn,
 
-    --     LEDG                => LEDG,
-    --     SW                  => SW,
+        m_axis_sdram_req_tvalid => sdram_req_tvalid,
+        m_axis_sdram_req_tready => sdram_req_tready,
+        m_axis_sdram_req_tdata  => sdram_req_tdata,
 
-    --     HEX0                => HEX0,
-    --     HEX1                => HEX1,
-    --     HEX2                => HEX2,
-    --     HEX3                => HEX3,
-    --     HEX4                => HEX4,
-    --     HEX5                => HEX5,
-    --     HEX6                => HEX6,
-    --     HEX7                => HEX7,
+        s_axis_sdram_res_tvalid => sdram_res_tvalid,
+        s_axis_sdram_res_tdata  => sdram_res_tdata,
 
-    --     BT_UART_RX          => BT_UART_RX,
-    --     BT_UART_TX          => BT_UART_TX
-    -- );
+        LEDG                    => LEDG,
+        SW                      => SW,
 
-    HEX0 <= (others => '0');
-    HEX1 <= (others => '0');
-    HEX2 <= (others => '0');
-    HEX3 <= (others => '0');
-    HEX4 <= (others => '0');
-    HEX5 <= (others => '0');
-    HEX6 <= (others => '0');
-    HEX7 <= (others => '0');
-    LEDG <= (others => '0');
-    BT_UART_TX <= '1';
+        HEX0                    => HEX0,
+        HEX1                    => HEX1,
+        HEX2                    => HEX2,
+        HEX3                    => HEX3,
+        HEX4                    => HEX4,
+        HEX5                    => HEX5,
+        HEX6                    => HEX6,
+        HEX7                    => HEX7,
+
+        BT_UART_RX              => BT_UART_RX,
+        BT_UART_TX              => BT_UART_TX
+    );
+
+    -- HEX0 <= (others => '0');
+    -- HEX1 <= (others => '0');
+    -- HEX2 <= (others => '0');
+    -- HEX3 <= (others => '0');
+    -- HEX4 <= (others => '0');
+    -- HEX5 <= (others => '0');
+    -- HEX6 <= (others => '0');
+    -- HEX7 <= (others => '0');
+    -- LEDG <= (others => '0');
+    -- BT_UART_TX <= '1';
 
     LEDR(17)          <= not BT_UART_TX;
     LEDR(16)          <= not BT_UART_RX;
@@ -348,8 +333,8 @@ begin
     process (clk_100) begin
         if rising_edge(clk_100) then
 
-            if (rd_tvalid = '1') then
-                led_ff <= rd_tdata(17 downto 0) or rd_tdata(31 downto 14);
+            if (sdram_req_tvalid = '1') then
+                led_ff <= sdram_req_tdata(17 downto 0) or sdram_req_tdata(31 downto 14);
             end if;
 
         end if;

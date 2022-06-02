@@ -79,19 +79,7 @@ int init_mmu(){
     return 0;
 }
 
-int main(){
-    const char *str = "Memory testbench\n";
-
-    // Initialization
-    init_timer();
-    init_pic_1();
-    init_pic_2();
-    init_isr();
-    init_mmu();
-    uart_log(str);
-
-    // Memory test 1
-    // check memory map work
+int mem_test1(){
     mmu_map(SLOT_50000_57FFF, 0xA0000);
     mmu_map(SLOT_A0000_A7FFF, 0xA0000);
 
@@ -103,9 +91,10 @@ int main(){
     } else {
         uart_log("fail\n");
     }
+    return 0;
+}
 
-    // Memory test 2
-    // load with filler
+int mem_test2(){
     uart_log("T2 ");
     stosw(0xA000, 0x0000, 0x5555, 10);
     movsw(0xA000, 0x0000, 0xB000, 0x1000, 10);
@@ -123,9 +112,47 @@ int main(){
     } else {
         uart_log("fail\n");
     }
+    return 0;
+}
 
+int mem_test3(){
+    uart_log("T3 ");
+
+    uint8_t ch = 0;
+    for (uint16_t i = 0; i < 80*25*2; i += 2) {
+        /* code */
+        writew(0xB000, i, ch);
+        ch++;
+    }
+
+    uart_log("ok\n");
+    return 0;
+}
+
+int main(){
+    const char *str = "Memory testbench\n";
+
+    // Initialization
+    init_timer();
+    init_pic_1();
+    init_pic_2();
+    init_isr();
+    init_mmu();
+    uart_log(str);
+
+    // Memory test 1
+    // check that memory mapping is working
+    mem_test1();
+
+    // Memory test 2
+    // load memory with filler
+    mem_test2();
 
     // Memory test 3
+    // fill mda memory with characters
+    mem_test3();
+
+    // Memory test 4
     // load itself to sdram
     // switch lower segment to sdram
     // jump to function via far call to force flush of instruction queue

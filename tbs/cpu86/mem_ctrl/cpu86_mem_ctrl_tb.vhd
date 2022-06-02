@@ -18,29 +18,31 @@ architecture rtl of cpu86_mem_ctrl_tb is
     constant USER_WIDTH         : natural := 32;
     constant BYTES              : natural := 4;
 
+    constant SDRAM_PORT_QTY     : natural := 2;
+
     component on_chip_ram is
         generic (
-            ADDR_WIDTH              : natural := 12;
-            DATA_WIDTH              : natural := 32;
-            USER_WIDTH              : natural := 32;
-            BYTES                   : natural := 4
+            ADDR_WIDTH          : natural := 12;
+            DATA_WIDTH          : natural := 32;
+            USER_WIDTH          : natural := 32;
+            BYTES               : natural := 4
         );
         port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
+            clk                 : in std_logic;
+            resetn              : in std_logic;
 
-            wr_s_tvalid             : in std_logic;
-            wr_s_taddr              : in std_logic_vector(ADDR_WIDTH-1 downto 0);
-            wr_s_tmask              : in std_logic_vector(BYTES-1 downto 0);
-            wr_s_tdata              : in std_logic_vector(DATA_WIDTH-1 downto 0);
+            wr_s_tvalid         : in std_logic;
+            wr_s_taddr          : in std_logic_vector(ADDR_WIDTH-1 downto 0);
+            wr_s_tmask          : in std_logic_vector(BYTES-1 downto 0);
+            wr_s_tdata          : in std_logic_vector(DATA_WIDTH-1 downto 0);
 
-            rd_s_tvalid             : in std_logic;
-            rd_s_taddr              : in std_logic_vector(ADDR_WIDTH-1 downto 0);
-            rd_s_tuser              : in std_logic_vector(USER_WIDTH-1 downto 0);
+            rd_s_tvalid         : in std_logic;
+            rd_s_taddr          : in std_logic_vector(ADDR_WIDTH-1 downto 0);
+            rd_s_tuser          : in std_logic_vector(USER_WIDTH-1 downto 0);
 
-            rd_m_tvalid             : out std_logic;
-            rd_m_tdata              : out std_logic_vector(DATA_WIDTH-1 downto 0);
-            rd_m_tuser              : out std_logic_vector(USER_WIDTH-1 downto 0)
+            rd_m_tvalid         : out std_logic;
+            rd_m_tdata          : out std_logic_vector(DATA_WIDTH-1 downto 0);
+            rd_m_tuser          : out std_logic_vector(USER_WIDTH-1 downto 0)
 
         );
     end component on_chip_ram;
@@ -61,7 +63,7 @@ architecture rtl of cpu86_mem_ctrl_tb is
         );
     end component;
 
-    component axis_sdram is
+    component sdram_system is
         port (
             clk                 : in std_logic;
             resetn              : in std_logic;
@@ -83,7 +85,31 @@ architecture rtl of cpu86_mem_ctrl_tb is
             DRAM_RAS_N          : out std_logic;
             DRAM_WE_N           : out std_logic
         );
-    end component axis_sdram;
+    end component sdram_system;
+
+    component sdram_interconnect is
+        generic (
+            PORT_QTY                : natural := 2
+        );
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+
+            s_axis_port_req_tvalid  : in std_logic_vector(PORT_QTY-1 downto 0);
+            s_axis_port_req_tready  : out std_logic_vector(PORT_QTY-1 downto 0);
+            s_axis_port_req_tdata   : in std_logic_vector(64*PORT_QTY-1 downto 0);
+
+            s_axis_sdram_res_tvalid : out std_logic;
+            s_axis_sdram_res_tdata  : out std_logic_vector(31 downto 0);
+
+            m_axis_sdram_req_tvalid : out std_logic;
+            m_axis_sdram_req_tready : in std_logic;
+            m_axis_sdram_req_tdata  : out std_logic_vector (63 downto 0);
+
+            m_axis_port_res_tvalid  : out std_logic_vector(PORT_QTY-1 downto 0);
+            m_axis_port_res_tdata   : out std_logic_vector(32*PORT_QTY-1 downto 0)
+        );
+    end component sdram_interconnect;
 
     component cpu86 is
         port (
@@ -394,6 +420,24 @@ architecture rtl of cpu86_mem_ctrl_tb is
     signal sdram_res_tvalid         : std_logic;
     signal sdram_res_tdata          : std_logic_vector(31 downto 0);
 
+    signal ps_sdram_req_tvalid      : std_logic;
+    signal ps_sdram_req_tready      : std_logic;
+    signal ps_sdram_req_tdata       : std_logic_vector(63 downto 0);
+    signal ps_sdram_res_tvalid      : std_logic;
+    signal ps_sdram_res_tdata       : std_logic_vector(31 downto 0);
+
+    signal vid_sdram_req_tvalid     : std_logic;
+    signal vid_sdram_req_tready     : std_logic;
+    signal vid_sdram_req_tdata      : std_logic_vector(63 downto 0);
+    signal vid_sdram_res_tvalid     : std_logic;
+    signal vid_sdram_res_tdata      : std_logic_vector(31 downto 0);
+
+    signal sdram_port_req_tvalid    : std_logic_vector(SDRAM_PORT_QTY-1 downto 0);
+    signal sdram_port_req_tready    : std_logic_vector(SDRAM_PORT_QTY-1 downto 0);
+    signal sdram_port_req_tdata     : std_logic_vector(64*SDRAM_PORT_QTY-1 downto 0);
+    signal sdram_port_res_tvalid    : std_logic_vector(SDRAM_PORT_QTY-1 downto 0);
+    signal sdram_port_res_tdata     : std_logic_vector(32*SDRAM_PORT_QTY-1 downto 0);
+
     signal bram_req_tvalid          : std_logic;
     signal bram_req_tready          : std_logic;
     signal bram_req_tdata           : std_logic_vector(63 downto 0);
@@ -531,8 +575,28 @@ begin
     );
 
 
-    -- Module cpu86 instantiation
-    axis_sdram_inst : axis_sdram port map (
+    -- Module sdram_interconnect instantiation
+    sdram_interconnect_inst : sdram_interconnect port map (
+        clk                     => clk,
+        resetn                  => resetn,
+
+        s_axis_port_req_tvalid  => sdram_port_req_tvalid,
+        s_axis_port_req_tready  => sdram_port_req_tready,
+        s_axis_port_req_tdata   => sdram_port_req_tdata,
+
+        s_axis_sdram_res_tvalid => sdram_res_tvalid,
+        s_axis_sdram_res_tdata  => sdram_res_tdata,
+
+        m_axis_sdram_req_tvalid => sdram_req_tvalid,
+        m_axis_sdram_req_tready => sdram_req_tready,
+        m_axis_sdram_req_tdata  => sdram_req_tdata,
+
+        m_axis_port_res_tvalid  => sdram_port_res_tvalid,
+        m_axis_port_res_tdata   => sdram_port_res_tdata
+    );
+
+    -- Module sdram instantiation
+    sdram_system_inst : sdram_system port map (
         clk                     => clk,
         resetn                  => resetn,
 
@@ -614,12 +678,12 @@ begin
         m_axis_mem_res_tvalid   => mem_res_tvalid,
         m_axis_mem_res_tdata    => mem_res_tdata,
 
-        m_axis_sdram_req_tvalid => sdram_req_tvalid,
-        m_axis_sdram_req_tready => sdram_req_tready,
-        m_axis_sdram_req_tdata  => sdram_req_tdata,
+        m_axis_sdram_req_tvalid => ps_sdram_req_tvalid,
+        m_axis_sdram_req_tready => ps_sdram_req_tready,
+        m_axis_sdram_req_tdata  => ps_sdram_req_tdata,
 
-        s_axis_sdram_res_tvalid => sdram_res_tvalid,
-        s_axis_sdram_res_tdata  => sdram_res_tdata,
+        s_axis_sdram_res_tvalid => ps_sdram_res_tvalid,
+        s_axis_sdram_res_tdata  => ps_sdram_res_tdata,
 
         m_axis_bram_req_tvalid  => bram_req_tvalid,
         m_axis_bram_req_tready  => bram_req_tready,
@@ -712,7 +776,7 @@ begin
         s_axis_uart_res_tvalid      => uart_rd_tvalid,
         s_axis_uart_res_tready      => uart_rd_tready,
         s_axis_uart_res_tdata       => uart_rd_tdata,
-        -- uart
+        -- mmu
         m_axis_mmu_req_tvalid       => mmu_req_tvalid,
         m_axis_mmu_req_tready       => mmu_req_tready,
         m_axis_mmu_req_tdata        => mmu_req_tdata,
@@ -897,6 +961,24 @@ begin
 
     interrupt_vector(15 downto 1)   <= (others => '0');
     interrupt_vector(0)             <= timer_ff;
+
+    vid_sdram_req_tvalid                <= '0';
+
+    -- video sdram req
+    sdram_port_req_tvalid(0)            <= vid_sdram_req_tvalid;
+    vid_sdram_req_tready                <= sdram_port_req_tready(0);
+    sdram_port_req_tdata(63 downto 0)   <= vid_sdram_req_tdata;
+
+    vid_sdram_res_tvalid                <= sdram_port_res_tvalid(0);
+    vid_sdram_res_tdata                 <= sdram_port_res_tdata(31 downto 0);
+
+    -- processing system sdram req
+    sdram_port_req_tvalid(1)            <= ps_sdram_req_tvalid;
+    ps_sdram_req_tready                 <= sdram_port_req_tready(1);
+    sdram_port_req_tdata(127 downto 64) <= ps_sdram_req_tdata;
+
+    ps_sdram_res_tvalid                <= sdram_port_res_tvalid(1);
+    ps_sdram_res_tdata                 <= sdram_port_res_tdata(63 downto 32);
 
 
     latching_timer_ff_proc: process (clk) begin
