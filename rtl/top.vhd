@@ -101,19 +101,53 @@ architecture rtl of top is
         );
     end component;
 
+    component sdram_interconnect is
+        generic (
+            PORT_QTY                : natural := 2
+        );
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+
+            s_axis_port_req_tvalid  : in std_logic_vector(PORT_QTY-1 downto 0);
+            s_axis_port_req_tready  : out std_logic_vector(PORT_QTY-1 downto 0);
+            s_axis_port_req_tdata   : in std_logic_vector(64*PORT_QTY-1 downto 0);
+
+            s_axis_sdram_res_tvalid : in std_logic;
+            s_axis_sdram_res_tdata  : in std_logic_vector(31 downto 0);
+
+            m_axis_sdram_req_tvalid : out std_logic;
+            m_axis_sdram_req_tready : in std_logic;
+            m_axis_sdram_req_tdata  : out std_logic_vector (63 downto 0);
+
+            m_axis_port_res_tvalid  : out std_logic_vector(PORT_QTY-1 downto 0);
+            m_axis_port_res_tdata   : out std_logic_vector(32*PORT_QTY-1 downto 0)
+        );
+    end component sdram_interconnect;
+
     component video_system is
         port (
             vid_clk                     : in std_logic;
             vid_resetn                  : in std_logic;
+
+            sdram_clk                   : in std_logic;
+            sdram_resetn                : in std_logic;
+
+            m_axis_sdram_req_tvalid     : out std_logic;
+            m_axis_sdram_req_tready     : in std_logic;
+            m_axis_sdram_req_tdata      : out std_logic_vector(63 downto 0);
+
+            s_axis_sdram_res_tvalid     : in std_logic;
+            s_axis_sdram_res_tdata      : in std_logic_vector(31 downto 0);
 
             VGA_BLANK_N                 : out std_logic;
             VGA_SYNC_N                  : out std_logic;
             VGA_HS                      : out std_logic;
             VGA_VS                      : out std_logic;
 
-            VGA_R                       : out std_logic_vector(7 downto 0);
+            VGA_B                       : out std_logic_vector(7 downto 0);
             VGA_G                       : out std_logic_vector(7 downto 0);
-            VGA_B                       : out std_logic_vector(7 downto 0)
+            VGA_R                       : out std_logic_vector(7 downto 0)
         );
     end component video_system;
 
@@ -177,6 +211,7 @@ architecture rtl of top is
         );
     end component soc;
 
+    constant SDRAM_PORT_QTY     : natural := 2;
 
     signal clk_100                  : std_logic;
     signal clk_100_locked           : std_logic;
@@ -193,6 +228,24 @@ architecture rtl of top is
     signal sdram_req_tdata          : std_logic_vector(63 downto 0);
     signal sdram_res_tvalid         : std_logic;
     signal sdram_res_tdata          : std_logic_vector(31 downto 0);
+
+    signal ps_sdram_req_tvalid      : std_logic;
+    signal ps_sdram_req_tready      : std_logic;
+    signal ps_sdram_req_tdata       : std_logic_vector(63 downto 0);
+    signal ps_sdram_res_tvalid      : std_logic;
+    signal ps_sdram_res_tdata       : std_logic_vector(31 downto 0);
+
+    signal vid_sdram_req_tvalid     : std_logic;
+    signal vid_sdram_req_tready     : std_logic;
+    signal vid_sdram_req_tdata      : std_logic_vector(63 downto 0);
+    signal vid_sdram_res_tvalid     : std_logic;
+    signal vid_sdram_res_tdata      : std_logic_vector(31 downto 0);
+
+    signal sdram_port_req_tvalid    : std_logic_vector(SDRAM_PORT_QTY-1 downto 0);
+    signal sdram_port_req_tready    : std_logic_vector(SDRAM_PORT_QTY-1 downto 0);
+    signal sdram_port_req_tdata     : std_logic_vector(64*SDRAM_PORT_QTY-1 downto 0);
+    signal sdram_port_res_tvalid    : std_logic_vector(SDRAM_PORT_QTY-1 downto 0);
+    signal sdram_port_res_tdata     : std_logic_vector(32*SDRAM_PORT_QTY-1 downto 0);
 
     signal timer_tvalid             : std_logic;
 
@@ -245,6 +298,26 @@ begin
         detection_m_tdata   => btn0_tdata
     );
 
+    -- Module sdram_interconnect instantiation
+    sdram_interconnect_inst : sdram_interconnect port map (
+        clk                 => clk_100,
+        resetn              => clk_100_resetn,
+
+        s_axis_port_req_tvalid  => sdram_port_req_tvalid,
+        s_axis_port_req_tready  => sdram_port_req_tready,
+        s_axis_port_req_tdata   => sdram_port_req_tdata,
+
+        s_axis_sdram_res_tvalid => sdram_res_tvalid,
+        s_axis_sdram_res_tdata  => sdram_res_tdata,
+
+        m_axis_sdram_req_tvalid => sdram_req_tvalid,
+        m_axis_sdram_req_tready => sdram_req_tready,
+        m_axis_sdram_req_tdata  => sdram_req_tdata,
+
+        m_axis_port_res_tvalid  => sdram_port_res_tvalid,
+        m_axis_port_res_tdata   => sdram_port_res_tdata
+    );
+
     sdram_system_inst : sdram_system port map (
         clk                 => clk_100,
         resetn              => clk_100_resetn,
@@ -270,6 +343,17 @@ begin
     video_system_inst : video_system port map (
         vid_clk             => vga_pll_clk,
         vid_resetn          => vga_pll_resetn,
+
+        sdram_clk           => clk_100,
+        sdram_resetn        => clk_100_resetn,
+
+        m_axis_sdram_req_tvalid => vid_sdram_req_tvalid,
+        m_axis_sdram_req_tready => vid_sdram_req_tready,
+        m_axis_sdram_req_tdata  => vid_sdram_req_tdata,
+
+        s_axis_sdram_res_tvalid => vid_sdram_res_tvalid,
+        s_axis_sdram_res_tdata  => vid_sdram_res_tdata,
+
         VGA_BLANK_N         => VGA_BLANK_N,
         VGA_SYNC_N          => VGA_SYNC_N,
         VGA_HS              => VGA_HS,
@@ -292,12 +376,12 @@ begin
         clk                     => clk_100,
         resetn                  => clk_100_resetn,
 
-        m_axis_sdram_req_tvalid => sdram_req_tvalid,
-        m_axis_sdram_req_tready => sdram_req_tready,
-        m_axis_sdram_req_tdata  => sdram_req_tdata,
+        m_axis_sdram_req_tvalid => ps_sdram_req_tvalid,
+        m_axis_sdram_req_tready => ps_sdram_req_tready,
+        m_axis_sdram_req_tdata  => ps_sdram_req_tdata,
 
-        s_axis_sdram_res_tvalid => sdram_res_tvalid,
-        s_axis_sdram_res_tdata  => sdram_res_tdata,
+        s_axis_sdram_res_tvalid => ps_sdram_res_tvalid,
+        s_axis_sdram_res_tdata  => ps_sdram_res_tdata,
 
         LEDG                    => LEDG,
         SW                      => SW,
@@ -329,6 +413,24 @@ begin
     LEDR(17)          <= not BT_UART_TX;
     LEDR(16)          <= not BT_UART_RX;
     LEDR(15 downto 0) <= led_ff(15 downto 0);
+
+
+    -- video sdram req
+    sdram_port_req_tvalid(0)            <= vid_sdram_req_tvalid;
+    vid_sdram_req_tready                <= sdram_port_req_tready(0);
+    sdram_port_req_tdata(63 downto 0)   <= vid_sdram_req_tdata;
+
+    vid_sdram_res_tvalid                <= sdram_port_res_tvalid(0);
+    vid_sdram_res_tdata                 <= sdram_port_res_tdata(31 downto 0);
+
+    -- processing system sdram req
+    sdram_port_req_tvalid(1)            <= ps_sdram_req_tvalid;
+    ps_sdram_req_tready                 <= sdram_port_req_tready(1);
+    sdram_port_req_tdata(127 downto 64) <= ps_sdram_req_tdata;
+
+    ps_sdram_res_tvalid                <= sdram_port_res_tvalid(1);
+    ps_sdram_res_tdata                 <= sdram_port_res_tdata(63 downto 32);
+
 
     process (clk_100) begin
         if rising_edge(clk_100) then

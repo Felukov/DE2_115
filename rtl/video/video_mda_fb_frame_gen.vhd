@@ -30,9 +30,16 @@ use ieee.numeric_std.all;
 
 entity video_mda_fb_frame_gen is
     port (
+        -- clock, reset
         vid_clk                     : in std_logic;
         vid_resetn                  : in std_logic;
-
+        -- data req
+        m_axis_vid_mem_req_tvalid   : out std_logic;
+        m_axis_vid_mem_req_tdata    : out std_logic_vector(31 downto 0);
+        -- data resp
+        s_axis_vid_mem_res_tvalid   : in std_logic;
+        s_axis_vid_mem_res_tdata    : in std_logic_vector(15 downto 0);
+        -- video frame
         m_axis_frame_tvalid         : out std_logic;
         m_axis_frame_tready         : in std_logic;
         m_axis_frame_tdata          : out std_logic_vector(31 downto 0);
@@ -71,20 +78,20 @@ architecture rtl of video_mda_fb_frame_gen is
         );
     end component;
 
+    constant BYTES_PER_LINE             : natural := 80 * 2; -- one byte for char, one byte for attr
+    constant MEM_WORDS_PER_LINE         : natural := BYTES_PER_LINE/4; -- each word in memory contains 4 bytes
+
     signal wakeup                   : std_logic;
 
     signal data_req_tvalid          : std_logic;
-    signal data_req_bytes_cnt       : std_logic_vector(7 downto 0);
-    signal data_req_address         : std_logic_vector(7 downto 0);
-    signal data_req_tdata           : std_logic_vector(39 downto 0);
+    signal data_req_line            : natural range 0 to 24;
+    signal data_req_address         : std_logic_vector(24 downto 0);
 
     signal data_res_tvalid          : std_logic;
     signal data_res_tdata           : std_logic_vector(15 downto 0);
     signal data_res_taddr           : std_logic_vector(7 downto 0);
     signal data_res_addr_lo         : natural range 0 to 79;
     signal data_res_addr_hi         : std_logic;
-    signal data_res_cyclic_cnt      : std_logic_vector(7 downto 0);
-    signal data_res_guard_cnt       : natural range 0 to 1999;
 
     signal data_rd_tvalid           : std_logic;
     signal data_rd_tready           : std_logic;
@@ -124,12 +131,20 @@ architecture rtl of video_mda_fb_frame_gen is
 begin
 
     -- i/o assigns
-    m_axis_frame_tvalid <= pixel_tvalid;
-    pixel_tready <= m_axis_frame_tready;
-    m_axis_frame_tdata <= (others => pixel_tdata);
-    m_axis_frame_tuser(7 downto 2) <= (others => '0') ;
-    m_axis_frame_tuser(1) <= pixel_end_of_frame;
-    m_axis_frame_tuser(0) <= pixel_tlast;
+    m_axis_frame_tvalid                     <= pixel_tvalid;
+    pixel_tready                            <= m_axis_frame_tready;
+    m_axis_frame_tdata                      <= (others => pixel_tdata);
+    m_axis_frame_tuser(7 downto 2)          <= (others => '0') ;
+    m_axis_frame_tuser(1)                   <= pixel_end_of_frame;
+    m_axis_frame_tuser(0)                   <= pixel_tlast;
+
+    m_axis_vid_mem_req_tvalid               <= data_req_tvalid;
+    m_axis_vid_mem_req_tdata(31 downto 25)  <= (others => '0');
+    m_axis_vid_mem_req_tdata(24 downto 0)   <= data_req_address;
+
+    data_res_tvalid                         <= s_axis_vid_mem_res_tvalid;
+    data_res_tdata                          <= s_axis_vid_mem_res_tdata;
+
 
     -- module video_mda_fb_frame_gen_ram instantiation
     video_mda_fb_frame_gen_ram_inst : video_mda_fb_frame_gen_ram generic map (
@@ -156,6 +171,7 @@ begin
         q               => font_line_tdata
     );
 
+
     -- Assigns
     data_res_taddr   <= data_res_addr_hi & std_logic_vector(to_unsigned(data_res_addr_lo, 7));
     data_rd_taddr    <= data_rd_addr_hi & std_logic_vector(to_unsigned(data_rd_addr_lo, 7));
@@ -166,14 +182,21 @@ begin
     font_line_tready <= '1' when pixel_tvalid = '0' or pixel_tready = '1' else '0';
 
     font_re          <= '1' when char_tvalid = '1' and char_tready = '1' else '0';
-    font_addr        <= char_tdata(7 downto 0) & std_logic_vector(to_unsigned(char_line, 4));
+    font_addr        <= char_tdata(15 downto 8) & std_logic_vector(to_unsigned(char_line, 4));
+
 
     -- requesting data from an external storage
-    process (vid_clk) begin
+    process (vid_clk)
+        function slv (a : integer) return std_logic_vector is begin
+            return std_logic_vector(to_unsigned(a, 25));
+        end function;
+    begin
         if rising_edge(vid_clk) then
+            -- control
             if vid_resetn = '0' then
                 wakeup <= '1';
                 data_req_tvalid <= '0';
+                data_req_line <= 0;
             else
                 wakeup <= '0';
 
@@ -183,6 +206,22 @@ begin
                     data_req_tvalid <= '0';
                 end if;
 
+                if (wakeup = '1' or event_read_next = '1') then
+                    if (data_req_line = 24) then
+                        data_req_line <= 0;
+                    else
+                        data_req_line <= data_req_line + 1;
+                    end if;
+                end if;
+
+            end if;
+            -- datapath
+            if (wakeup = '1' or event_read_next = '1') then
+                if (data_req_line = 0) then
+                    data_req_address <= slv(16#2C000#); -- 0xB0000 >> 2
+                else
+                    data_req_address <= std_logic_vector(unsigned(data_req_address) + to_unsigned(MEM_WORDS_PER_LINE, 25));
+                end if;
             end if;
         end if;
     end process;
@@ -190,21 +229,12 @@ begin
     -- storing data from an external storage into the internal buffer
     process (vid_clk) begin
         if rising_edge(vid_clk) then
-            -- resettable
+            -- control
             if vid_resetn = '0' then
-                data_res_tvalid <= '0';
                 data_res_addr_lo <= 0;
                 data_res_addr_hi <= '0';
-                data_res_cyclic_cnt <= (others => '0');
-                data_res_guard_cnt <= 0;
-                buffer_ready <= '0';
+                buffer_ready     <= '0';
             else
-                if (data_req_tvalid = '1') then
-                    data_res_tvalid <= '1';
-                elsif (data_res_tvalid = '1' and data_res_addr_lo = 79) then
-                    data_res_tvalid <= '0';
-                end if;
-
                 if (data_res_tvalid = '1') then
                     if (data_res_addr_lo = 79) then
                         data_res_addr_lo <= 0;
@@ -217,31 +247,11 @@ begin
                     data_res_addr_hi <= not data_res_addr_hi;
                 end if;
 
-                if (data_res_tvalid = '1') then
-                    if data_res_guard_cnt = 1999 then
-                        data_res_cyclic_cnt <= (others => '0');
-                    else
-                        data_res_cyclic_cnt <= data_res_cyclic_cnt + 1;
-                    end if;
-                end if;
-
-                if (data_res_tvalid = '1') then
-                    if data_res_guard_cnt = 1999 then
-                        data_res_guard_cnt <= 0;
-                    else
-                        data_res_guard_cnt <= data_res_guard_cnt + 1;
-                    end if;
-                end if;
-
                 if (data_res_tvalid = '1' and data_res_addr_lo = 79) then
                     buffer_ready <= '1';
                 elsif (generator_ready = '1') then
                     buffer_ready <= '0';
                 end if;
-            end if;
-            -- without reset
-            if (data_res_tvalid = '1' or data_req_tvalid = '1') then
-                data_res_tdata <= x"00" & data_res_cyclic_cnt;
             end if;
         end if;
     end process;

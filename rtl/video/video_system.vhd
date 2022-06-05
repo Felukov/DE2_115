@@ -33,6 +33,16 @@ entity video_system is
         vid_clk                     : in std_logic;
         vid_resetn                  : in std_logic;
 
+        sdram_clk                   : in std_logic;
+        sdram_resetn                : in std_logic;
+
+        m_axis_sdram_req_tvalid     : out std_logic;
+        m_axis_sdram_req_tready     : in std_logic;
+        m_axis_sdram_req_tdata      : out std_logic_vector(63 downto 0);
+
+        s_axis_sdram_res_tvalid     : in std_logic;
+        s_axis_sdram_res_tdata      : in std_logic_vector(31 downto 0);
+
         VGA_BLANK_N                 : out std_logic;
         VGA_SYNC_N                  : out std_logic;
         VGA_HS                      : out std_logic;
@@ -46,8 +56,8 @@ end entity video_system;
 
 architecture rtl of video_system is
 
-    constant H_MAX          : natural := 1280; --H total period (pixels)
-    constant V_MAX          : natural := 1024; --V total period (lines)
+    constant H_MAX                  : natural := 1280; --H total period (pixels)
+    constant V_MAX                  : natural := 1024; --V total period (lines)
 
     component video_vga_ctrl is
         port (
@@ -66,16 +76,27 @@ architecture rtl of video_system is
 
     component video_mda_fb is
         port (
-            vid_clk             : in std_logic;
-            vid_resetn          : in std_logic;
-
-            s_axis_vid_tvalid   : in std_logic;
-            s_axis_vid_tdata    : in std_logic_vector(31 downto 0);
-            s_axis_vid_tuser    : in std_logic_vector(7 downto 0);
-
-            m_axis_vid_tvalid   : out std_logic;
-            m_axis_vid_tdata    : out std_logic_vector(31 downto 0);
-            m_axis_vid_tuser    : out std_logic_vector(31 downto 0)
+            -- video clk
+            vid_clk                         : in std_logic;
+            vid_resetn                      : in std_logic;
+            -- sdram clk
+            sdram_clk                       : in std_logic;
+            sdram_resetn                    : in std_logic;
+            -- sdram data req
+            m_axis_sdram_req_tvalid         : out std_logic;
+            m_axis_sdram_req_tready         : in std_logic;
+            m_axis_sdram_req_tdata          : out std_logic_vector(63 downto 0);
+            -- data resp
+            s_axis_sdram_res_tvalid         : in std_logic;
+            s_axis_sdram_res_tdata          : in std_logic_vector(31 downto 0);
+            -- sync signals
+            s_axis_vid_sync_tvalid          : in std_logic;
+            s_axis_vid_sync_tdata           : in std_logic_vector(31 downto 0);
+            s_axis_vid_sync_tuser           : in std_logic_vector(7 downto 0);
+            -- data out
+            m_axis_vid_dout_tvalid          : out std_logic;
+            m_axis_vid_dout_tdata           : out std_logic_vector(31 downto 0);
+            m_axis_vid_dout_tuser           : out std_logic_vector(31 downto 0)
         );
     end component video_mda_fb;
 
@@ -106,9 +127,6 @@ begin
     VGA_SYNC_N              <= d_vid_ctrl_sync_n;
     VGA_HS                  <= d_vid_ctrl_hs;
     VGA_VS                  <= d_vid_ctrl_vs;
-    -- VGA_R                   <= x"00";
-    -- VGA_G                   <= x"00";
-    -- VGA_B                   <= x"FF";
     VGA_R                   <= mda_fb_m_tdata(23 downto 16);
     VGA_G                   <= mda_fb_m_tdata(15 downto  8);
     VGA_B                   <= mda_fb_m_tdata( 7 downto  0);
@@ -127,16 +145,26 @@ begin
     );
 
     video_mda_fb_inst : video_mda_fb port map (
-        vid_clk             => vid_clk,
-        vid_resetn          => vid_resetn,
+        vid_clk                 => vid_clk,
+        vid_resetn              => vid_resetn,
 
-        s_axis_vid_tvalid   => vid_ctrl_tvalid,
-        s_axis_vid_tdata    => mda_fb_s_tdata,
-        s_axis_vid_tuser    => vid_ctrl_tdata,
+        sdram_clk               => sdram_clk,
+        sdram_resetn            => sdram_resetn,
 
-        m_axis_vid_tvalid   => mda_fb_m_tvalid,
-        m_axis_vid_tdata    => mda_fb_m_tdata,
-        m_axis_vid_tuser    => open
+        m_axis_sdram_req_tvalid => m_axis_sdram_req_tvalid,
+        m_axis_sdram_req_tready => m_axis_sdram_req_tready,
+        m_axis_sdram_req_tdata  => m_axis_sdram_req_tdata,
+
+        s_axis_sdram_res_tvalid => s_axis_sdram_res_tvalid,
+        s_axis_sdram_res_tdata  => s_axis_sdram_res_tdata,
+
+        s_axis_vid_sync_tvalid  => vid_ctrl_tvalid,
+        s_axis_vid_sync_tdata   => mda_fb_s_tdata,
+        s_axis_vid_sync_tuser   => vid_ctrl_tdata,
+
+        m_axis_vid_dout_tvalid  => mda_fb_m_tvalid,
+        m_axis_vid_dout_tdata   => mda_fb_m_tdata,
+        m_axis_vid_dout_tuser   => open
     );
 
     -- assigns

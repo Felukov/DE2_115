@@ -5,8 +5,8 @@ use ieee.std_logic_unsigned.all;
 
 entity axis_fifo_er is
     generic (
-        FIFO_DEPTH      : natural := 2**8;
-        FIFO_WIDTH      : natural := 128
+        FIFO_DEPTH          : natural := 2**8;
+        FIFO_WIDTH          : natural := 128
     );
     port (
         clk                 : in std_logic;
@@ -34,8 +34,6 @@ architecture rtl of axis_fifo_er is
 
     attribute ramstyle : string;
     attribute ramstyle of fifo_ram : signal is "no_rw_check";
-
-    --signal q_tdata          : std_logic_vector(FIFO_WIDTH-1 downto 0);
 
     signal wr_data_tvalid   : std_logic;
     signal wr_data_tready   : std_logic;
@@ -65,7 +63,6 @@ begin
 
     rd_data_tready      <= '1' when q_tvalid = '0' or (q_tvalid = '1' and q_tready = '1') else '0';
     q_tready            <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
-    --q_tdata             <= fifo_ram(rd_addr);
 
     wr_data_tready_proc : process (clk) begin
         if rising_edge(clk) then
@@ -95,7 +92,7 @@ begin
         end if;
     end process;
 
-    write_proc_next: process (all) begin
+    write_proc_next: process (wr_data_tvalid, wr_data_tready, wr_addr) begin
         if (wr_data_tvalid = '1' and wr_data_tready = '1') then
             wr_addr_next <= (wr_addr + 1) mod FIFO_DEPTH;
         else
@@ -119,7 +116,7 @@ begin
         end if;
     end process;
 
-    read_proc_next : process (all) begin
+    read_proc_next : process (rd_data_tvalid, rd_data_tready, rd_addr) begin
         if rd_data_tvalid = '1' and rd_data_tready = '1' then
             rd_addr_next <= (rd_addr + 1) mod FIFO_DEPTH;
         else
