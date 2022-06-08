@@ -147,6 +147,7 @@ architecture rtl of cpu86_exec_register_reader is
     signal seg_override_tvalid      : std_logic;
     signal seg_override_tdata       : std_logic_vector(15 downto 0);
 
+    signal combined_instr           : std_logic;
     signal skip_next                : std_logic;
 
     signal ext_intr_tvalid          : std_logic;
@@ -338,23 +339,39 @@ begin
         ((instr_tvalid = '1' and instr_hazards_resolved = '1')) and
         (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) else '0';
 
+    -- controlling instruction queue
+    instr_flow_controller : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                instr_tready_mask <= '0';
+            else
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) then
+                        instr_tready_mask <= '1';
+                    end if;
+                elsif (ext_intr_tvalid = '1' and ext_intr_tready = '0') then
+                    if (combined_instr = '0') then
+                        instr_tready_mask <= '1';
+                    end if;
+                end if;
+            end if;
+        end if;
+    end process;
+
     -- handling external interrupt process
     ext_interrupt_process : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
                 ext_intr_tready <= '0';
-                instr_tready_mask <= '0';
             else
 
-                if (ext_intr_tvalid = '1' and ext_intr_tready = '0') then
-                    if (skip_next = '0' and seg_override_tvalid = '0') then
-                        instr_tready_mask <= '1';
-                    end if;
-                end if;
-
                 if (ext_intr_tvalid = '1' and instr_tready_mask = '1' and ext_intr_tready = '0') then
-                    if (instr_s_tvalid = '1' and rr_tvalid = '0' and skip_next = '0' and seg_override_tvalid = '0' and
-                        ss_s_tvalid = '1' and sp_s_tvalid = '1' and flags_s_tvalid = '1') then
+                    -- if there is an external interrupt we wait till we have the next instruction
+                    -- from the instruction queue and we have passed the current instruction next
+                    -- then we can acknowledge the interrupt request
+                    if (instr_tvalid = '1' and rr_tvalid = '0' and combined_instr = '0' and
+                        ss_s_tvalid = '1' and sp_s_tvalid = '1' and flags_s_tvalid = '1')
+                    then
                         ext_intr_tready <= '1';
                     end if;
                 elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
@@ -577,8 +594,9 @@ begin
                 rr_tvalid <= '0';
             else
                 if (instr_tvalid = '1' and instr_tready = '1') then
-                    if instr_tdata.op = SET_SEG or skip_next = '1' or
-                        (instr_tdata.op = REP and cx_s_tdata = x"0000")
+                    if ((instr_tdata.op = SET_SEG) or (skip_next = '1') or
+                        (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
+                        (instr_tdata.op = REP and cx_s_tdata = x"0000"))
                     then
                         rr_tvalid <= '0';
                     else
@@ -714,6 +732,22 @@ begin
                 end case;
             end if;
 
+        end if;
+    end process;
+
+    combined_instr_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                combined_instr <= '0';
+            else
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if (instr_tdata.op = REP or instr_tdata.op = SET_SEG) then
+                        combined_instr <= '1';
+                    else
+                        combined_instr <= '0';
+                    end if;
+                end if;
+            end if;
         end if;
     end process;
 
