@@ -49,7 +49,6 @@ module pic_8259
 
     // Local signals
     logic               io_read_valid;
-    //logic               io_read_last;
     logic               init_icw1;
     logic               init_icw2;
     logic               init_icw3;
@@ -72,9 +71,9 @@ module pic_8259
     logic               level_trigger_mode;                   // level trigger mode
 
     logic [2:0]         lowest_priority;
-    logic [7:0]         interrupt_mask_register;
-    logic [7:0]         in_service_register;
-    logic [7:0]         interrupt_request_register;
+    logic [7:0]         IMR;
+    logic [7:0]         ISR;
+    logic [7:0]         IRR;
     logic [4:0]         interrupt_offset;
     logic               auto_eoi;
     logic [7:0]         irr_slave;
@@ -83,14 +82,14 @@ module pic_8259
     logic               spurious;
     logic               isr_clear;
 
-    logic [7:0]         selectected_prepare;
-    logic [15:0]        selectected_shifted;
-    logic [15:0]        selectected_shifted_isr;
+    logic [7:0]         irx_vec;
+    logic [15:0]        irx_vec_priority;
+    logic [2:0]         irx_idx;
 
-    logic [2:0]         selectected_shifted_isr_first;
-    logic [2:0]         selectected_shifted_isr_first_norm;
-    logic [7:0]         selectected_shifted_isr_first_bits;
-    logic [2:0]         selectected_index;
+    logic [15:0]        isr_vec_priority;
+    logic [2:0]         isr_idx;
+    logic [2:0]         isr_value;
+    logic [7:0]         isr_idx_bits;
 
     logic               irq;
     logic [2:0]         irq_value;
@@ -101,8 +100,6 @@ module pic_8259
 
 
     // Assigns
-    //assign io_read_valid    = (io_read == 1'b1 && io_read_last == 1'b0) ? 1'b1 : 1'b0;
-
     assign init_icw1        = (io_write == 1'b1 && io_address == 1'b0 && io_writedata[4] == 1'b1) ? 1'b1 : 1'b0;
     assign init_icw2        = (io_write == 1'b1 && io_address == 1'b1 && init_mode == 1'b1 && init_byte_expected == 3'd2) ? 1'b1 : 1'b0;
     assign init_icw3        = (io_write == 1'b1 && io_address == 1'b1 && init_mode == 1'b1 && init_byte_expected == 3'd3) ? 1'b1 : 1'b0;
@@ -123,58 +120,46 @@ module pic_8259
 
     assign io_readdata =
         (polled_mode == 1'b1)                           ? { interrupt_valid, 4'd0, irq_value } :
-        (io_address == 1'b0 && read_reg_select == 1'b0) ? interrupt_request_register :
-        (io_address == 1'b0 && read_reg_select == 1'b1) ? in_service_register :
-                                                        interrupt_mask_register;
+        (io_address == 1'b0 && read_reg_select == 1'b0) ? IRR :
+        (io_address == 1'b0 && read_reg_select == 1'b1) ? ISR :
+                                                        IMR;
 
-    assign selectected_prepare = interrupt_request_register & ~interrupt_mask_register & ~in_service_register;
+    assign irx_vec = IRR & ~IMR & ~ISR;
 
-    assign selectected_shifted = {selectected_prepare[0],selectected_prepare,selectected_prepare[7:1]} >> lowest_priority;
-    assign selectected_shifted_isr = {in_service_register[0],in_service_register,in_service_register[7:1]} >> lowest_priority;
+    assign irx_vec_priority = {irx_vec[0], irx_vec, irx_vec[7:1]} >> lowest_priority;
+    assign isr_vec_priority = {ISR[0], ISR, ISR[7:1]} >> lowest_priority;
 
-    assign selectected_shifted_isr_first =
-        (selectected_shifted_isr[0]) ? 3'd0 :
-        (selectected_shifted_isr[1]) ? 3'd1 :
-        (selectected_shifted_isr[2]) ? 3'd2 :
-        (selectected_shifted_isr[3]) ? 3'd3 :
-        (selectected_shifted_isr[4]) ? 3'd4 :
-        (selectected_shifted_isr[5]) ? 3'd5 :
-        (selectected_shifted_isr[6]) ? 3'd6 :
-                                    3'd7;
-
-    assign selectected_shifted_isr_first_norm = lowest_priority + selectected_shifted_isr_first + 3'd1;
-    assign selectected_shifted_isr_first_bits = 8'h01 << selectected_shifted_isr_first_norm;
-
-    assign selectected_index =
-        (selectected_shifted[0]) ? 3'd0 :
-        (selectected_shifted[1]) ? 3'd1 :
-        (selectected_shifted[2]) ? 3'd2 :
-        (selectected_shifted[3]) ? 3'd3 :
-        (selectected_shifted[4]) ? 3'd4 :
-        (selectected_shifted[5]) ? 3'd5 :
-        (selectected_shifted[6]) ? 3'd6 :
+    assign isr_idx =
+        (isr_vec_priority[0]) ? 3'd0 :
+        (isr_vec_priority[1]) ? 3'd1 :
+        (isr_vec_priority[2]) ? 3'd2 :
+        (isr_vec_priority[3]) ? 3'd3 :
+        (isr_vec_priority[4]) ? 3'd4 :
+        (isr_vec_priority[5]) ? 3'd5 :
+        (isr_vec_priority[6]) ? 3'd6 :
                                 3'd7;
 
-    assign irq = selectected_prepare != 8'd0 && (special_mask_mode || selectected_index <= selectected_shifted_isr_first);
+    assign isr_value = lowest_priority + isr_idx + 3'd1;
+    assign isr_idx_bits = 8'h01 << isr_value;
 
-    assign irq_value = lowest_priority + selectected_index + 3'd1;
+    assign irx_idx =
+        (irx_vec_priority[0]) ? 3'd0 :
+        (irx_vec_priority[1]) ? 3'd1 :
+        (irx_vec_priority[2]) ? 3'd2 :
+        (irx_vec_priority[3]) ? 3'd3 :
+        (irx_vec_priority[4]) ? 3'd4 :
+        (irx_vec_priority[5]) ? 3'd5 :
+        (irx_vec_priority[6]) ? 3'd6 :
+                                3'd7;
+
+    assign irq = irx_vec != 8'd0 && (special_mask_mode == 1'b1 || irx_idx <= isr_idx);
+
+    assign irq_value = lowest_priority + irx_idx + 3'd1;
 
     assign acknowledge_not_spurious = (polled_mode && io_read_valid) || (interrupt_ack && ~spurious);
     assign acknowledge              = (polled_mode && io_read_valid) || interrupt_ack;
 
     assign spurious_start = interrupt_valid && ~interrupt_ack && ~irq;
-
-    // always_ff @(posedge clk) begin
-    //     if (resetn == 1'b0) begin
-    //         io_read_last <= 1'b0;
-    //     end else begin
-    //         if (io_read_last == 1'b1) begin
-    //             io_read_last <= 1'b0;
-    //         end else begin
-    //             io_read_last <= io_read;
-    //         end
-    //     end
-    // end
 
     always_ff @(posedge clk) begin
         if (resetn == 1'b0) begin
@@ -298,48 +283,48 @@ module pic_8259
 
     always_ff @(posedge clk) begin
         if (resetn == 1'b0) begin
-            interrupt_mask_register <= 8'hFF;
+            IMR <= 8'hFF;
         end else begin
             if (init_icw1 == 1'b1) begin
-                interrupt_mask_register <= 8'h00;
+                IMR <= 8'h00;
             end else if (ocw1 == 1'b1) begin
-                interrupt_mask_register <= io_writedata;
+                IMR <= io_writedata;
             end
         end
     end
 
     always_ff @(posedge clk) begin
         if (resetn == 1'b0) begin
-            interrupt_request_register <= 8'h00;
+            IRR <= 8'h00;
         end else begin
             if (init_icw1 == 1'b1) begin
-                interrupt_request_register <= 8'h00;
+                IRR <= 8'h00;
             end else if (acknowledge_not_spurious == 1'b1) begin
-                interrupt_request_register <= (interrupt_request_register & interrupt_input & ~interrupt_mask) | ((~level_trigger_mode) ? edge_detect : interrupt_input);
+                IRR <= (IRR & interrupt_input & ~interrupt_mask) | ((~level_trigger_mode) ? edge_detect : interrupt_input);
             end else begin
-                interrupt_request_register <= (interrupt_request_register & interrupt_input) | ((~level_trigger_mode) ? edge_detect : interrupt_input);
+                IRR <= (IRR & interrupt_input) | ((~level_trigger_mode) ? edge_detect : interrupt_input);
             end
         end
     end
 
     always_ff @(posedge clk) begin
         if (resetn == 1'b0) begin
-            in_service_register <= 8'h00;
+            ISR <= 8'h00;
         end else begin
             if (init_icw1 == 1'b1) begin
-                in_service_register <= 8'h00;
+                ISR <= 8'h00;
             end else if (ocw2 == 1'b1 && { io_writedata[7:3], 3'b000 } == 8'h60) begin
                 //clear on specific EOI
-                in_service_register <= in_service_register & ~writedata_mask;
+                ISR <= ISR & ~writedata_mask;
             end else if (ocw2 == 1'b1 && { io_writedata[7:3], 3'b000 } == 8'hE0) begin
                 //clear on rotate on specific EOI
-                in_service_register <= in_service_register & ~writedata_mask;
+                ISR <= ISR & ~writedata_mask;
             end else if (isr_clear == 1'b1) begin
                 //clear on polling or non-specific EOI (with or without rotate)
-                in_service_register <= in_service_register & ~selectected_shifted_isr_first_bits;
+                ISR <= ISR & ~isr_idx_bits;
             end else if (acknowledge_not_spurious == 1'b1 && auto_eoi == 1'b0) begin
                 //set
-                in_service_register <= in_service_register | interrupt_mask;
+                ISR <= ISR | interrupt_mask;
             end
         end
     end
@@ -441,8 +426,6 @@ module pic_8259
             end
         end
     end
-
-    //assign interrupt_mask = 8'h01 << interrupt_data[2:0];
 
     // Forming interrupt mask process
     always_ff @(posedge clk) begin
