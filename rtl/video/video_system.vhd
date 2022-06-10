@@ -61,64 +61,79 @@ architecture rtl of video_system is
 
     component video_vga_ctrl is
         port (
-            vid_clk             : in std_logic;
-            vid_resetn          : in std_logic;
+            vid_clk                 : in std_logic;
+            vid_resetn              : in std_logic;
 
-            m_axis_vid_tvalid   : out std_logic;
-            m_axis_vid_tdata    : out std_logic_vector(7 downto 0);
+            m_axis_vid_tvalid       : out std_logic;
+            m_axis_vid_tdata        : out std_logic_vector(7 downto 0);
 
-            VGA_BLANK_N         : out std_logic;
-            VGA_SYNC_N          : out std_logic;
-            VGA_HS              : out std_logic;
-            VGA_VS              : out std_logic
+            VGA_BLANK_N             : out std_logic;
+            VGA_SYNC_N              : out std_logic;
+            VGA_HS                  : out std_logic;
+            VGA_VS                  : out std_logic
         );
     end component video_vga_ctrl;
 
     component video_mda_fb is
         port (
             -- video clk
-            vid_clk                         : in std_logic;
-            vid_resetn                      : in std_logic;
+            vid_clk                 : in std_logic;
+            vid_resetn              : in std_logic;
             -- sdram clk
-            sdram_clk                       : in std_logic;
-            sdram_resetn                    : in std_logic;
+            sdram_clk               : in std_logic;
+            sdram_resetn            : in std_logic;
             -- sdram data req
-            m_axis_sdram_req_tvalid         : out std_logic;
-            m_axis_sdram_req_tready         : in std_logic;
-            m_axis_sdram_req_tdata          : out std_logic_vector(63 downto 0);
+            m_axis_sdram_req_tvalid : out std_logic;
+            m_axis_sdram_req_tready : in std_logic;
+            m_axis_sdram_req_tdata  : out std_logic_vector(63 downto 0);
             -- data resp
-            s_axis_sdram_res_tvalid         : in std_logic;
-            s_axis_sdram_res_tdata          : in std_logic_vector(31 downto 0);
+            s_axis_sdram_res_tvalid : in std_logic;
+            s_axis_sdram_res_tdata  : in std_logic_vector(31 downto 0);
             -- sync signals
-            s_axis_vid_sync_tvalid          : in std_logic;
-            s_axis_vid_sync_tdata           : in std_logic_vector(31 downto 0);
-            s_axis_vid_sync_tuser           : in std_logic_vector(7 downto 0);
+            s_axis_vid_sync_tvalid  : in std_logic;
+            s_axis_vid_sync_tdata   : in std_logic_vector(31 downto 0);
+            s_axis_vid_sync_tuser   : in std_logic_vector(7 downto 0);
             -- data out
-            m_axis_vid_dout_tvalid          : out std_logic;
-            m_axis_vid_dout_tdata           : out std_logic_vector(31 downto 0);
-            m_axis_vid_dout_tuser           : out std_logic_vector(31 downto 0)
+            m_axis_vid_dout_tvalid  : out std_logic;
+            m_axis_vid_dout_tdata   : out std_logic_vector(31 downto 0);
+            m_axis_vid_dout_tuser   : out std_logic_vector(31 downto 0);
+            -- events
+            event_blink_switch      : in std_logic
         );
     end component video_mda_fb;
 
-    signal vid_ctrl_tvalid      : std_logic;
-    signal vid_ctrl_tdata       : std_logic_vector(7 downto 0);
+    component video_system_timer is
+        port (
+            clk_108                 : in std_logic;
+            resetn_108              : in std_logic;
+            timer_pulse             : out std_logic
+        );
+    end component video_system_timer;
 
-    signal vid_ctrl_blank_n     : std_logic;
-    signal vid_ctrl_sync_n      : std_logic;
-    signal vid_ctrl_hs          : std_logic;
-    signal vid_ctrl_vs          : std_logic;
+    signal vid_ctrl_tvalid          : std_logic;
+    signal vid_ctrl_tdata           : std_logic_vector(7 downto 0);
 
-    signal d_vid_ctrl_blank_n   : std_logic;
-    signal d_vid_ctrl_sync_n    : std_logic;
-    signal d_vid_ctrl_hs        : std_logic;
-    signal d_vid_ctrl_vs        : std_logic;
+    signal vid_ctrl_blank_n         : std_logic;
+    signal vid_ctrl_sync_n          : std_logic;
+    signal vid_ctrl_hs              : std_logic;
+    signal vid_ctrl_vs              : std_logic;
 
-    signal mda_fb_s_tdata       : std_logic_vector(31 downto 0);
-    signal mda_fb_m_tvalid      : std_logic;
-    signal mda_fb_m_tdata       : std_logic_vector(31 downto 0);
+    signal d_vid_ctrl_blank_n       : std_logic;
+    signal d_vid_ctrl_sync_n        : std_logic;
+    signal d_vid_ctrl_hs            : std_logic;
+    signal d_vid_ctrl_vs            : std_logic;
 
-    signal x_cnt                : std_logic_vector(11 downto 0);
-    signal y_cnt                : std_logic_vector(11 downto 0);
+    signal mda_fb_s_tdata           : std_logic_vector(31 downto 0);
+    signal mda_fb_m_tvalid          : std_logic;
+    signal mda_fb_m_tdata           : std_logic_vector(31 downto 0);
+
+    signal x_cnt                    : std_logic_vector(11 downto 0);
+    signal y_cnt                    : std_logic_vector(11 downto 0);
+
+    signal timer_pulse              : std_logic;
+    signal timer_pulse_cnt          : std_logic_vector(8 downto 0);
+
+    signal event_blink_switch       : std_logic;
 
 begin
 
@@ -130,6 +145,12 @@ begin
     VGA_R                   <= mda_fb_m_tdata(23 downto 16);
     VGA_G                   <= mda_fb_m_tdata(15 downto  8);
     VGA_B                   <= mda_fb_m_tdata( 7 downto  0);
+
+    video_system_timer_inst : video_system_timer port map (
+        clk_108             => vid_clk,
+        resetn_108          => vid_resetn,
+        timer_pulse         => timer_pulse
+    );
 
     video_vga_ctrl_inst : video_vga_ctrl port map (
         vid_clk             => vid_clk,
@@ -164,11 +185,14 @@ begin
 
         m_axis_vid_dout_tvalid  => mda_fb_m_tvalid,
         m_axis_vid_dout_tdata   => mda_fb_m_tdata,
-        m_axis_vid_dout_tuser   => open
+        m_axis_vid_dout_tuser   => open,
+
+        event_blink_switch      => event_blink_switch
     );
 
     -- assigns
     mda_fb_s_tdata <= x"0" & y_cnt & x"0" & x_cnt;
+    event_blink_switch <= timer_pulse_cnt(8);
 
     process (vid_clk) begin
         if rising_edge(vid_clk) then
@@ -215,6 +239,18 @@ begin
                     elsif (x_cnt = (H_MAX - 1)) then
                         y_cnt <= y_cnt + 1;
                     end if;
+                end if;
+            end if;
+        end if;
+    end process;
+
+    process (vid_clk) begin
+        if rising_edge(vid_clk) then
+            if vid_resetn = '0' then
+                timer_pulse_cnt <= (others => '0');
+            else
+                if (timer_pulse = '1') then
+                    timer_pulse_cnt <= ('0' & timer_pulse_cnt(7 downto 0)) + 1;
                 end if;
             end if;
         end if;

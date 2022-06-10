@@ -78,8 +78,8 @@ architecture rtl of video_mda_fb_frame_gen is
         );
     end component;
 
-    constant BYTES_PER_LINE             : natural := 80 * 2; -- one byte for char, one byte for attr
-    constant MEM_WORDS_PER_LINE         : natural := BYTES_PER_LINE/4; -- each word in memory contains 4 bytes
+    constant BYTES_PER_LINE         : natural := 80 * 2; -- one byte for char, one byte for attr
+    constant MEM_WORDS_PER_LINE     : natural := BYTES_PER_LINE/4; -- each word in memory contains 4 bytes
 
     signal wakeup                   : std_logic;
 
@@ -117,10 +117,14 @@ architecture rtl of video_mda_fb_frame_gen is
     signal font_line_tdata          : std_logic_vector(7 downto 0);
     signal font_line_col            : natural range 0 to 7;
     signal font_line_char_col       : natural range 0 to 79;
+    signal font_line_row            : natural range 0 to 15;
+    signal font_line_attr           : std_logic_vector(7 downto 0);
 
     signal pixel_tvalid             : std_logic;
     signal pixel_tready             : std_logic;
-    signal pixel_tdata              : std_logic;
+    signal pixel_tdata              : std_logic_vector(31 downto 0);
+    signal pixel_attr               : std_logic_vector(7 downto 0);
+    signal pixel_fill               : std_logic;
     signal pixel_tlast              : std_logic;
     signal pixel_end_of_frame       : std_logic;
 
@@ -133,7 +137,7 @@ begin
     -- i/o assigns
     m_axis_frame_tvalid                     <= pixel_tvalid;
     pixel_tready                            <= m_axis_frame_tready;
-    m_axis_frame_tdata                      <= (others => pixel_tdata);
+    m_axis_frame_tdata                      <= pixel_tdata;
     m_axis_frame_tuser(7 downto 2)          <= (others => '0') ;
     m_axis_frame_tuser(1)                   <= pixel_end_of_frame;
     m_axis_frame_tuser(0)                   <= pixel_tlast;
@@ -183,6 +187,10 @@ begin
 
     font_re          <= '1' when char_tvalid = '1' and char_tready = '1' else '0';
     font_addr        <= char_tdata(15 downto 8) & std_logic_vector(to_unsigned(char_line, 4));
+
+    pixel_tdata(31 downto 9) <= (others => '0');
+    pixel_tdata(8)           <= pixel_fill;
+    pixel_tdata(7 downto 0)  <= pixel_attr;
 
 
     -- requesting data from an external storage
@@ -311,7 +319,7 @@ begin
     -- reading an ascii character from the internal buffer
     process (vid_clk) begin
         if rising_edge(vid_clk) then
-            -- resettable
+            -- control
             if (vid_resetn = '0') then
                 char_tvalid <= '0';
                 char_tlast <= '0';
@@ -330,7 +338,7 @@ begin
                     end if;
                 end if;
             end if;
-            -- without reset
+            -- data
             if (data_rd_tvalid = '1' and data_rd_tready = '1') then
                 char_line <= data_rd_iter;
                 char_col <= data_rd_addr_lo;
@@ -341,7 +349,7 @@ begin
     -- requesting font line for the ascii character
     process (vid_clk) begin
         if rising_edge(vid_clk) then
-            -- resettable
+            -- control
             if (vid_resetn = '0') then
                 font_line_tvalid <= '0';
                 font_line_tlast <= '0';
@@ -363,9 +371,11 @@ begin
                     font_line_tlast <= char_tlast;
                 end if;
             end if;
-            -- without reset
+            -- data
             if (char_tvalid = '1' and char_tready = '1') then
                 font_line_char_col <= char_col;
+                font_line_row <= char_line;
+                font_line_attr <= char_tdata(7 downto 0);
             end if;
         end if;
     end process;
@@ -373,7 +383,7 @@ begin
     -- forming the pixel value
     process (vid_clk) begin
         if rising_edge(vid_clk) then
-            -- resettable
+            -- control
             if (vid_resetn = '0') then
                 pixel_tvalid <= '0';
                 pixel_tlast <= '0';
@@ -397,9 +407,17 @@ begin
                     pixel_end_of_frame <= font_line_tlast;
                 end if;
             end if;
-            -- without reset
+            -- data
             if (font_line_tvalid = '1' and font_line_tready = '1') then
-                pixel_tdata <= font_line_tdata(7 - font_line_col);
+                if (font_line_attr(1) = '1' and font_line_row = 15) then
+                    -- underline
+                    pixel_fill <= not font_line_tdata(7 - font_line_col);
+                else
+                    pixel_fill <= font_line_tdata(7 - font_line_col);
+                end if;
+            end if;
+            if (font_line_tvalid = '1' and font_line_tready = '1') then
+                pixel_attr <= font_line_attr;
             end if;
         end if;
     end process;

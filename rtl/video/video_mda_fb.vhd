@@ -23,6 +23,26 @@
 -- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+---
+-- #Short Description
+--
+-- MDA produces an 80x25 text screen.
+-- The memory storage scheme is that two bytes of video RAM are used for each character (80*25*2 = 4000, neatly fitting in the 4k RAM on the card).
+-- The first byte is the character code, and the second gives the attribute.
+
+-- The attribute bytes mostly behave like a bitmap:
+
+-- Bits 0-2: 1 => underline, other values => no underline.
+-- Bit 3: High intensity.
+-- Bit 7: Blink
+-- but there are eight exceptions:
+
+-- Attributes 00h, 08h, 80h and 88h display as black space.
+-- Attribute 70h displays as black on green.
+-- Attribute 78h displays as dark green on green.
+-- Attribute F0h displays as a blinking version of 70h (if blinking is enabled); as black on bright green otherwise.
+-- Attribute F8h displays as a blinking version of 78h (if blinking is enabled); as dark green on bright green otherwise.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -50,7 +70,9 @@ entity video_mda_fb is
         -- data out
         m_axis_vid_dout_tvalid          : out std_logic;
         m_axis_vid_dout_tdata           : out std_logic_vector(31 downto 0);
-        m_axis_vid_dout_tuser           : out std_logic_vector(31 downto 0)
+        m_axis_vid_dout_tuser           : out std_logic_vector(31 downto 0);
+
+        event_blink_switch              : in std_logic
     );
 end entity video_mda_fb;
 
@@ -164,6 +186,11 @@ architecture rtl of video_mda_fb is
     signal frame_2x_tuser               : std_logic_vector(7 downto 0);
     signal frame_2x_tready_mask         : std_logic;
 
+    signal dark_green_filler            : std_logic_vector(7 downto 0);
+    signal bright_green_filler          : std_logic_vector(7 downto 0);
+
+    signal blink_on                     : std_logic;
+
     function comb_and (a, b : std_logic_vector) return std_logic_vector is
         variable o : std_logic_vector(a'range);
     begin
@@ -172,6 +199,16 @@ architecture rtl of video_mda_fb is
         end loop;
         return o;
     end function;
+
+    function comb_not (a : std_logic_vector) return std_logic_vector is
+        variable o : std_logic_vector(a'range);
+    begin
+        for i in o'range loop
+            o := not a;
+        end loop;
+        return o;
+    end function;
+
 begin
     -- i/o assigns
     din_tvalid                      <= s_axis_vid_sync_tvalid;
@@ -263,6 +300,22 @@ begin
 
     frame_2x_tready <= '1' when dout_tvalid = '1' and frame_2x_tready_mask = '1' else '0';
 
+    dark_green_filler(7) <= '0';
+    dark_green_filler(6 downto 0) <= (others => frame_2x_tdata(8));
+    bright_green_filler(7 downto 0) <= (others => frame_2x_tdata(8));
+
+    process (vid_clk) begin
+        if rising_edge(vid_clk) then
+            if vid_resetn = '0' then
+                blink_on <= '0';
+            else
+                if (event_blink_switch = '1') then
+                    blink_on <= not blink_on;
+                end if;
+            end if;
+        end if;
+    end process;
+
     process (vid_clk) begin
         if rising_edge(vid_clk) then
             if vid_resetn = '0' then
@@ -314,8 +367,51 @@ begin
                     else
                         -- main
                         dout_r <= comb_and(x"00", blank_mask);
-                        dout_g <= comb_and(x"00", blank_mask);
-                        dout_b <= comb_and(frame_2x_tdata(7 downto 0), blank_mask);
+
+                        case(frame_2x_tdata(7 downto 0)) is
+                            when x"00" | x"08" | x"80" | x"88" =>
+                                dout_g <= comb_and(x"00", blank_mask);
+                            when x"78" =>
+                                -- dark green on green
+                                dout_g <= comb_and(comb_not(dark_green_filler), blank_mask);
+                            when x"70" =>
+                                --black on green
+                                dout_g <= comb_and(comb_not(bright_green_filler), blank_mask);
+                            when x"F8" =>
+                                -- dark green on green blinking
+                                if (blink_on = '0') then
+                                    dout_g <= comb_and(comb_not(dark_green_filler), blank_mask);
+                                else
+                                    dout_g <= comb_and(dark_green_filler, blank_mask);
+                                end if;
+                            when x"F0" =>
+                                --black on green blinking
+                                if (blink_on = '0') then
+                                    dout_g <= comb_and(comb_not(bright_green_filler), blank_mask);
+                                else
+                                    dout_g <= comb_and(bright_green_filler, blank_mask);
+                                end if;
+                            when others =>
+                                if (blink_on = '1' and frame_2x_tdata(7) = '1') then
+                                    if (frame_2x_tdata(3) = '0') then
+                                        -- dark green on black
+                                        dout_g <= comb_and(comb_not(dark_green_filler), blank_mask);
+                                    else
+                                        -- bright green on black
+                                        dout_g <= comb_and(comb_not(bright_green_filler), blank_mask);
+                                    end if;
+                                else
+                                    if (frame_2x_tdata(3) = '0') then
+                                        -- dark green on black
+                                        dout_g <= comb_and(dark_green_filler, blank_mask);
+                                    else
+                                        -- bright green on black
+                                        dout_g <= comb_and(bright_green_filler, blank_mask);
+                                    end if;
+                                end if;
+                        end case;
+
+                        dout_b <= comb_and(x"00", blank_mask);
                     end if;
                 else
                     -- dark area
