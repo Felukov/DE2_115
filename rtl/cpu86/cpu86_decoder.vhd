@@ -70,7 +70,7 @@ architecture rtl of cpu86_decoder is
     );
 
     attribute enum_encoding : string;
-    attribute enum_encoding of byte_pos_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1001 1010 1011 1100";
+    attribute enum_encoding of byte_pos_t : type is "sequential";
 
     type bytes_chain_t is array (natural range 0 to 5) of byte_pos_t;
 
@@ -262,7 +262,7 @@ begin
                                      x"92" | x"93" | x"94" | x"95" | x"96" | x"97" | x"98" | x"99" | x"9B" | x"9C" | x"9D" | x"9E" |
                                      x"9F" | x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AC" | x"AD" | x"AE" | x"AF" | x"CB" |
                                      x"C9" | x"CC" | x"CE" | x"CF" | x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" | x"F5" | x"F4" |
-                                     x"40" | x"27" | x"D7" | x"EC" | x"ED"  =>
+                                     x"40" | x"27" | x"D7" | x"EC" | x"ED" | x"D6" | x"F1" =>
                                     byte_pos_chain(0) <= first_byte;
                                     instr_tvalid <= '1';
 
@@ -746,21 +746,21 @@ begin
                 when x"A8" => set_op(ALU, ALU_OP_TST, '0', LOCK_AX or LOCK_FL, WAIT_AX);
                 when x"A9" => set_op(ALU, ALU_OP_TST, '1', LOCK_AX or LOCK_FL, WAIT_AX);
 
-                -- DBG
-                when x"0F" => set_op(DBG, "0000",     '0', LOCK_NO_LOCK, WAIT_NO_WAIT);
-
                 -- MUL
                 when x"69" => set_op(MULU, IMUL_RR,   '1', LOCK_FL, WAIT_NO_WAIT);
                 when x"6B" => set_op(MULU, IMUL_RR,   '1', LOCK_FL, WAIT_NO_WAIT);
 
                 -- SET SEG
-                when x"26" | x"2E" | x"36" | x"3E" => set_op(SET_SEG); no_lock; no_wait;
+                when x"26" => set_op(SET_SEG, "0000", '1', LOCK_NO_LOCK, WAIT_ES);
+                when x"2E" => set_op(SET_SEG, "0000", '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"36" => set_op(SET_SEG, "0000", '1', LOCK_NO_LOCK, WAIT_SS);
+                when x"3E" => set_op(SET_SEG, "0000", '1', LOCK_NO_LOCK, WAIT_DS);
 
                 -- BCD
-                when x"27" => set_op(BCDU, BCDU_DAA,  '0', LOCK_AX or LOCK_FL, WAIT_AX);
-                when x"2F" => set_op(BCDU, BCDU_DAS,  '0', LOCK_AX or LOCK_FL, WAIT_AX);
-                when x"37" => set_op(BCDU, BCDU_AAA,  '0', LOCK_AX or LOCK_FL, WAIT_AX);
-                when x"3F" => set_op(BCDU, BCDU_AAS,  '0', LOCK_AX or LOCK_FL, WAIT_AX);
+                when x"27" => set_op(BCDU, BCDU_DAA,  '0', LOCK_AX or LOCK_FL, WAIT_AX or WAIT_FL);
+                when x"2F" => set_op(BCDU, BCDU_DAS,  '0', LOCK_AX or LOCK_FL, WAIT_AX or WAIT_FL);
+                when x"37" => set_op(BCDU, BCDU_AAA,  '0', LOCK_AX or LOCK_FL, WAIT_AX or WAIT_FL);
+                when x"3F" => set_op(BCDU, BCDU_AAS,  '0', LOCK_AX or LOCK_FL, WAIT_AX or WAIT_FL);
                 when x"D4" => set_op(DIVU, DIVU_AAM,  '0', LOCK_AX or LOCK_FL, WAIT_AX);
                 when x"D5" => set_op(BCDU, BCDU_AAD,  '0', LOCK_AX or LOCK_FL, WAIT_AX);
 
@@ -863,7 +863,6 @@ begin
                 --
                 when x"80" => no_lock; no_wait; set_lock(LOCK_FL);
                 when x"81" => no_lock; no_wait;
-                --when x"82" => no_lock; no_wait; set_lock(LOCK_FL);
                 when x"83" => no_lock; no_wait; set_lock(LOCK_FL);
                 when x"8F" => no_lock; no_wait;
                 when x"C0" => no_lock; no_wait;
@@ -901,11 +900,32 @@ begin
                 when x"D7" => set_op(LFP, MISC_XLAT,     '0', LOCK_AX,              WAIT_DS or WAIT_AX or WAIT_BX);
 
                 -- SYS
-                when x"CC" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP,      WAIT_SS or WAIT_SP);
-                when x"CD" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP,      WAIT_SS or WAIT_SP);
-                when x"CE" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP,      WAIT_SS or WAIT_SP);
-                when x"CF" => set_op(SYS, SYS_IRET_OP,   '1', LOCK_SP,      WAIT_SS or WAIT_SP);
-                when x"F4" => set_op(SYS, SYS_HLT_OP,    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"9B" => set_op(SYS, SYS_WAIT_OP,   '1', LOCK_NO_LOCK,         WAIT_NO_WAIT);
+                when x"CC" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"CD" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"CE" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"CF" => set_op(SYS, SYS_IRET_OP,   '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"F4" => set_op(SYS, SYS_HLT_OP,    '1', LOCK_NO_LOCK,         WAIT_NO_WAIT);
+
+                -- ESC
+                when x"D8" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"D9" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"DA" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"DB" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"DC" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"DD" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"DE" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"DF" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+
+                -- invalid opcodes
+                when x"0F" => set_op(SYS, SYS_INT_INT_OP,'0', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"63" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"64" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"65" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"66" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"67" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"D6" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"F1" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
 
                 -- LOOP
                 when x"E0" => set_op(LOOPU, LOOP_OP_NE,  '1', LOCK_DREG,    WAIT_CX or WAIT_FL);
@@ -974,8 +994,8 @@ begin
             case u8_tdata_reg is
                 when "000" => instr_tdata.code <= SHF_OP_ROL;
                 when "001" => instr_tdata.code <= SHF_OP_ROR;
-                when "010" => instr_tdata.code <= SHF_OP_RCL;
-                when "011" => instr_tdata.code <= SHF_OP_RCR;
+                when "010" => instr_tdata.code <= SHF_OP_RCL; instr_tdata.wait_fl <= '1';
+                when "011" => instr_tdata.code <= SHF_OP_RCR; instr_tdata.wait_fl <= '1';
                 when "100" => instr_tdata.code <= SHF_OP_SHL;
                 when "101" => instr_tdata.code <= SHF_OP_SHR;
                 when "110" => null;
@@ -1011,8 +1031,8 @@ begin
             case u8_tdata_reg is
                 when "000" => instr_tdata.code <= SHF_OP_ROL;
                 when "001" => instr_tdata.code <= SHF_OP_ROR;
-                when "010" => instr_tdata.code <= SHF_OP_RCL;
-                when "011" => instr_tdata.code <= SHF_OP_RCR;
+                when "010" => instr_tdata.code <= SHF_OP_RCL; instr_tdata.wait_fl <= '1';
+                when "011" => instr_tdata.code <= SHF_OP_RCR; instr_tdata.wait_fl <= '1';
                 when "100" => instr_tdata.code <= SHF_OP_SHL;
                 when "101" => instr_tdata.code <= SHF_OP_SHR;
                 when "110" => null;
@@ -1047,8 +1067,8 @@ begin
             case u8_tdata_reg is
                 when "000" => instr_tdata.code <= SHF_OP_ROL;
                 when "001" => instr_tdata.code <= SHF_OP_ROR;
-                when "010" => instr_tdata.code <= SHF_OP_RCL;
-                when "011" => instr_tdata.code <= SHF_OP_RCR;
+                when "010" => instr_tdata.code <= SHF_OP_RCL; instr_tdata.wait_fl <= '1';
+                when "011" => instr_tdata.code <= SHF_OP_RCR; instr_tdata.wait_fl <= '1';
                 when "100" => instr_tdata.code <= SHF_OP_SHL;
                 when "101" => instr_tdata.code <= SHF_OP_SHR;
                 when "110" => null;
@@ -1082,8 +1102,8 @@ begin
             case u8_tdata_reg is
                 when "000" => instr_tdata.code <= SHF_OP_ROL;
                 when "001" => instr_tdata.code <= SHF_OP_ROR;
-                when "010" => instr_tdata.code <= SHF_OP_RCL;
-                when "011" => instr_tdata.code <= SHF_OP_RCR;
+                when "010" => instr_tdata.code <= SHF_OP_RCL; instr_tdata.wait_fl <= '1';
+                when "011" => instr_tdata.code <= SHF_OP_RCR; instr_tdata.wait_fl <= '1';
                 when "100" => instr_tdata.code <= SHF_OP_SHL;
                 when "101" => instr_tdata.code <= SHF_OP_SHR;
                 when "110" => null;
@@ -2215,10 +2235,14 @@ begin
                                 instr_tdata.data <= x"FFFF";
                             when x"D0" | x"D1" =>
                                 instr_tdata.data <= x"0001";
+                            when x"63" | x"64" | x"65" | x"66" | x"67" | x"D6" | x"F1" =>
+                                instr_tdata.data <= x"0006"; -- invalid opcodes. trap 6
+                            when x"D8" | x"D9" | x"DA" | x"DB" | x"DC" | x"DD" | x"DE" | x"DF" =>
+                                instr_tdata.data <= x"0007"; -- esc instructions. trap 7
                             when x"CC" =>
-                                instr_tdata.data <= x"0003";
+                                instr_tdata.data <= x"0003"; -- int 3
                             when x"CE" =>
-                                instr_tdata.data <= x"0004";
+                                instr_tdata.data <= x"0004"; -- into
                             when others =>
                                 null;
                         end case;
