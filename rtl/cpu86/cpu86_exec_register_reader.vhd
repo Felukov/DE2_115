@@ -131,6 +131,7 @@ architecture rtl of cpu86_exec_register_reader is
     signal instr_tuser              : user_t;
     signal instr_hazards_resolved   : std_logic;
     signal instr_tready_mask        : std_logic;
+    signal instr_wait_fl_valid      : std_logic;
 
     signal rr_tvalid                : std_logic;
     signal rr_tready                : std_logic;
@@ -335,7 +336,7 @@ begin
         (instr_tdata.wait_fl = '0' or (instr_tdata.wait_fl = '1' and flags_s_tvalid = '1' and flags_m_lock_tvalid = '0'))
     else '0';
 
-    instr_tready <= '1' when instr_tready_mask = '0' and
+    instr_tready <= '1' when instr_tready_mask = '0' and instr_wait_fl_valid = '0' and
         ((instr_tvalid = '1' and instr_hazards_resolved = '1')) and
         (rr_tvalid = '0' or (rr_tvalid = '1' and rr_tready = '1')) else '0';
 
@@ -353,6 +354,24 @@ begin
                     if (combined_instr = '0') then
                         instr_tready_mask <= '1';
                     end if;
+                end if;
+            end if;
+        end if;
+    end process;
+
+    -- forcing instruction queue to stall till flag is valid
+    instr_wait_fl_valid_proc : process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                instr_wait_fl_valid <= '0';
+            else
+                if (instr_tvalid = '1' and instr_tready = '1') then
+                    if ((instr_tdata.op = STACKU and instr_tdata.code = STACKU_POPR and instr_tdata.dreg = FL) or
+                        (instr_tdata.op = SYS and instr_tdata.code = SYS_IRET_OP)) then
+                        instr_wait_fl_valid <= '1';
+                    end if;
+                elsif (instr_wait_fl_valid = '1' and flags_s_tvalid = '1' and flags_m_lock_tvalid = '0') then
+                    instr_wait_fl_valid <= '0';
                 end if;
             end if;
         end if;
@@ -596,6 +615,7 @@ begin
                 if (instr_tvalid = '1' and instr_tready = '1') then
                     if ((instr_tdata.op = SET_SEG) or (skip_next = '1') or
                         (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
+                        (instr_tdata.op = SYS and instr_tdata.code = SYS_WAIT_OP) or
                         (instr_tdata.op = REP and cx_s_tdata = x"0000"))
                     then
                         rr_tvalid <= '0';
@@ -616,8 +636,10 @@ begin
                 rr_tdata.data       <= instr_tdata.data;
                 rr_tdata.w          <= instr_tdata.w;
 
-                if ((instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
-                    ((instr_tdata.op = MOVU or instr_tdata.op = XCHG) and (instr_tdata.dir = R2R or instr_tdata.dir = I2R)) or
+                if ((instr_tdata.op = MOVU and instr_tdata.dir = R2R) or
+                    (instr_tdata.op = MOVU and instr_tdata.dir = I2R) or
+                    (instr_tdata.op = XCHG and instr_tdata.dir = R2R) or
+                    (instr_tdata.op = XCHG and instr_tdata.dir = I2R) or
                     (instr_tdata.op = JMPU and instr_tdata.code(3) = '0') or
                     (instr_tdata.op = REP) or (instr_tdata.op = FEU))
                 then
