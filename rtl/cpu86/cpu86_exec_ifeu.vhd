@@ -120,7 +120,6 @@ architecture rtl of cpu86_exec_ifeu is
     signal ea_val_plus_disp_p_2 : std_logic_vector(15 downto 0);
 
     signal ip_val_plus_disp_next: std_logic_vector(15 downto 0);
-    signal ip_val_plus_disp     : std_logic_vector(15 downto 0);
 
     signal frame_pointer        : std_logic_vector(15 downto 0);
 
@@ -184,7 +183,6 @@ begin
          (rr_tdata.op = JCALL and rr_tdata.code(3) = '1') or
          (rr_tdata.op = RET) or
          (rr_tdata.op = DIVU) or
-         (rr_tdata.op = DBG) or
          (rr_tdata.op = IO) or
          (rr_tdata.op = JMPU and rr_tdata.code(3) = '1') or
          (rr_tdata.op = LFP and rr_tdata.code = MISC_BOUND) or
@@ -1153,10 +1151,6 @@ begin
             mem_write_alu(seg => rr_tdata_buf.seg_val, addr => ea_val_plus_disp, w => rr_tdata_buf.w);
         end procedure;
 
-        procedure do_dbg_cmd_0 is begin
-            micro_tdata.cmd <= MICRO_DBG_OP or MICRO_UNLK_OP;
-        end procedure;
-
         procedure do_set_flg_cmd_0 is begin
             micro_tdata.cmd <= MICRO_FLG_OP;
             flag_update(rr_tdata.code, rr_tdata.fl);
@@ -1262,7 +1256,7 @@ begin
                     micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
 
                     -- alu cmd
-                    update_sp(sp_val => rr_tdata.sp_val);
+                    update_sp(sp_val => rr_tdata_buf.sp_val);
 
                 when STACKU_PUSHA =>
                     if (micro_cnt = 1) then
@@ -2059,10 +2053,6 @@ begin
             end if;
 
             if (rr_tvalid = '1' and rr_tready = '1') then
-                ip_val_plus_disp <= ip_val_plus_disp_next;
-            end if;
-
-            if (rr_tvalid = '1' and rr_tready = '1') then
                 micro_tdata.inst_cs      <= rr_tuser(USER_T_CS);
                 micro_tdata.inst_ip      <= rr_tuser(USER_T_IP);
                 micro_tdata.inst_ip_next <= rr_tuser(USER_T_IP_NEXT);
@@ -2099,7 +2089,6 @@ begin
                     when SHFU       => do_shf_cmd_0;
                     when XCHG       => do_xchg_cmd_0;
                     when MOVU       => do_movu_cmd_0;
-                    when DBG        => do_dbg_cmd_0;
                     when STR        => do_str_cmd;
                     when IO         => do_io_cmd;
                     when SET_FLAG   => do_set_flg_cmd_0;
