@@ -109,8 +109,10 @@ entity cpu86_exec_mexec is
 end entity cpu86_exec_mexec;
 
 architecture rtl of cpu86_exec_mexec is
+    attribute enum_encoding : string;
 
     type flag_src_t is (RES_USER, RES_DATA, CMD_FLG);
+    attribute enum_encoding of flag_src_t : type is "sequential";
 
     type res_t is record
         code                    : std_logic_vector(3 downto 0);
@@ -426,6 +428,9 @@ begin
     m_axis_intr_tvalid  <= '1' when div_intr_tvalid = '1' or bnd_intr_tvalid = '1' else '0';
     m_axis_intr_tdata   <= div_intr_tdata when div_intr_tvalid = '1' else bnd_intr_tdata;
     m_axis_intr_tuser   <= x"00" when div_intr_tvalid = '1' else x"05";
+
+    dbg_m_tvalid        <= '0';
+    dbg_m_tdata         <= (others => '0');
 
     mexec_alu_inst : cpu86_exec_mexec_alu port map (
         clk                     => clk,
@@ -1833,30 +1838,6 @@ begin
                 bnd_intr_tdata(INTR_T_CS) <= micro_tdata.bnd_cs_val;
                 bnd_intr_tdata(INTR_T_IP) <= micro_tdata.bnd_ip_val;
                 bnd_intr_tdata(INTR_T_IP_NEXT) <= micro_tdata.bnd_ip_val;
-            end if;
-
-        end if;
-    end process;
-
-    dbg_proc : process (clk) begin
-        if rising_edge(clk) then
-            if resetn = '0' then
-                dbg_m_tvalid <= '0';
-                dbg_0_tvalid <= '0';
-                dbg_1_tvalid <= '0';
-            else
-                if (micro_tvalid = '1' and micro_tready = '1') then
-                    dbg_0_tvalid <= micro_tdata.cmd(MICRO_OP_CMD_DBG);
-                else
-                    dbg_0_tvalid <= '0';
-                end if;
-                dbg_1_tvalid <= dbg_0_tvalid;
-
-                dbg_m_tvalid <= dbg_1_tvalid;
-            end if;
-
-            if (micro_tvalid = '1' and micro_tready = '1') then
-                dbg_m_tdata <= micro_tdata.inst_cs & micro_tdata.inst_ip;
             end if;
 
         end if;
