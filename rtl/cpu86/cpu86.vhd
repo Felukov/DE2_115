@@ -168,10 +168,7 @@ architecture rtl of cpu86 is
 
             interrupt_valid             : in std_logic;
             interrupt_data              : in std_logic_vector(7 downto 0);
-            interrupt_ack               : out std_logic;
-
-            dbg_m_tvalid                : out std_logic;
-            dbg_m_tdata                 : out std_logic_vector(14*16-1 downto 0)
+            interrupt_ack               : out std_logic
 
         );
     end component cpu86_exec;
@@ -384,10 +381,7 @@ begin
 
         interrupt_valid             => interrupt_valid,
         interrupt_data              => interrupt_data,
-        interrupt_ack               => interrupt_ack,
-
-        dbg_m_tvalid                => open,
-        dbg_m_tdata                 => open
+        interrupt_ack               => interrupt_ack
     );
 
     -- Assigns

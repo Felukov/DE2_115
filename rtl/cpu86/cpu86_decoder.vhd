@@ -1275,8 +1275,12 @@ begin
                     when "111" => instr_tdata.wait_di <= '1';
                     when others => null;
                 end case;
+            end if;
 
+            if (u8_tdata(7 downto 6) = "11") then
                 upd_lock(LOCK_DREG or LOCK_FL);
+            else
+                upd_lock(LOCK_FL);
             end if;
         end;
 

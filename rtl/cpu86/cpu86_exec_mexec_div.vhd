@@ -46,19 +46,15 @@ end entity cpu86_exec_mexec_div;
 
 architecture rtl of cpu86_exec_mexec_div is
 
-    constant USER_WIDTH             : natural := 77;
+    constant USER_WIDTH             : natural := 13;
 
-    constant DIV_USER_T_SIGN_D      : natural  := 76;
-    constant DIV_USER_T_SIGN_N      : natural  := 75;
-    constant DIV_USER_T_W           : natural  := 74;
-    constant DIV_USER_T_D_HI_ZERO   : natural := 73;
-    constant DIV_USER_T_D_LO_ZERO   : natural := 72;
-    subtype  DIV_USER_T_CODE       is natural range 71 downto 68;
-    subtype  DIV_USER_T_DREG       is natural range 67 downto 64;
-    subtype  DIV_USER_T_SS         is natural range 63 downto 48;
-    subtype  DIV_USER_T_IP         is natural range 47 downto 32;
-    subtype  DIV_USER_T_CS         is natural range 31 downto 16;
-    subtype  DIV_USER_T_IP_NEXT    is natural range 15 downto 0;
+    constant DIV_USER_T_SIGN_D      : natural := 12;
+    constant DIV_USER_T_SIGN_N      : natural := 11;
+    constant DIV_USER_T_W           : natural := 10;
+    constant DIV_USER_T_D_HI_ZERO   : natural := 9;
+    constant DIV_USER_T_D_LO_ZERO   : natural := 8;
+    subtype  DIV_USER_T_CODE       is natural range 7 downto 4;
+    subtype  DIV_USER_T_DREG       is natural range 3 downto 0;
 
     component axis_div_u is
         generic (
@@ -188,10 +184,6 @@ begin
             div_s_tuser(DIV_USER_T_CODE)    <= req_s_tdata.code;
             div_s_tuser(DIV_USER_T_W)       <= req_s_tdata.w;
             div_s_tuser(DIV_USER_T_DREG)    <= std_logic_vector(to_unsigned(reg_t'pos(req_s_tdata.dreg), 4));
-            div_s_tuser(DIV_USER_T_SS)      <= req_s_tdata.ss_val;
-            div_s_tuser(DIV_USER_T_IP)      <= req_s_tdata.cs_val;
-            div_s_tuser(DIV_USER_T_CS)      <= req_s_tdata.ip_val;
-            div_s_tuser(DIV_USER_T_IP_NEXT) <= req_s_tdata.ip_next_val;
 
             if (req_s_tdata.code = DIVU_IDIV) then
                 if (req_s_tdata.w = '1') then
@@ -234,11 +226,6 @@ begin
                 else
                     res_m_tdata.rval <= div_m_tdata(15 downto 0);
                 end if;
-
-                res_m_tdata.ss_val      <= div_m_tuser(DIV_USER_T_SS);
-                res_m_tdata.cs_val      <= div_m_tuser(DIV_USER_T_IP);
-                res_m_tdata.ip_val      <= div_m_tuser(DIV_USER_T_CS);
-                res_m_tdata.ip_next_val <= div_m_tuser(DIV_USER_T_IP_NEXT);
 
                 if (div_m_tuser(DIV_USER_T_W) = '0') then
                     if (div_m_tuser(DIV_USER_T_CODE) = DIVU_IDIV) then

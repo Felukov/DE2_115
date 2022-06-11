@@ -614,8 +614,6 @@ begin
             else
                 if (instr_tvalid = '1' and instr_tready = '1') then
                     if ((instr_tdata.op = SET_SEG) or (skip_next = '1') or
-                        (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
-                        (instr_tdata.op = SYS and instr_tdata.code = SYS_WAIT_OP) or
                         (instr_tdata.op = REP and cx_s_tdata = x"0000"))
                     then
                         rr_tvalid <= '0';

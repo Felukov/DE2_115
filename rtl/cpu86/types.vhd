@@ -5,6 +5,9 @@ use ieee.numeric_std.all;
 
 package cpu86_types is
 
+    attribute syn_encoding : string;
+    attribute enum_encoding : string;
+
     type reg_t is (
         AX, -- 0000
         DX, -- 0001
@@ -21,8 +24,7 @@ package cpu86_types is
         FL  -- 1100
     );
 
-    attribute enum_encoding : string;
-    attribute enum_encoding of reg_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1000 1001 1010 1011 1100";
+    attribute enum_encoding of reg_t : type is "sequential";
 
     type reg_idx_2_int_t is array(reg_t) of natural;
     type int_2_reg_idx_t is array(0 to 12) of reg_t;
@@ -62,14 +64,12 @@ package cpu86_types is
     type ea_t is (
         BX_SI_DISP, BX_DI_DISP, BP_SI_DISP, BP_DI_DISP, SI_DISP, DI_DISP, BP_DISP, BX_DISP, DIRECT, XLAT
     );
-
-    attribute enum_encoding of ea_t : type is "0000 0001 0010 0011 0100 0101 0110 0111 1001 1010";
+    attribute enum_encoding of ea_t : type is "sequential";
 
     type direction_t is (
         R2R, M2R, R2M, I2R, I2M, R2F, M2M
     );
-
-    attribute enum_encoding of direction_t : type is "000 001 010 011 100 101 110";
+    attribute enum_encoding of direction_t : type is "sequential";
 
     type op_t is (
         MOVU,     -- 00000
@@ -87,7 +87,6 @@ package cpu86_types is
         REP,      -- 01100
         STR,      -- 01101
         SET_FLAG, -- 01110
-        DBG,      -- 01111
         XCHG,     -- 10000
         SYS,      -- 10001
         LFP,      -- 10010
@@ -96,8 +95,7 @@ package cpu86_types is
         IO,       -- 10101
         ILLEGAL   -- 10110
     );
-
-    attribute enum_encoding of op_t : type is "00000 00001 00010 00011 00100 00101 00110 00111 01000 01001 01010 01011 01100 01101 01110 01111 10000 10001 10010 10011 10100 10101 10110";
+    attribute enum_encoding of op_t : type is "sequential";
 
     type mem_data_src_t is (
         MEM_DATA_SRC_IMM,   -- 000
@@ -107,17 +105,12 @@ package cpu86_types is
         MEM_DATA_SRC_FIFO,  -- 100
         MEM_DATA_SRC_IO     -- 101
     );
-
-    attribute enum_encoding of mem_data_src_t : type is "000 001 010 011 100 101";
-
-    type io_data_src_t is (
-        IO_DATA_SRC_IMM, IO_DATA_SRC_FIFO
-    );
+    attribute enum_encoding of mem_data_src_t : type is "sequential";
 
     type fl_action_t is (
         SET, CLR, TOGGLE
     );
-    attribute enum_encoding of fl_action_t : type is "00 01 10";
+    attribute enum_encoding of fl_action_t : type is "sequential";
 
     constant ALU_OP_ADD     : std_logic_vector (3 downto 0) := "0000";
     constant ALU_OP_SUB     : std_logic_vector (3 downto 0) := "0001";
@@ -185,13 +178,14 @@ package cpu86_types is
     constant MUL_RR         : std_logic_vector (3 downto 0) := "0011";
 
     constant SYS_HLT_OP     : std_logic_vector (3 downto 0) := "0000";
-    constant SYS_ESC_OP     : std_logic_vector (3 downto 0) := "0001";
     constant SYS_DBG_OP     : std_logic_vector (3 downto 0) := "0010";
+    constant SYS_WAIT_OP    : std_logic_vector (3 downto 0) := "0011";
     constant SYS_IRET_OP    : std_logic_vector (3 downto 0) := "0101";
     constant SYS_INT_INT_OP : std_logic_vector (3 downto 0) := "1000";
     constant SYS_EXT_INT_OP : std_logic_vector (3 downto 0) := "1001";
-    constant SYS_BND_INT_OP : std_logic_vector (3 downto 0) := "1110";
-    constant SYS_DIV_INT_OP : std_logic_vector (3 downto 0) := "1111";
+    constant SYS_ESC_INT_OP : std_logic_vector (3 downto 0) := "1010";
+    constant SYS_TRAP_INT_OP : std_logic_vector (3 downto 0) := "1110";
+    --constant SYS_DIV_INT_OP : std_logic_vector (3 downto 0) := "1111";
 
     constant FEU_CBW        : std_logic_vector (3 downto 0) := "0000";
     constant FEU_CWD        : std_logic_vector (3 downto 0) := "0001";
@@ -372,64 +366,69 @@ package cpu86_types is
         ea_val          : std_logic_vector(15 downto 0);
     end record;
 
-    constant MICRO_OP_CMD_WIDTH : natural := 13;
+    constant MICRO_OP_CMD_WIDTH : natural := 12;
     constant MICRO_OP_CMD_MEM   : natural := 0;
     constant MICRO_OP_CMD_ALU   : natural := 1;
     constant MICRO_OP_CMD_JMP   : natural := 2;
     constant MICRO_OP_CMD_FLG   : natural := 3;
     constant MICRO_OP_CMD_MUL   : natural := 4;
-    constant MICRO_OP_CMD_DBG   : natural := 5;
-    constant MICRO_OP_CMD_BCD   : natural := 6;
-    constant MICRO_OP_CMD_SHF   : natural := 7;
-    constant MICRO_OP_CMD_DIV   : natural := 8;
-    constant MICRO_OP_CMD_BND   : natural := 9;
-    constant MICRO_OP_CMD_STR   : natural := 10;
-    constant MICRO_OP_CMD_MRD   : natural := 11;
-    constant MICRO_OP_CMD_UNLK  : natural := 12;
+    constant MICRO_OP_CMD_BCD   : natural := 5;
+    constant MICRO_OP_CMD_SHF   : natural := 6;
+    constant MICRO_OP_CMD_DIV   : natural := 7;
+    constant MICRO_OP_CMD_BND   : natural := 8;
+    constant MICRO_OP_CMD_STR   : natural := 9;
+    constant MICRO_OP_CMD_MRD   : natural := 10;
+    constant MICRO_OP_CMD_UNLK  : natural := 11;
 
-    constant MICRO_UNLK_OP      : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "1000000000000";
-    constant MICRO_MRD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0100000000000";
-    constant MICRO_STR_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0010000000000";
-    constant MICRO_BND_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0001000000000";
-    constant MICRO_DIV_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000100000000";
-    constant MICRO_SHF_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000010000000";
-    constant MICRO_BCD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000001000000";
-    constant MICRO_DBG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000100000";
-    constant MICRO_MUL_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000010000";
-    constant MICRO_FLG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000001000";
-    constant MICRO_JMP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000100";
-    constant MICRO_ALU_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000010";
-    constant MICRO_MEM_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000001";
-    constant MICRO_NOP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000000000";
+    constant MICRO_UNLK_OP      : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "100000000000";
+    constant MICRO_MRD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "010000000000";
+    constant MICRO_STR_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "001000000000";
+    constant MICRO_BND_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000100000000";
+    constant MICRO_DIV_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000010000000";
+    constant MICRO_SHF_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000001000000";
+    constant MICRO_BCD_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000000100000";
+    constant MICRO_MUL_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000000010000";
+    constant MICRO_FLG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000000001000";
+    constant MICRO_JMP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000000000100";
+    constant MICRO_ALU_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000000000010";
+    constant MICRO_MEM_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000000000001";
+    constant MICRO_NOP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000000000000";
 
-    type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
-    type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
+    --constant MICRO_DBG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000100000";
+    --type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
+    --type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
+
     type micro_op_jmp_cond_t is (
-        j_always,
-        j_never,
-        cx_ne_0,
-        cx_eq_0,
-        cx_ne_0_and_zf,
-        cx_ne_0_and_nzf,
-        j_jo,
-        j_jno,
-        j_jb,
-        j_jae,
-        j_je,
-        j_jne,
-        j_jbe,
-        j_ja,
-        j_js,
-        j_jns,
-        j_jp,
-        j_jnp,
-        j_jl,
-        j_jge,
-        j_jle,
-        j_jg);
+        j_always,        -- 00000
+        j_never,         -- 00001
+        cx_ne_0,         -- 00010
+        cx_eq_0,         -- 00011
+        cx_ne_0_and_zf,  -- 00100
+        cx_ne_0_and_nzf, -- 00101
+        j_jo,            -- 10000
+        j_jno,           -- 10001
+        j_jb,            -- 10010
+        j_jae,           -- 10011
+        j_je,            -- 10100
+        j_jne,           -- 10101
+        j_jbe,           -- 10110
+        j_ja,            -- 10111
+        j_js,            -- 11000
+        j_jns,           -- 11001
+        j_jp,            -- 11010
+        j_jnp,           -- 11011
+        j_jl,            -- 11100
+        j_jge,           -- 11101
+        j_jle,           -- 11110
+        j_jg             -- 11111
+    );
+    attribute enum_encoding of micro_op_jmp_cond_t : type is "sequential";
 
     type micro_op_t is record
         cmd             : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0);
+
+        trap            : std_logic;
+
         alu_code        : std_logic_vector(3 downto 0);
         alu_w           : std_logic;
         alu_dreg        : reg_t;
@@ -453,16 +452,16 @@ package cpu86_types is
         div_dreg        : reg_t;
         div_a_val       : std_logic_vector(31 downto 0);
         div_b_val       : std_logic_vector(15 downto 0);
-        div_ss_val      : std_logic_vector(15 downto 0);
-        div_cs_val      : std_logic_vector(15 downto 0);
-        div_ip_val      : std_logic_vector(15 downto 0);
-        div_ip_next_val : std_logic_vector(15 downto 0);
+        -- div_ss_val      : std_logic_vector(15 downto 0);
+        -- div_cs_val      : std_logic_vector(15 downto 0);
+        -- div_ip_val      : std_logic_vector(15 downto 0);
+        -- div_ip_next_val : std_logic_vector(15 downto 0);
 
         bnd_val         : std_logic_vector(15 downto 0);
-        bnd_ss_val      : std_logic_vector(15 downto 0);
-        bnd_cs_val      : std_logic_vector(15 downto 0);
-        bnd_ip_val      : std_logic_vector(15 downto 0);
-        bnd_ip_next_val : std_logic_vector(15 downto 0);
+        -- bnd_ss_val      : std_logic_vector(15 downto 0);
+        -- bnd_cs_val      : std_logic_vector(15 downto 0);
+        -- bnd_ip_val      : std_logic_vector(15 downto 0);
+        -- bnd_ip_next_val : std_logic_vector(15 downto 0);
 
         shf_code        : std_logic_vector(3 downto 0);
         shf_code_ex     : std_logic_vector(2 downto 0);
@@ -507,6 +506,7 @@ package cpu86_types is
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
 
+        inst_ss         : std_logic_vector(15 downto 0);
         inst_cs         : std_logic_vector(15 downto 0);
         inst_ip         : std_logic_vector(15 downto 0);
         inst_ip_next    : std_logic_vector(15 downto 0);
@@ -602,10 +602,10 @@ package cpu86_types is
         dreg            : reg_t;
         nval            : std_logic_vector(31 downto 0);
         dval            : std_logic_vector(15 downto 0);
-        ss_val          : std_logic_vector(15 downto 0);
-        cs_val          : std_logic_vector(15 downto 0);
-        ip_val          : std_logic_vector(15 downto 0);
-        ip_next_val     : std_logic_vector(15 downto 0);
+        -- ss_val          : std_logic_vector(15 downto 0);
+        -- cs_val          : std_logic_vector(15 downto 0);
+        -- ip_val          : std_logic_vector(15 downto 0);
+        -- ip_next_val     : std_logic_vector(15 downto 0);
     end record;
 
     type div_res_t is record
@@ -615,10 +615,10 @@ package cpu86_types is
         qval            : std_logic_vector(15 downto 0); --quotient
         rval            : std_logic_vector(15 downto 0); --remainder
         overflow        : std_logic;
-        ss_val          : std_logic_vector(15 downto 0);
-        cs_val          : std_logic_vector(15 downto 0);
-        ip_val          : std_logic_vector(15 downto 0);
-        ip_next_val     : std_logic_vector(15 downto 0);
+        -- ss_val          : std_logic_vector(15 downto 0);
+        -- cs_val          : std_logic_vector(15 downto 0);
+        -- ip_val          : std_logic_vector(15 downto 0);
+        -- ip_next_val     : std_logic_vector(15 downto 0);
     end record;
 
     type shf_req_t is record
