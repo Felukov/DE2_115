@@ -37,14 +37,13 @@ module vld_cpu86_exec_register_reader (
         REP       = 5'b01100,
         STR       = 5'b01101,
         SET_FLAG  = 5'b01110,
-        DBG       = 5'b01111,
-        XCHG      = 5'b10000,
-        SYS       = 5'b10001,
-        LFP       = 5'b10010,
-        SHFU      = 5'b10011,
-        BCDU      = 5'b10100,
-        IO        = 5'b10101,
-        ILLEGAL   = 5'b10110
+        XCHG      = 5'b01111,
+        SYS       = 5'b10000,
+        LFP       = 5'b10001,
+        SHFU      = 5'b10010,
+        BCDU      = 5'b10011,
+        IO        = 5'b10100,
+        ILLEGAL   = 5'b10101
     } opcode_t;
 
     typedef enum logic[3:0] {
@@ -129,6 +128,7 @@ module vld_cpu86_exec_register_reader (
             dut_sreg    <= AX;
             dut_dreg    <= AX;
             instr_str   <= "invalid";
+            sim_jumped  <= 0;
         end else begin
             check_event <= vld_valid;
 
@@ -219,6 +219,7 @@ module vld_cpu86_exec_register_reader (
     task check_push_reg;
         if (dut_op == STACKU && (dut_code == STACKU_PUSHR)) begin
             check_sreg();
+            check_sp();
         end
     endtask
 
