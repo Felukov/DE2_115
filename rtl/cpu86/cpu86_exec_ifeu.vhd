@@ -194,7 +194,8 @@ begin
     rr_tready <= '1' when trap_tvalid = '0' and halt_mode = '0' and jmp_lock_s_tvalid = '1' and
         (micro_tvalid = '0' or (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
-    trap_tready <= '1' when jmp_lock_s_tvalid = '1' and sp_tvalid = '1' and ss_tvalid = '1' and
+    trap_tready <= '1' when ((rr_tvalid = '1' and trap_tuser = x"01" and rr_tdata.fl_tdata(FLAG_TF) = '1') or (trap_tuser /= x"01")) and
+        jmp_lock_s_tvalid = '1' and sp_tvalid = '1' and ss_tvalid = '1' and
         (micro_tvalid = '0' or (micro_tvalid = '1' and micro_tready = '1' and micro_busy = '0')) else '0';
 
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
@@ -431,6 +432,7 @@ begin
             when LFP =>
                 case rr_tdata.code is
                     when MISC_XLAT      => micro_cnt_next <= 1;
+                    when MISC_BOUND     => micro_cnt_next <= 3;
                     when others         => micro_cnt_next <= 2;
                 end case;
 
@@ -926,20 +928,22 @@ begin
 
             --release dest register
             alu_command_imm(cmd => ALU_OP_ADD,
-                aval => rr_tdata.dreg_val,
-                bval => x"0000",
-                dreg => rr_tdata.dreg,
-                dmask => rr_tdata.dmask,
+                aval   => rr_tdata.dreg_val,
+                bval   => x"0000",
+                dreg   => rr_tdata.dreg,
+                dmask  => rr_tdata.dmask,
                 upd_fl => '0');
         end procedure;
 
         procedure do_misc_bound_1 is begin
             case micro_cnt is
-                when 2 =>
+                when 3 =>
                     set_cmd_1(MICRO_MEM_OP or MICRO_MRD_OP);
                     micro_tdata.mem_addr <= ea_val_plus_disp_p_2;
+                when 2 =>
+                    set_cmd_1(MICRO_MRD_OP);
                 when others =>
-                    set_cmd_1(MICRO_BND_OP or MICRO_MRD_OP or MICRO_UNLK_OP);
+                    set_cmd_1(MICRO_BND_OP or MICRO_UNLK_OP);
             end case;
         end procedure;
 
@@ -1974,11 +1978,6 @@ begin
                     micro_tvalid <= '1';
                 elsif (rr_tvalid = '1' and rr_tready = '1') then
                     micro_tvalid <= '1';
-                    -- if (rr_tdata.fast_instr = '0' and (rep_mode = '0' or (rep_mode = '1' and rep_cx_cnt /= x"0000"))) then
-                    --     micro_tvalid <= '1';
-                    -- else
-                    --     micro_tvalid <= '0';
-                    -- end if;
                 elsif (micro_tready = '1' and micro_cnt = 0) then
                     micro_tvalid <= '0';
                 end if;
@@ -2026,62 +2025,6 @@ begin
                     end if;
                 end if;
 
-            end if;
-
-            if (rr_tvalid = '1' and rr_tready = '1') then
-                frame_pointer <= rr_tdata.sp_val;
-            end if;
-
-            if (trap_tvalid = '1' and trap_tready = '1') then
-                sp_offset <= x"FFFE";
-            elsif (rr_tvalid = '1' and rr_tready = '1') then
-                sp_offset <= rr_tdata.sp_offset;
-            end if;
-
-            if (trap_tvalid = '1' and trap_tready = '1') then
-                sp_val <= std_logic_vector(unsigned(sp_tdata) - to_unsigned(2, 16));
-            elsif (rr_tvalid = '1' and rr_tready = '1') then
-                sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
-            elsif (micro_tvalid = '1' and micro_tready = '1') then
-                sp_val <= sp_val + sp_offset;
-            end if;
-
-            if (rr_tvalid = '1' and rr_tready = '1') then
-                bp_val <= std_logic_vector(unsigned(rr_tdata.bp_tdata) - to_unsigned(2, 16));
-            elsif (micro_tvalid = '1' and micro_tready = '1') then
-                bp_val <= std_logic_vector(unsigned(bp_val) - to_unsigned(2, 16));
-            end if;
-
-            if (trap_tvalid = '1' and trap_tready = '1') then
-                interrupt_no <= x"00" & trap_tuser;
-            elsif (rr_tvalid = '1' and rr_tready = '1') then
-                interrupt_no <= rr_tdata.data;
-            end if;
-
-            if (trap_tvalid = '1' and trap_tready = '1') then
-                interrupt_next_cs <= trap_tdata(INTR_T_CS);
-                if (trap_tuser = x"05") then
-                    interrupt_next_ip <= trap_tdata(INTR_T_IP);
-                else
-                    interrupt_next_ip <= trap_tdata(INTR_T_IP_NEXT);
-                end if;
-            elsif (rr_tvalid = '1' and rr_tready = '1') then
-                interrupt_next_cs <= rr_tuser(USER_T_CS);
-                if (rr_tdata.op = SYS and rr_tdata.code = SYS_EXT_INT_OP) then
-                    interrupt_next_ip <= rr_tuser(USER_T_IP);
-                else
-                    interrupt_next_ip <= rr_tuser(USER_T_IP_NEXT);
-                end if;
-            end if;
-
-            if (rr_tvalid = '1' and rr_tready = '1') then
-                interrupt_flags <= rr_tdata.fl_tdata;
-            end if;
-
-            if (trap_tvalid = '1' and trap_tready = '1') then
-                interrupt_ss_seg_val <= ss_tdata;
-            elsif (rr_tvalid = '1' and rr_tready = '1') then
-                interrupt_ss_seg_val <= rr_tdata.ss_seg_val;
             end if;
 
             if (trap_tvalid = '1' and trap_tready = '1') then
@@ -2233,6 +2176,81 @@ begin
                 end case;
             end if;
 
+        end if;
+    end process;
+
+    stack_handler : process (clk) begin
+        if rising_edge(clk) then
+            -- datapath
+            if (rr_tvalid = '1' and rr_tready = '1') then
+                frame_pointer <= rr_tdata.sp_val;
+            end if;
+
+            if (trap_tvalid = '1' and trap_tready = '1') then
+                sp_offset <= x"FFFE";
+            elsif (rr_tvalid = '1' and rr_tready = '1') then
+                sp_offset <= rr_tdata.sp_offset;
+            end if;
+
+            if (trap_tvalid = '1' and trap_tready = '1') then
+                sp_val <= std_logic_vector(unsigned(sp_tdata) - to_unsigned(2, 16));
+            elsif (rr_tvalid = '1' and rr_tready = '1') then
+                sp_val <= rr_tdata.sp_val + rr_tdata.sp_offset;
+            elsif (micro_tvalid = '1' and micro_tready = '1') then
+                sp_val <= sp_val + sp_offset;
+            end if;
+
+            if (rr_tvalid = '1' and rr_tready = '1') then
+                bp_val <= std_logic_vector(unsigned(rr_tdata.bp_tdata) - to_unsigned(2, 16));
+            elsif (micro_tvalid = '1' and micro_tready = '1') then
+                bp_val <= std_logic_vector(unsigned(bp_val) - to_unsigned(2, 16));
+            end if;
+        end if;
+    end process;
+
+    interrupts_handler : process (clk) begin
+        if rising_edge(clk) then
+            -- datapath
+            if (trap_tvalid = '1' and trap_tready = '1') then
+                interrupt_no <= x"00" & trap_tuser;
+            elsif (rr_tvalid = '1' and rr_tready = '1') then
+                interrupt_no <= rr_tdata.data;
+            end if;
+
+            if (trap_tvalid = '1' and trap_tready = '1') then
+                if (trap_tuser = x"01") then
+                    -- trap caused by TF always points to current instruction
+                    -- in the queue whatever it is
+                    interrupt_next_cs <= rr_tuser(USER_T_CS);
+                    interrupt_next_ip <= rr_tuser(USER_T_IP);
+                elsif (trap_tuser = x"05") then
+                    -- bound instruction trap always points to itself
+                    interrupt_next_cs <= trap_tdata(INTR_T_CS);
+                    interrupt_next_ip <= trap_tdata(INTR_T_IP);
+                else
+                    -- div instruction points to the next instruction
+                    -- after itself in 8086
+                    interrupt_next_cs <= trap_tdata(INTR_T_CS);
+                    interrupt_next_ip <= trap_tdata(INTR_T_IP);
+                end if;
+            elsif (rr_tvalid = '1' and rr_tready = '1') then
+                interrupt_next_cs <= rr_tuser(USER_T_CS);
+                if (rr_tdata.op = SYS and rr_tdata.code = SYS_EXT_INT_OP) then
+                    interrupt_next_ip <= rr_tuser(USER_T_IP);
+                else
+                    interrupt_next_ip <= rr_tuser(USER_T_IP_NEXT);
+                end if;
+            end if;
+
+            if (rr_tvalid = '1' and rr_tready = '1') then
+                interrupt_flags <= rr_tdata.fl_tdata;
+            end if;
+
+            if (trap_tvalid = '1' and trap_tready = '1') then
+                interrupt_ss_seg_val <= ss_tdata;
+            elsif (rr_tvalid = '1' and rr_tready = '1') then
+                interrupt_ss_seg_val <= rr_tdata.ss_seg_val;
+            end if;
         end if;
     end process;
 

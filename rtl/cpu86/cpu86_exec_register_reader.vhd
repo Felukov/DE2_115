@@ -121,7 +121,8 @@ architecture rtl of cpu86_exec_register_reader is
             vld_di                  : in std_logic_vector(15 downto 0);
             vld_fl                  : in std_logic_vector(15 downto 0);
             vld_sreg                : in std_logic_vector(3 downto 0);
-            vld_dreg                : in std_logic_vector(3 downto 0)
+            vld_dreg                : in std_logic_vector(3 downto 0);
+            vld_branch_taken        : in std_logic
         );
     end component;
 
@@ -172,6 +173,7 @@ architecture rtl of cpu86_exec_register_reader is
     signal vld_di                   : std_logic_vector(15 downto 0);
     signal vld_si                   : std_logic_vector(15 downto 0);
     signal vld_fl                   : std_logic_vector(15 downto 0);
+    signal vld_branch_taken         : std_logic;
 
 begin
 
@@ -193,25 +195,26 @@ begin
 
     -- module vld_cpu86_exec_register_reader instantiation
     vld_cpu86_exec_register_reader_inst : vld_cpu86_exec_register_reader port map (
-        clk        => clk,
-        resetn     => resetn,
+        clk                 => clk,
+        resetn              => resetn,
 
-        vld_valid  => vld_valid,
-        vld_cs     => vld_cs,
-        vld_ip     => vld_ip,
-        vld_op     => vld_op,
-        vld_code   => vld_code,
-        vld_ax     => vld_ax,
-        vld_bx     => vld_bx,
-        vld_cx     => vld_cx,
-        vld_dx     => vld_dx,
-        vld_bp     => vld_bp,
-        vld_sp     => vld_sp,
-        vld_di     => vld_di,
-        vld_si     => vld_si,
-        vld_fl     => vld_fl,
-        vld_sreg   => vld_sreg,
-        vld_dreg   => vld_dreg
+        vld_valid           => vld_valid,
+        vld_cs              => vld_cs,
+        vld_ip              => vld_ip,
+        vld_op              => vld_op,
+        vld_code            => vld_code,
+        vld_ax              => vld_ax,
+        vld_bx              => vld_bx,
+        vld_cx              => vld_cx,
+        vld_dx              => vld_dx,
+        vld_bp              => vld_bp,
+        vld_sp              => vld_sp,
+        vld_di              => vld_di,
+        vld_si              => vld_si,
+        vld_fl              => vld_fl,
+        vld_sreg            => vld_sreg,
+        vld_dreg            => vld_dreg,
+        vld_branch_taken    => vld_branch_taken
     );
 
 
@@ -788,7 +791,7 @@ begin
                 end if;
 
                 if (instr_tvalid = '1' and instr_tready = '1') then
-                    if (instr_tdata.op = REP) then
+                    if (instr_tdata.op = REP or instr_tdata.op = SET_SEG) then
                         vld_skip_next <= '1';
                     else
                         vld_skip_next <= '0';
@@ -797,21 +800,26 @@ begin
             end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
-                vld_cs <= instr_tuser(USER_T_CS);
-                vld_ip <= instr_tuser(USER_T_IP);
-                vld_op <= std_logic_vector(to_unsigned(op_t'pos(instr_tdata.op), 5));
-                vld_code <= instr_tdata.code;
-                vld_ax <= ax_s_tdata;
-                vld_bx <= bx_s_tdata;
-                vld_cx <= cx_s_tdata;
-                vld_dx <= dx_s_tdata;
-                vld_bp <= bp_s_tdata;
-                vld_sp <= sp_s_tdata;
-                vld_di <= di_s_tdata;
-                vld_si <= si_s_tdata;
-                vld_sreg <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.sreg), 4));
-                vld_dreg <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.dreg), 4));
-                vld_fl <= flags_s_tdata;
+                vld_cs           <= instr_tuser(USER_T_CS);
+                vld_ip           <= instr_tuser(USER_T_IP);
+                vld_op           <= std_logic_vector(to_unsigned(op_t'pos(instr_tdata.op), 5));
+                vld_code         <= instr_tdata.code;
+                vld_ax           <= ax_s_tdata;
+                vld_bx           <= bx_s_tdata;
+                vld_cx           <= cx_s_tdata;
+                vld_dx           <= dx_s_tdata;
+                vld_bp           <= bp_s_tdata;
+                vld_sp           <= sp_s_tdata;
+                vld_di           <= di_s_tdata;
+                vld_si           <= si_s_tdata;
+                vld_sreg         <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.sreg), 4));
+                vld_dreg         <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.dreg), 4));
+                vld_fl           <= flags_s_tdata;
+                if (instr_tdata.bpu_first = '0' and instr_tdata.bpu_taken = '1') then
+                    vld_branch_taken <=  '1';
+                else
+                    vld_branch_taken <=  '0';
+                end if;
             end if;
         end if;
     end process;

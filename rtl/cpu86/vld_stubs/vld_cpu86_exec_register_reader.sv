@@ -17,7 +17,8 @@ module vld_cpu86_exec_register_reader (
     input logic [15:0]      vld_di,
     input logic [15:0]      vld_fl,
     input logic [3:0]       vld_sreg,
-    input logic [3:0]       vld_dreg
+    input logic [3:0]       vld_dreg,
+    input logic             vld_branch_taken
 );
 
     // stub for synthesis

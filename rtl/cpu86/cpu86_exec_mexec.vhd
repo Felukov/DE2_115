@@ -337,7 +337,8 @@ architecture rtl of cpu86_exec_mexec is
     signal flags_src            : flag_src_t;
     signal flags_wr_vector      : std_logic_vector(11 downto 0);
 
-    signal mem_buf_tdata        : std_logic_vector(15 downto 0);
+    signal mem_buf_0_tdata      : std_logic_vector(15 downto 0);
+    signal mem_buf_1_tdata      : std_logic_vector(15 downto 0);
     signal mexec_busy           : std_logic;
     signal mexec_wait_fifo      : std_logic;
     signal mexec_wait_mul       : std_logic;
@@ -356,8 +357,6 @@ architecture rtl of cpu86_exec_mexec is
     signal io_wait_fifo         : std_logic;
     signal shf8_wait_fifo       : std_logic;
     signal shf16_wait_fifo      : std_logic;
-    signal bnd_wait_fifo        : std_logic;
-    signal bnd_val              : std_logic_vector(15 downto 0);
 
     signal mem_wait_alu         : std_logic;
     signal mem_wait_shf         : std_logic;
@@ -401,6 +400,7 @@ architecture rtl of cpu86_exec_mexec is
     signal div_intr_tvalid      : std_logic;
     signal bnd_intr_tvalid      : std_logic;
     signal trap_intr_tvalid     : std_logic;
+    signal trap_intr_tvalid_mask: std_logic;
 
     signal trap_check_tf_tvalid : std_logic;
 
@@ -422,7 +422,7 @@ begin
     m_axis_jump_tvalid  <= jmp_dout_tvalid;
     m_axis_jump_tdata   <= jmp_dout_tdata;
 
-    m_axis_intr_tvalid  <= '1' when div_intr_tvalid = '1' or bnd_intr_tvalid = '1' or trap_intr_tvalid = '1' else '0';
+    m_axis_intr_tvalid  <= '1' when div_intr_tvalid = '1' or bnd_intr_tvalid = '1' or (trap_intr_tvalid = '1' and trap_intr_tvalid_mask = '0') else '0';
     m_axis_intr_tdata   <= dout_intr_tdata;
     m_axis_intr_tuser   <= dout_intr_tuser;
 
@@ -745,16 +745,11 @@ begin
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_DIV) = '1') then
-                div_req_tdata.code        <= micro_tdata.div_code;
-                div_req_tdata.w           <= micro_tdata.div_w;
-                div_req_tdata.nval        <= micro_tdata.div_a_val;
-                div_req_tdata.dval        <= micro_tdata.div_b_val;
-                div_req_tdata.dreg        <= micro_tdata.div_dreg;
-
-                -- div_req_tdata.ss_val      <= micro_tdata.inst_ss;
-                -- div_req_tdata.cs_val      <= micro_tdata.inst_cs;
-                -- div_req_tdata.ip_val      <= micro_tdata.inst_ip;
-                -- div_req_tdata.ip_next_val <= micro_tdata.inst_ip_next;
+                div_req_tdata.code <= micro_tdata.div_code;
+                div_req_tdata.w    <= micro_tdata.div_w;
+                div_req_tdata.nval <= micro_tdata.div_a_val;
+                div_req_tdata.dval <= micro_tdata.div_b_val;
+                div_req_tdata.dreg <= micro_tdata.div_dreg;
             elsif (div_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
                 div_req_tdata.dval <= lsu_rd_s_tdata;
             end if;
@@ -896,7 +891,7 @@ begin
                 alu_req_tdata.wb <= micro_tdata.alu_wb;
 
                 if micro_tdata.alu_a_buf = '1' then
-                    alu_req_tdata.aval <= mem_buf_tdata;
+                    alu_req_tdata.aval <= mem_buf_0_tdata;
                 else
                     alu_req_tdata.aval <= micro_tdata.alu_a_val;
                 end if;
@@ -1411,7 +1406,8 @@ begin
     mem_buf_proc : process (clk) begin
         if rising_edge(clk) then
             if (lsu_rd_s_tvalid = '1' and mexec_wait_fifo = '1') then
-                mem_buf_tdata <= lsu_rd_s_tdata;
+                mem_buf_0_tdata <= lsu_rd_s_tdata;
+                mem_buf_1_tdata <= mem_buf_0_tdata;
             end if;
         end if;
     end process;
@@ -1790,21 +1786,9 @@ begin
         if rising_edge(clk) then
             if resetn = '0' then
                 bnd_intr_tvalid <= '0';
-                bnd_wait_fifo <= '0';
             else
-
-                if (micro_tvalid = '1' and micro_tready = '1') then
-                    if (micro_tdata.cmd(MICRO_OP_CMD_BND) = '1' AND micro_tdata.cmd(MICRO_OP_CMD_MRD) = '1') then
-                        bnd_wait_fifo <= '1';
-                    else
-                        bnd_wait_fifo <= '0';
-                    end if;
-                elsif (bnd_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
-                    bnd_wait_fifo <= '0';
-                end if;
-
-                if (bnd_wait_fifo = '1' and lsu_rd_s_tvalid = '1') then
-                    if (bnd_val < mem_buf_tdata or bnd_val > lsu_rd_s_tdata) then
+                if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BND) = '1') then
+                    if (signed(micro_tdata.bnd_val) < signed(mem_buf_1_tdata) or signed(micro_tdata.bnd_val) > signed(mem_buf_0_tdata + 2)) then
                         bnd_intr_tvalid <= '1';
                     else
                         bnd_intr_tvalid <= '0';
@@ -1812,22 +1796,17 @@ begin
                 else
                     bnd_intr_tvalid <= '0';
                 end if;
-
             end if;
-
-            if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_BND) = '1') then
-                bnd_val <= micro_tdata.bnd_val;
-            end if;
-
         end if;
     end process;
 
     trap_check_process : process (clk) begin
         if rising_edge(clk) then
-            -- contrl
+            -- control
             if resetn = '0' then
                 trap_check_tf_tvalid <= '0';
                 trap_intr_tvalid     <= '0';
+                trap_intr_tvalid_mask <= '0';
             else
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tlast = '1' and micro_tdata.trap = '1') then
                     trap_check_tf_tvalid <= '1';
@@ -1839,6 +1818,10 @@ begin
                     trap_intr_tvalid <= '1';
                 else
                     trap_intr_tvalid <= '0';
+                end if;
+
+                if (div_intr_tvalid = '1') or (bnd_intr_tvalid = '1') then
+                    trap_intr_tvalid_mask <= '1';
                 end if;
             end if;
         end if;
