@@ -15,7 +15,6 @@ unsigned short di_val;
 unsigned short fl_val;
 
 bool cpu_halted;
-bool cpu_jumped;
 unsigned short cpu_new_cs;
 unsigned short cpu_new_ip;
 

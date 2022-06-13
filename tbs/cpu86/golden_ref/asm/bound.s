@@ -16,7 +16,6 @@ start:
     ; TEST 1 - SHOULD PASS
     MOV AX, 150
     BOUND AX, [BP]
-
     NOP
 
     ; PREPARE INTERRUPT HANDLER
@@ -27,6 +26,19 @@ start:
 
     ; TEST 2 - SHOULD FAIL
     MOV AX, 50
+    BOUND AX, [BP]
+
+    ; PREPARE MEMORY
+    MOV AX, -200
+    MOV [BP], AX
+    MOV AX, -100
+    MOV [BP+2], AX
+    ; TEST 2 - SHOULD PASS
+    MOV AX,-150
+    BOUND AX, [BP]
+    NOP
+    ; TEST 2 - SHOULD FAIL
+    MOV AX,-350
     BOUND AX, [BP]
 
     MOV AX, 1111

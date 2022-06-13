@@ -101,7 +101,6 @@ void e8086_cpu_exec() {
 
     e86_disasm_cur(cpu8086, &op);
 
-    cpu_jumped = false;
     instr_cs = e86_get_cs(cpu8086);
     instr_ip = e86_get_ip(cpu8086);
 
@@ -127,10 +126,6 @@ void e8086_cpu_exec() {
         snprintf(instr_str, sizeof(instr_str), "%s", "cpu halted");
     }
 
-    if (cpu8086->pq_cnt == 0){
-        // prefetch queue is empty so the cpu jumped somewhere
-        cpu_jumped = true;
-        cpu_new_cs = e86_get_cs(cpu8086);
-        cpu_new_ip = e86_get_ip(cpu8086);
-    }
+    cpu_new_cs = e86_get_cs(cpu8086);
+    cpu_new_ip = e86_get_ip(cpu8086);
 }

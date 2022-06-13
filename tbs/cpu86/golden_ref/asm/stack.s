@@ -82,5 +82,6 @@ start:
     PUSH word [BP+2]
     POP word [BP+4]
     MOV AX, [BP+4]
+    XCHG AX, AX             ; FORCE CHECK AX CONTENT
 
     hlt

@@ -27,11 +27,6 @@ module cpu86_e8086_tb ();
     logic           interrupt_ack;
 
 
-    cpu86_exec_ifeu_validator cpu86_exec_ifeu_validator_inst(
-        .clk        (clk),
-        .resetn     (resetn)
-    );
-
     // module cpu86_e8086_mem instantiation
     cpu86_e8086_mem cpu86_e8086_mem_inst(
         // clk & reset

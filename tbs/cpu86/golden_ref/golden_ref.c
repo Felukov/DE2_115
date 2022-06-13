@@ -83,7 +83,7 @@ void c_tb_cpu_exec(
     int* ax, int* bx, int* cx, int *dx,
     int* bp, int* sp, int* si, int *di,
     int* fl,
-    int* jumped, int* new_cs, int* new_ip
+    int* completed, int* new_cs, int* new_ip
 ){
     *(ax) = ax_val;
     *(bx) = bx_val;
@@ -102,7 +102,7 @@ void c_tb_cpu_exec(
 
     *(str) = &instr_str[0];
 
-    *(jumped) = cpu_jumped;
+    *(completed) = 1;
     *(new_cs) = cpu_new_cs;
     *(new_ip) = cpu_new_ip;
 }

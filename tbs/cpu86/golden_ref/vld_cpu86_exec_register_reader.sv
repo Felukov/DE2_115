@@ -17,7 +17,8 @@ module vld_cpu86_exec_register_reader (
     input logic [15:0]      vld_di,
     input logic [15:0]      vld_fl,
     input logic [3:0]       vld_sreg,
-    input logic [3:0]       vld_dreg
+    input logic [3:0]       vld_dreg,
+    input logic             vld_branch_taken
 );
     // instruction execution starts here
 
@@ -73,7 +74,18 @@ module vld_cpu86_exec_register_reader (
     localparam logic [3:0] STACKU_ENTER   = 4'b1101;
     localparam logic [3:0] STACKU_LEAVE   = 4'b1110;
 
+    localparam logic [3:0] MOVS_OP        = 4'b0000;
+    localparam logic [3:0] STOS_OP        = 4'b0001;
+    localparam logic [3:0] LODS_OP        = 4'b0010;
+    localparam logic [3:0] CMPS_OP        = 4'b0011;
+    localparam logic [3:0] SCAS_OP        = 4'b0100;
+    localparam logic [3:0] OUTS_OP        = 4'b1000;
+    localparam logic [3:0] OUT_OP         = 4'b1001;
+    localparam logic [3:0] INS_OP         = 4'b1010;
+    localparam logic [3:0] IN_OP          = 4'b1011;
+
     bit             check_event;
+    bit             try_next_csip = 0;
     bit [15:0]      sim_cs;
     bit [15:0]      sim_ip;
     bit [15:0]      sim_ax;
@@ -85,7 +97,7 @@ module vld_cpu86_exec_register_reader (
     bit [15:0]      sim_si;
     bit [15:0]      sim_di;
     bit [15:0]      sim_fl;
-    bit             sim_jumped = 0;
+    bit             sim_completed = 0;
     bit [15:0]      sim_new_cs;
     bit [15:0]      sim_new_ip;
 
@@ -102,6 +114,7 @@ module vld_cpu86_exec_register_reader (
     bit [15:0]      dut_si;
     bit [15:0]      dut_di;
     bit [15:0]      dut_fl;
+    bit             dut_branch_taken;
     reg_t           dut_sreg;
     reg_t           dut_dreg;
 
@@ -128,13 +141,12 @@ module vld_cpu86_exec_register_reader (
             dut_sreg    <= AX;
             dut_dreg    <= AX;
             instr_str   <= "invalid";
-            sim_jumped  <= 0;
+            sim_completed  <= 0;
         end else begin
             check_event <= vld_valid;
 
             if (vld_valid == 1'b1 && (
-                (sim_jumped == 1'b0) ||
-                (sim_jumped == 1'b1 && sim_new_cs == vld_cs && sim_new_ip == vld_ip)))
+                (sim_completed == 1'b0) || (sim_completed == 1'b1 && sim_new_cs == vld_cs && sim_new_ip == vld_ip)))
             begin
 
                 c_tb_cpu_exec(
@@ -143,32 +155,48 @@ module vld_cpu86_exec_register_reader (
                     sim_ax, sim_bx, sim_cx, sim_dx,
                     sim_bp, sim_sp, sim_si, sim_di,
                     sim_fl,
-                    sim_jumped, sim_new_cs, sim_new_ip
+                    sim_completed, sim_new_cs, sim_new_ip
                 );
 
-                dut_cs   <= vld_cs;
-                dut_ip   <= vld_ip;
-                dut_op   <= opcode_t'(vld_op);
-                dut_code <= vld_code;
-                dut_ax   <= vld_ax;
-                dut_bx   <= vld_bx;
-                dut_cx   <= vld_cx;
-                dut_dx   <= vld_dx;
-                dut_bp   <= vld_bp;
-                dut_sp   <= vld_sp;
-                dut_si   <= vld_si;
-                dut_di   <= vld_di;
-                dut_fl   <= vld_fl;
-                dut_sreg <= reg_t'(vld_sreg);
-                dut_dreg <= reg_t'(vld_dreg);
+                dut_cs           <= vld_cs;
+                dut_ip           <= vld_ip;
+                dut_op           <= opcode_t'(vld_op);
+                dut_code         <= vld_code;
+                dut_ax           <= vld_ax;
+                dut_bx           <= vld_bx;
+                dut_cx           <= vld_cx;
+                dut_dx           <= vld_dx;
+                dut_bp           <= vld_bp;
+                dut_sp           <= vld_sp;
+                dut_si           <= vld_si;
+                dut_di           <= vld_di;
+                dut_fl           <= vld_fl;
+                dut_sreg         <= reg_t'(vld_sreg);
+                dut_dreg         <= reg_t'(vld_dreg);
+                dut_branch_taken <= vld_branch_taken;
             end
         end
     end
 
     initial begin
+        try_next_csip = 0;
         forever begin
             @(negedge clk);
             if (resetn == 1'b1 && check_event == 1'b1) begin
+
+                if (dut_op == BRANCH) begin
+                    // it could be misprediction
+                    if (sim_completed == 0 && dut_branch_taken == 1) begin
+                        try_next_csip = 1;
+                    end
+                end else if (try_next_csip == 1) begin
+                    if (sim_ip == dut_ip && sim_cs == dut_cs) begin
+                        try_next_csip = 0;
+                    end else begin
+                        $error("CS:IP mismatch after jump");
+                    end
+                end
+
                 if (sim_ip != dut_ip) begin
                     $error("IP mismatch");
                     error_cnt++;
@@ -182,7 +210,16 @@ module vld_cpu86_exec_register_reader (
                 check_pusha();
                 check_push_reg();
                 check_xchg();
+
                 check_rep();
+                check_movs();
+                check_stos();
+                check_scas();
+                check_cmps();
+                check_lods();
+                check_ins();
+                check_outs();
+
                 if (error_cnt > 100) begin
                     $display("too many errors");
                     $stop();
@@ -190,6 +227,59 @@ module vld_cpu86_exec_register_reader (
             end
         end
     end
+
+    task check_ins;
+        if (dut_op == STR && dut_code == INS_OP) begin
+            check_di();
+            check_fl();
+        end
+    endtask
+
+    task check_outs;
+        if (dut_op == STR && dut_code == INS_OP) begin
+            check_si();
+            check_fl();
+        end
+    endtask
+
+    task check_lods;
+        if (dut_op == STR && dut_code == LODS_OP) begin
+            check_si();
+            check_fl();
+        end
+    endtask
+
+    task check_cmps;
+        if (dut_op == STR && dut_code == CMPS_OP) begin
+            check_di();
+            check_si();
+            check_fl();
+        end
+    endtask
+
+    task check_scas;
+        if (dut_op == STR && dut_code == SCAS_OP) begin
+            check_ax();
+            check_di();
+            check_fl();
+        end
+    endtask
+
+    task check_stos;
+        if (dut_op == STR && dut_code == STOS_OP) begin
+            check_ax();
+            check_di();
+            check_fl();
+        end
+    endtask
+
+    task check_movs;
+        if (dut_op == STR && dut_code == MOVS_OP) begin
+            check_di();
+            check_si();
+            check_fl();
+        end
+    endtask
 
     task check_xchg;
         if (dut_op == XCHG) begin
@@ -328,7 +418,7 @@ module vld_cpu86_exec_register_reader (
         output int ax, output int bx, output int cx, output int dx,
         output int bp, output int sp, output int si, output int di,
         output int fl,
-        output int jumped, output int new_cs, output int new_js
+        output int completed, output int new_cs, output int new_js
     );
 
 endmodule

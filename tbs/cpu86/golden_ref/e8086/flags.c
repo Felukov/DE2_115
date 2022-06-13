@@ -22,7 +22,7 @@
 
 #include "e8086.h"
 #include "internal.h"
-
+#include "../cpu86_e8086_tb.h"
 
 static
 char parity[256] = {

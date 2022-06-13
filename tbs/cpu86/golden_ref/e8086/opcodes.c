@@ -22,7 +22,7 @@
 
 #include "e8086.h"
 #include "internal.h"
-
+#include "../cpu86_e8086_tb.h"
 
 void e86_push (e8086_t *c, unsigned short val)
 {
@@ -60,8 +60,10 @@ static
 unsigned op_divide_error (e8086_t *c)
 {
 	e86_set_clk_ea (c, 16, 20);
-
-	e86_set_ip (c, e86_get_ip (c) + c->ea.cnt + 1);
+	// fk 2022-jun-13
+	// DIV instruction acts like in 80286+ storing CS:IP of the instruction
+	// that caused the divide error
+	//e86_set_ip (c, e86_get_ip (c) + c->ea.cnt + 1);
 	e86_trap (c, 0);
 
 	return (0);
@@ -84,7 +86,7 @@ unsigned op_00 (e8086_t *c)
 	e86_set_flg_add_8 (c, s1, s2);
 	e86_set_clk_ea (c, 3, 16);
 
-	return (c->ea.cnt + 1); 
+	return (c->ea.cnt + 1);
 }
 
 /* OP 01: ADD r/m16, reg16 */
