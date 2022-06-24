@@ -35,14 +35,14 @@ entity cpu86_exec_register_reader is
         clk                     : in std_logic;
         resetn                  : in std_logic;
 
-        instr_s_tvalid          : in std_logic;
-        instr_s_tready          : out std_logic;
-        instr_s_tdata           : in decoded_instr_t;
-        instr_s_tuser           : in user_t;
+        s_axis_instr_tvalid     : in std_logic;
+        s_axis_instr_tready     : out std_logic;
+        s_axis_instr_tdata      : in decoded_instr_t;
+        s_axis_instr_tuser      : in user_t;
 
-        ext_intr_s_tvalid       : in std_logic;
-        ext_intr_s_tready       : out std_logic;
-        ext_intr_s_tdata        : in std_logic_vector(7 downto 0);
+        s_axis_ext_intr_tvalid  : in std_logic;
+        s_axis_ext_intr_tready  : out std_logic;
+        s_axis_ext_intr_tdata   : in std_logic_vector(7 downto 0);
 
         ds_s_tvalid             : in std_logic;
         ds_s_tdata              : in std_logic_vector(15 downto 0);
@@ -92,39 +92,31 @@ entity cpu86_exec_register_reader is
         flags_s_tdata           : in std_logic_vector(15 downto 0);
         flags_m_lock_tvalid     : out std_logic;
 
-        rr_m_tvalid             : out std_logic;
-        rr_m_tready             : in std_logic;
-        rr_m_tdata              : out rr_instr_t;
-        rr_m_tuser              : out user_t
+        m_axis_rr_tvalid        : out std_logic;
+        m_axis_rr_tready        : in std_logic;
+        m_axis_rr_tdata         : out rr_instr_t;
+        m_axis_rr_tuser         : out user_t;
+
+        dbg_out_valid           : out std_logic;
+        dbg_out_cs              : out std_logic_vector(15 downto 0);
+        dbg_out_ip              : out std_logic_vector(15 downto 0);
+        dbg_out_op              : out std_logic_vector(4 downto 0);
+        dbg_out_code            : out std_logic_vector(3 downto 0);
+        dbg_out_sreg            : out std_logic_vector(3 downto 0);
+        dbg_out_dreg            : out std_logic_vector(3 downto 0);
+        dbg_out_ax              : out std_logic_vector(15 downto 0);
+        dbg_out_bx              : out std_logic_vector(15 downto 0);
+        dbg_out_cx              : out std_logic_vector(15 downto 0);
+        dbg_out_dx              : out std_logic_vector(15 downto 0);
+        dbg_out_bp              : out std_logic_vector(15 downto 0);
+        dbg_out_sp              : out std_logic_vector(15 downto 0);
+        dbg_out_di              : out std_logic_vector(15 downto 0);
+        dbg_out_si              : out std_logic_vector(15 downto 0);
+        dbg_out_fl              : out std_logic_vector(15 downto 0)
     );
 end entity cpu86_exec_register_reader;
 
 architecture rtl of cpu86_exec_register_reader is
-
-    component vld_cpu86_exec_register_reader is
-        port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
-
-            vld_valid               : in std_logic;
-            vld_op                  : in std_logic_vector(4 downto 0);
-            vld_code                : in std_logic_vector(3 downto 0);
-            vld_cs                  : in std_logic_vector(15 downto 0);
-            vld_ip                  : in std_logic_vector(15 downto 0);
-            vld_ax                  : in std_logic_vector(15 downto 0);
-            vld_bx                  : in std_logic_vector(15 downto 0);
-            vld_cx                  : in std_logic_vector(15 downto 0);
-            vld_dx                  : in std_logic_vector(15 downto 0);
-            vld_bp                  : in std_logic_vector(15 downto 0);
-            vld_sp                  : in std_logic_vector(15 downto 0);
-            vld_si                  : in std_logic_vector(15 downto 0);
-            vld_di                  : in std_logic_vector(15 downto 0);
-            vld_fl                  : in std_logic_vector(15 downto 0);
-            vld_sreg                : in std_logic_vector(3 downto 0);
-            vld_dreg                : in std_logic_vector(3 downto 0);
-            vld_branch_taken        : in std_logic
-        );
-    end component;
 
     signal instr_tvalid             : std_logic;
     signal instr_tready             : std_logic;
@@ -178,44 +170,36 @@ architecture rtl of cpu86_exec_register_reader is
 begin
 
     -- i/o assigns
-    instr_tvalid      <= instr_s_tvalid;
-    instr_s_tready    <= instr_tready;
-    instr_tdata       <= instr_s_tdata;
-    instr_tuser       <= instr_s_tuser;
+    instr_tvalid            <= s_axis_instr_tvalid;
+    s_axis_instr_tready     <= instr_tready;
+    instr_tdata             <= s_axis_instr_tdata;
+    instr_tuser             <= s_axis_instr_tuser;
 
-    rr_m_tvalid       <= rr_tvalid;
-    rr_tready         <= rr_m_tready;
-    rr_m_tdata        <= rr_tdata;
-    rr_m_tuser        <= rr_tuser;
+    m_axis_rr_tvalid        <= rr_tvalid;
+    rr_tready               <= m_axis_rr_tready;
+    m_axis_rr_tdata         <= rr_tdata;
+    m_axis_rr_tuser         <= rr_tuser;
 
-    ext_intr_tvalid   <= ext_intr_s_tvalid;
-    ext_intr_s_tready <= ext_intr_tready;
-    ext_intr_tdata    <= ext_intr_s_tdata;
+    ext_intr_tvalid         <= s_axis_ext_intr_tvalid;
+    s_axis_ext_intr_tready  <= ext_intr_tready;
+    ext_intr_tdata          <= s_axis_ext_intr_tdata;
 
-
-    -- module vld_cpu86_exec_register_reader instantiation
-    vld_cpu86_exec_register_reader_inst : vld_cpu86_exec_register_reader port map (
-        clk                 => clk,
-        resetn              => resetn,
-
-        vld_valid           => vld_valid,
-        vld_cs              => vld_cs,
-        vld_ip              => vld_ip,
-        vld_op              => vld_op,
-        vld_code            => vld_code,
-        vld_ax              => vld_ax,
-        vld_bx              => vld_bx,
-        vld_cx              => vld_cx,
-        vld_dx              => vld_dx,
-        vld_bp              => vld_bp,
-        vld_sp              => vld_sp,
-        vld_di              => vld_di,
-        vld_si              => vld_si,
-        vld_fl              => vld_fl,
-        vld_sreg            => vld_sreg,
-        vld_dreg            => vld_dreg,
-        vld_branch_taken    => vld_branch_taken
-    );
+    dbg_out_valid           <= vld_valid;
+    dbg_out_cs              <= vld_cs;
+    dbg_out_ip              <= vld_ip;
+    dbg_out_op              <= vld_op;
+    dbg_out_code            <= vld_code;
+    dbg_out_sreg            <= vld_sreg;
+    dbg_out_dreg            <= vld_dreg;
+    dbg_out_ax              <= vld_ax;
+    dbg_out_bx              <= vld_bx;
+    dbg_out_cx              <= vld_cx;
+    dbg_out_dx              <= vld_dx;
+    dbg_out_bp              <= vld_bp;
+    dbg_out_sp              <= vld_sp;
+    dbg_out_di              <= vld_di;
+    dbg_out_si              <= vld_si;
+    dbg_out_fl              <= vld_fl;
 
 
     process (all) begin
