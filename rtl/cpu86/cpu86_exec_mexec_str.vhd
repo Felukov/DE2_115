@@ -35,12 +35,12 @@ entity cpu86_exec_mexec_str is
         clk                     : in std_logic;
         resetn                  : in std_logic;
 
-        req_s_tvalid            : in std_logic;
-        req_s_tdata             : in str_req_t;
+        s_axis_req_tvalid       : in std_logic;
+        s_axis_req_tdata        : in str_req_t;
 
-        res_m_tvalid            : out std_logic;
-        res_m_tdata             : out str_res_t;
-        res_m_tuser             : out std_logic_vector(15 downto 0);
+        m_axis_res_tvalid       : out std_logic;
+        m_axis_res_tdata        : out str_res_t;
+        m_axis_res_tuser        : out std_logic_vector(15 downto 0);
 
         lsu_req_m_tvalid        : out std_logic;
         lsu_req_m_tready        : in std_logic;
@@ -88,6 +88,13 @@ architecture rtl of cpu86_exec_mexec_str is
     end component;
 
     type cmps_iter_t is (st_first, st_second);
+
+    signal req_s_tvalid         : std_logic;
+    signal req_s_tdata          : str_req_t;
+
+    signal res_m_tvalid         : std_logic;
+    signal res_m_tdata          : str_res_t;
+    signal res_m_tuser          : std_logic_vector(15 downto 0);
 
     signal instr_movs           : std_logic;
     signal instr_scas           : std_logic;
@@ -195,9 +202,18 @@ architecture rtl of cpu86_exec_mexec_str is
     signal di_addr_val          : std_logic_vector(15 downto 0);
     signal si_addr_val          : std_logic_vector(15 downto 0);
 
-    signal cmp_finish_vector   : std_logic_vector(1 downto 0);
+    signal cmp_finish_vector    : std_logic_vector(1 downto 0);
 
 begin
+
+    -- i/o assigns
+    req_s_tvalid        <= s_axis_req_tvalid;
+    req_s_tdata         <= s_axis_req_tdata;
+
+    m_axis_res_tvalid   <= res_m_tvalid;
+    m_axis_res_tdata    <= res_m_tdata;
+    m_axis_res_tuser    <= res_m_tuser;
+
 
     axis_fifo_inst : axis_fifo generic map (
         FIFO_DEPTH              => 16,
@@ -247,16 +263,17 @@ begin
     io_wr_req_tready <= io_req_m_tready;
 
     io_req_m_tdata(39 downto 34) <= (others => '0');
-    io_req_m_tdata(33) <= req_s_tdata.w;
-    io_req_m_tdata(32) <= '1' when io_wr_req_tvalid = '1' else '0';
+    io_req_m_tdata(33)           <= req_s_tdata.w;
+    io_req_m_tdata(32)           <= '1' when io_wr_req_tvalid = '1' else '0';
     io_req_m_tdata(31 downto 16) <= req_s_tdata.io_port;
-    io_req_m_tdata(15 downto 0) <= io_wr_req_tdata;
+    io_req_m_tdata(15 downto 0)  <= io_wr_req_tdata;
 
     fifo_m_tready <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and (instr_scas = '1' or (instr_cmps = '1' and cmps_res_iter = st_second)) else '0';
     cmp_tready <= '1' when instr_scas = '1' or instr_cmps = '1' else '0';
 
     event_stop <= '1' when cmp_tvalid = '1' and cmp_tready = '1' and req_s_tdata.rep = '1' and
-        ((req_s_tdata.rep_nz = '1' and flags_zf_next = '1') or (req_s_tdata.rep_nz = '0' and flags_zf_next = '0')) else '0';
+        ((req_s_tdata.rep_nz = '1' and flags_zf_next = '1') or
+         (req_s_tdata.rep_nz = '0' and flags_zf_next = '0')) else '0';
 
     common_proc : process (clk) begin
         if rising_edge(clk) then
@@ -906,11 +923,12 @@ begin
                     flags_cf <= cmp_tdata(16);
                 end if;
 
-                if req_s_tdata.w = '0' then
-                    flags_of <= (cmp_a_val(7) xor cmp_b_val(7)) and (cmp_tdata(7) xor cmp_a_val(7));
+                if res_m_tdata.w = '0' then
+                    flags_of <= (cmp_a_val(7) xor cmp_tdata(7)) and (cmp_a_val(7) xor cmp_b_val(7));
                 else
-                    flags_of <= (cmp_a_val(15) xor cmp_b_val(15)) and (cmp_tdata(15) xor cmp_a_val(15));
+                    flags_of <= (cmp_a_val(15) xor cmp_tdata(15)) and (cmp_a_val(15) xor cmp_b_val(15));
                 end if;
+
             end if;
 
             if (cmp_res_tvalid = '1') then
