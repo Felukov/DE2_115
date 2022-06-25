@@ -60,7 +60,24 @@ entity cpu86_exec is
 
         interrupt_valid             : in std_logic;
         interrupt_data              : in std_logic_vector(7 downto 0);
-        interrupt_ack               : out std_logic
+        interrupt_ack               : out std_logic;
+
+        dbg_out_rr_valid            : out std_logic;
+        dbg_out_rr_cs               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_ip               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_op               : out std_logic_vector(4 downto 0);
+        dbg_out_rr_code             : out std_logic_vector(3 downto 0);
+        dbg_out_rr_sreg             : out std_logic_vector(3 downto 0);
+        dbg_out_rr_dreg             : out std_logic_vector(3 downto 0);
+        dbg_out_rr_ax               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_bx               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_cx               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_dx               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_bp               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_sp               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_di               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_si               : out std_logic_vector(15 downto 0);
+        dbg_out_rr_fl               : out std_logic_vector(15 downto 0)
     );
 end entity cpu86_exec;
 
@@ -147,14 +164,13 @@ architecture rtl of cpu86_exec is
             clk                     : in std_logic;
             resetn                  : in std_logic;
 
-            instr_s_tvalid          : in std_logic;
-            instr_s_tready          : out std_logic;
-            instr_s_tdata           : in decoded_instr_t;
-            instr_s_tuser           : in user_t;
+            s_axis_instr_tvalid     : in std_logic;
+            s_axis_instr_tready     : out std_logic;
+            s_axis_instr_tdata      : in decoded_instr_t;
+            s_axis_instr_tuser      : in user_t;
 
-            ext_intr_s_tvalid       : in std_logic;
-            ext_intr_s_tready       : out std_logic;
-            ext_intr_s_tdata        : in std_logic_vector(7 downto 0);
+            s_axis_ext_intr_tvalid  : in std_logic;
+            s_axis_ext_intr_tdata   : in std_logic_vector(7 downto 0);
 
             ds_s_tvalid             : in std_logic;
             ds_s_tdata              : in std_logic_vector(15 downto 0);
@@ -204,10 +220,27 @@ architecture rtl of cpu86_exec is
             flags_s_tdata           : in std_logic_vector(15 downto 0);
             flags_m_lock_tvalid     : out std_logic;
 
-            rr_m_tvalid             : out std_logic;
-            rr_m_tready             : in std_logic;
-            rr_m_tdata              : out rr_instr_t;
-            rr_m_tuser              : out user_t
+            m_axis_rr_tvalid        : out std_logic;
+            m_axis_rr_tready        : in std_logic;
+            m_axis_rr_tdata         : out rr_instr_t;
+            m_axis_rr_tuser         : out user_t;
+
+            dbg_out_valid           : out std_logic;
+            dbg_out_cs              : out std_logic_vector(15 downto 0);
+            dbg_out_ip              : out std_logic_vector(15 downto 0);
+            dbg_out_op              : out std_logic_vector(4 downto 0);
+            dbg_out_code            : out std_logic_vector(3 downto 0);
+            dbg_out_sreg            : out std_logic_vector(3 downto 0);
+            dbg_out_dreg            : out std_logic_vector(3 downto 0);
+            dbg_out_ax              : out std_logic_vector(15 downto 0);
+            dbg_out_bx              : out std_logic_vector(15 downto 0);
+            dbg_out_cx              : out std_logic_vector(15 downto 0);
+            dbg_out_dx              : out std_logic_vector(15 downto 0);
+            dbg_out_bp              : out std_logic_vector(15 downto 0);
+            dbg_out_sp              : out std_logic_vector(15 downto 0);
+            dbg_out_di              : out std_logic_vector(15 downto 0);
+            dbg_out_si              : out std_logic_vector(15 downto 0);
+            dbg_out_fl              : out std_logic_vector(15 downto 0)
         );
     end component cpu86_exec_register_reader;
 
@@ -958,14 +991,13 @@ begin
         clk                     => clk,
         resetn                  => exec_resetn,
 
-        instr_s_tvalid          => instr_m_tvalid,
-        instr_s_tready          => instr_m_tready,
-        instr_s_tdata           => instr_m_tdata,
-        instr_s_tuser           => instr_m_tuser,
+        s_axis_instr_tvalid     => instr_m_tvalid,
+        s_axis_instr_tready     => instr_m_tready,
+        s_axis_instr_tdata      => instr_m_tdata,
+        s_axis_instr_tuser      => instr_m_tuser,
 
-        ext_intr_s_tvalid       => ext_intr_m_tvalid,
-        ext_intr_s_tready       => open,
-        ext_intr_s_tdata        => ext_intr_m_tdata,
+        s_axis_ext_intr_tvalid  => ext_intr_m_tvalid,
+        s_axis_ext_intr_tdata   => ext_intr_m_tdata,
 
         ds_s_tvalid             => ds_tvalid,
         ds_s_tdata              => ds_tdata,
@@ -1017,10 +1049,27 @@ begin
 
         flags_m_lock_tvalid     => flags_lock_tvalid,
 
-        rr_m_tvalid             => rr_tvalid,
-        rr_m_tready             => rr_tready,
-        rr_m_tdata              => rr_tdata,
-        rr_m_tuser              => rr_tuser
+        m_axis_rr_tvalid        => rr_tvalid,
+        m_axis_rr_tready        => rr_tready,
+        m_axis_rr_tdata         => rr_tdata,
+        m_axis_rr_tuser         => rr_tuser,
+
+        dbg_out_valid           => dbg_out_rr_valid,
+        dbg_out_cs              => dbg_out_rr_cs,
+        dbg_out_ip              => dbg_out_rr_ip,
+        dbg_out_op              => dbg_out_rr_op,
+        dbg_out_code            => dbg_out_rr_code,
+        dbg_out_sreg            => dbg_out_rr_sreg,
+        dbg_out_dreg            => dbg_out_rr_dreg,
+        dbg_out_ax              => dbg_out_rr_ax,
+        dbg_out_bx              => dbg_out_rr_bx,
+        dbg_out_cx              => dbg_out_rr_cx,
+        dbg_out_dx              => dbg_out_rr_dx,
+        dbg_out_bp              => dbg_out_rr_bp,
+        dbg_out_sp              => dbg_out_rr_sp,
+        dbg_out_di              => dbg_out_rr_di,
+        dbg_out_si              => dbg_out_rr_si,
+        dbg_out_fl              => dbg_out_rr_fl
     );
 
     -- module cpu86_exec_ifeu instantiation

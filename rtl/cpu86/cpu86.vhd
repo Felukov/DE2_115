@@ -53,7 +53,24 @@ entity cpu86 is
 
         interrupt_valid                 : in std_logic;
         interrupt_data                  : in std_logic_vector(7 downto 0);
-        interrupt_ack                   : out std_logic
+        interrupt_ack                   : out std_logic;
+
+        dbg_out_rr_valid                : out std_logic;
+        dbg_out_rr_cs                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_ip                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_op                   : out std_logic_vector(4 downto 0);
+        dbg_out_rr_code                 : out std_logic_vector(3 downto 0);
+        dbg_out_rr_sreg                 : out std_logic_vector(3 downto 0);
+        dbg_out_rr_dreg                 : out std_logic_vector(3 downto 0);
+        dbg_out_rr_ax                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_bx                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_cx                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_dx                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_bp                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_sp                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_di                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_si                   : out std_logic_vector(15 downto 0);
+        dbg_out_rr_fl                   : out std_logic_vector(15 downto 0)
     );
 end entity;
 
@@ -168,8 +185,24 @@ architecture rtl of cpu86 is
 
             interrupt_valid             : in std_logic;
             interrupt_data              : in std_logic_vector(7 downto 0);
-            interrupt_ack               : out std_logic
+            interrupt_ack               : out std_logic;
 
+            dbg_out_rr_valid            : out std_logic;
+            dbg_out_rr_cs               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_ip               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_op               : out std_logic_vector(4 downto 0);
+            dbg_out_rr_code             : out std_logic_vector(3 downto 0);
+            dbg_out_rr_sreg             : out std_logic_vector(3 downto 0);
+            dbg_out_rr_dreg             : out std_logic_vector(3 downto 0);
+            dbg_out_rr_ax               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_bx               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_cx               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_dx               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_bp               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_sp               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_di               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_si               : out std_logic_vector(15 downto 0);
+            dbg_out_rr_fl               : out std_logic_vector(15 downto 0)
         );
     end component cpu86_exec;
 
@@ -381,7 +414,24 @@ begin
 
         interrupt_valid             => interrupt_valid,
         interrupt_data              => interrupt_data,
-        interrupt_ack               => interrupt_ack
+        interrupt_ack               => interrupt_ack,
+
+        dbg_out_rr_valid            => dbg_out_rr_valid,
+        dbg_out_rr_cs               => dbg_out_rr_cs,
+        dbg_out_rr_ip               => dbg_out_rr_ip,
+        dbg_out_rr_op               => dbg_out_rr_op,
+        dbg_out_rr_code             => dbg_out_rr_code,
+        dbg_out_rr_sreg             => dbg_out_rr_sreg,
+        dbg_out_rr_dreg             => dbg_out_rr_dreg,
+        dbg_out_rr_ax               => dbg_out_rr_ax,
+        dbg_out_rr_bx               => dbg_out_rr_bx,
+        dbg_out_rr_cx               => dbg_out_rr_cx,
+        dbg_out_rr_dx               => dbg_out_rr_dx,
+        dbg_out_rr_bp               => dbg_out_rr_bp,
+        dbg_out_rr_sp               => dbg_out_rr_sp,
+        dbg_out_rr_di               => dbg_out_rr_di,
+        dbg_out_rr_si               => dbg_out_rr_si,
+        dbg_out_rr_fl               => dbg_out_rr_fl
     );
 
     -- Assigns
