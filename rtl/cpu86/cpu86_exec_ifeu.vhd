@@ -401,20 +401,20 @@ begin
                 rep_nz <= '0';
             else
 
-                if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = REP) then
+                if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = PREFIX) then
                     rep_mode <= '1';
                 elsif rep_mode = '1' and (rr_tvalid = '1' and rr_tready = '1') then
                     rep_mode <= '0';
                 end if;
 
-                if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = REP) then
+                if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = PREFIX) then
                     rep_cx_cnt <= rr_tdata.sreg_val;
                 elsif rep_mode = '1' and (rr_tvalid = '1' and rr_tready = '1') then
                     rep_cx_cnt <= x"0001";
                 end if;
 
-                if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = REP) then
-                    if (rr_tdata.code = REPNZ_OP) then
+                if (rr_tvalid = '1' and rr_tready = '1' and rr_tdata.op = PREFIX) then
+                    if (rr_tdata.code = PREFIX_REPNZ) then
                         rep_nz <= '1';
                     else
                         rep_nz <= '0';
@@ -673,9 +673,9 @@ begin
         end procedure;
 
         procedure do_mul_cmd_0 is begin
-            micro_tdata.mul_code <= rr_tdata.code;
-            micro_tdata.mul_w <= rr_tdata.w;
-            micro_tdata.mul_dreg <= rr_tdata.dreg;
+            micro_tdata.mul_code  <= rr_tdata.code;
+            micro_tdata.mul_w     <= rr_tdata.w;
+            micro_tdata.mul_dreg  <= rr_tdata.dreg;
             micro_tdata.mul_a_val <= rr_tdata.sreg_val;
 
             case rr_tdata.dir is
@@ -688,18 +688,22 @@ begin
             end case;
 
             case rr_tdata.code is
-                when IMUL_RR =>
-                    micro_tdata.mul_b_val <= rr_tdata.data;
-                when IMUL_AXDX =>
+                when MUL_AXDX =>
                     if (rr_tdata.w = '0') then
-                        for i in 15 downto 8 loop
-                            micro_tdata.mul_b_val(i) <= rr_tdata.ax_tdata(7);
-                        end loop;
-                        micro_tdata.mul_b_val(7 downto 0) <= rr_tdata.ax_tdata(7 downto 0);
+                        micro_tdata.mul_b_val(15 downto 8) <= (others => '0');
+                        micro_tdata.mul_b_val( 7 downto 0) <= rr_tdata.ax_tdata(7 downto 0);
                     else
                         micro_tdata.mul_b_val <= rr_tdata.ax_tdata;
                     end if;
-                when others => null;
+                when IMUL_AXDX =>
+                    if (rr_tdata.w = '0') then
+                        micro_tdata.mul_b_val(15 downto 8) <= (others => rr_tdata.ax_tdata(7));
+                        micro_tdata.mul_b_val( 7 downto 0) <= rr_tdata.ax_tdata(7 downto 0);
+                    else
+                        micro_tdata.mul_b_val <= rr_tdata.ax_tdata;
+                    end if;
+                when others =>
+                    micro_tdata.mul_b_val <= rr_tdata.data;
             end case;
 
         end procedure;

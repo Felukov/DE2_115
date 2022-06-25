@@ -200,12 +200,12 @@ architecture rtl of cpu86_exec_mexec is
             clk                 : in std_logic;
             resetn              : in std_logic;
 
-            req_s_tvalid        : in std_logic;
-            req_s_tdata         : in str_req_t;
+            s_axis_req_tvalid   : in std_logic;
+            s_axis_req_tdata    : in str_req_t;
 
-            res_m_tvalid        : out std_logic;
-            res_m_tdata         : out str_res_t;
-            res_m_tuser         : out std_logic_vector(15 downto 0);
+            m_axis_res_tvalid   : out std_logic;
+            m_axis_res_tdata    : out str_res_t;
+            m_axis_res_tuser    : out std_logic_vector(15 downto 0);
 
             lsu_req_m_tvalid    : out std_logic;
             lsu_req_m_tready    : in std_logic;
@@ -511,12 +511,12 @@ begin
         clk                     => CLK,
         resetn                  => RESETN,
 
-        req_s_tvalid            => str_req_tvalid,
-        req_s_tdata             => str_req_tdata,
+        s_axis_req_tvalid       => str_req_tvalid,
+        s_axis_req_tdata        => str_req_tdata,
 
-        res_m_tvalid            => str_res_tvalid,
-        res_m_tdata             => str_res_tdata,
-        res_m_tuser             => str_res_tuser,
+        m_axis_res_tvalid       => str_res_tvalid,
+        m_axis_res_tdata        => str_res_tdata,
+        m_axis_res_tuser        => str_res_tuser,
 
         lsu_req_m_tvalid        => str_lsu_req_tvalid,
         lsu_req_m_tready        => str_lsu_req_tready,
@@ -987,7 +987,7 @@ begin
                     res_tdata.code <= mul_res_tdata.code;
                     res_tdata.dmask <= "11";
                     res_tdata.dval_lo <= mul_res_tdata.dval(15 downto 0);
-                    if ((mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX)) then
+                    if ((mul_res_tdata.code = IMUL_AXDX or mul_res_tdata.code = MUL_AXDX) and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX) then
                         res_tdata.dval_hi <= mul_res_tdata.dval(31 downto 16);
                     else
                         res_tdata.dval_hi <= mul_res_tdata.dval(15 downto 0);
@@ -1038,7 +1038,7 @@ begin
             else
                 if ((alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = AX) or
                     (mul_res_tvalid = '1' and (mul_res_tdata.dreg = AX or
-                        (mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
+                        ((mul_res_tdata.code = IMUL_AXDX or mul_res_tdata.code = MUL_AXDX) and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
                     (div_res_tvalid = '1' and div_res_tdata.overflow = '0') or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = AX) or
                     (shf16_res_tvalid = '1' and shf16_res_tdata.wb = '1' and shf16_res_tdata.dreg = AX) or
@@ -1141,7 +1141,7 @@ begin
                 ax_m_wr_tdata <= alu_res_tdata.dval(15 downto 0);
                 ax_m_wr_tmask <= alu_res_tdata.dmask;
             elsif (mul_res_tvalid = '1' and mul_res_tdata.dreg = AX) or
-                  (mul_res_tvalid = '1' and mul_res_tdata.code = IMUL_AXDX and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX) then
+                  (mul_res_tvalid = '1' and (mul_res_tdata.code = IMUL_AXDX or mul_res_tdata.code = MUL_AXDX) and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX) then
                 ax_m_wr_tdata <= mul_res_tdata.dval(15 downto 0);
                 ax_m_wr_tmask <= "11";
             elsif (div_res_tvalid = '1' and div_res_tdata.overflow = '0') then
