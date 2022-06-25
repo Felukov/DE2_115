@@ -186,8 +186,10 @@ architecture rtl of video_mda_fb is
     signal frame_2x_tuser               : std_logic_vector(7 downto 0);
     signal frame_2x_tready_mask         : std_logic;
 
-    signal dark_green_filler            : std_logic_vector(7 downto 0);
-    signal bright_green_filler          : std_logic_vector(7 downto 0);
+    signal dark_filler                  : std_logic_vector(7 downto 0);
+    signal dark_filler_inv              : std_logic_vector(7 downto 0);
+    signal bright_filler                : std_logic_vector(7 downto 0);
+    signal bright_filler_inv            : std_logic_vector(7 downto 0);
 
     signal blink_on                     : std_logic;
 
@@ -300,9 +302,15 @@ begin
 
     frame_2x_tready <= '1' when dout_tvalid = '1' and frame_2x_tready_mask = '1' else '0';
 
-    dark_green_filler(7) <= '0';
-    dark_green_filler(6 downto 0) <= (others => frame_2x_tdata(8));
-    bright_green_filler(7 downto 0) <= (others => frame_2x_tdata(8));
+    bright_filler(7 downto 0)       <= (others => frame_2x_tdata(8));
+    bright_filler_inv(7 downto 0)   <= (others => not frame_2x_tdata(8));
+
+    dark_filler(7)                  <= '0';
+    dark_filler(6 downto 0)         <= (others => frame_2x_tdata(8));
+
+    dark_filler_inv(7)              <= '0';
+    dark_filler_inv(6 downto 0)     <= (others => not frame_2x_tdata(8));
+
 
     process (vid_clk) begin
         if rising_edge(vid_clk) then
@@ -359,11 +367,11 @@ begin
                         dout_r <= x"FF";
                         dout_g <= x"FF";
                         dout_b <= x"FF";
-                    elsif (din_x = x"000" or din_x = x"4FF" or din_y = x"070" or din_y=x"38F") then
-                        -- border
-                        dout_r <= comb_and(x"FF", blank_mask);
-                        dout_g <= comb_and(x"FF", blank_mask);
-                        dout_b <= comb_and(x"FF", blank_mask);
+                    -- elsif (din_x = x"000" or din_x = x"4FF" or din_y = x"070" or din_y=x"38F") then
+                    --     -- border
+                    --     dout_r <= comb_and(x"FF", blank_mask);
+                    --     dout_g <= comb_and(x"FF", blank_mask);
+                    --     dout_b <= comb_and(x"FF", blank_mask);
                     else
                         -- main
                         dout_r <= comb_and(x"00", blank_mask);
@@ -373,40 +381,40 @@ begin
                                 dout_g <= comb_and(x"00", blank_mask);
                             when x"78" =>
                                 -- dark green on green
-                                dout_g <= comb_and(comb_not(dark_green_filler), blank_mask);
+                                dout_g <= comb_and(comb_not(dark_filler), blank_mask);
                             when x"70" =>
                                 --black on green
-                                dout_g <= comb_and(comb_not(bright_green_filler), blank_mask);
+                                dout_g <= comb_and(comb_not(bright_filler), blank_mask);
                             when x"F8" =>
                                 -- dark green on green blinking
                                 if (blink_on = '0') then
-                                    dout_g <= comb_and(comb_not(dark_green_filler), blank_mask);
+                                    dout_g <= comb_and(comb_not(dark_filler), blank_mask);
                                 else
-                                    dout_g <= comb_and(dark_green_filler, blank_mask);
+                                    dout_g <= comb_and(dark_filler, blank_mask);
                                 end if;
                             when x"F0" =>
                                 --black on green blinking
                                 if (blink_on = '0') then
-                                    dout_g <= comb_and(comb_not(bright_green_filler), blank_mask);
+                                    dout_g <= comb_and(comb_not(bright_filler), blank_mask);
                                 else
-                                    dout_g <= comb_and(bright_green_filler, blank_mask);
+                                    dout_g <= comb_and(bright_filler, blank_mask);
                                 end if;
                             when others =>
                                 if (blink_on = '1' and frame_2x_tdata(7) = '1') then
                                     if (frame_2x_tdata(3) = '0') then
                                         -- dark green on black
-                                        dout_g <= comb_and(comb_not(dark_green_filler), blank_mask);
+                                        dout_g <= comb_and(dark_filler_inv, blank_mask);
                                     else
                                         -- bright green on black
-                                        dout_g <= comb_and(comb_not(bright_green_filler), blank_mask);
+                                        dout_g <= comb_and(bright_filler_inv, blank_mask);
                                     end if;
                                 else
                                     if (frame_2x_tdata(3) = '0') then
                                         -- dark green on black
-                                        dout_g <= comb_and(dark_green_filler, blank_mask);
+                                        dout_g <= comb_and(dark_filler, blank_mask);
                                     else
                                         -- bright green on black
-                                        dout_g <= comb_and(bright_green_filler, blank_mask);
+                                        dout_g <= comb_and(bright_filler, blank_mask);
                                     end if;
                                 end if;
                         end case;
