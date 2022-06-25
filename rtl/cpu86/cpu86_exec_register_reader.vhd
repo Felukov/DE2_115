@@ -41,7 +41,6 @@ entity cpu86_exec_register_reader is
         s_axis_instr_tuser      : in user_t;
 
         s_axis_ext_intr_tvalid  : in std_logic;
-        s_axis_ext_intr_tready  : out std_logic;
         s_axis_ext_intr_tdata   : in std_logic_vector(7 downto 0);
 
         ds_s_tvalid             : in std_logic;
@@ -118,6 +117,8 @@ end entity cpu86_exec_register_reader;
 
 architecture rtl of cpu86_exec_register_reader is
 
+    type ext_intr_mode_t is (ST_IDLE, ST_ACK);
+
     signal instr_tvalid             : std_logic;
     signal instr_tready             : std_logic;
     signal instr_tdata              : decoded_instr_t;
@@ -145,7 +146,7 @@ architecture rtl of cpu86_exec_register_reader is
     signal skip_next                : std_logic;
 
     signal ext_intr_tvalid          : std_logic;
-    signal ext_intr_tready          : std_logic;
+    signal ext_intr_mode            : ext_intr_mode_t;
     signal ext_intr_tdata           : std_logic_vector(7 downto 0);
 
     signal vld_valid                : std_logic;
@@ -165,7 +166,6 @@ architecture rtl of cpu86_exec_register_reader is
     signal vld_di                   : std_logic_vector(15 downto 0);
     signal vld_si                   : std_logic_vector(15 downto 0);
     signal vld_fl                   : std_logic_vector(15 downto 0);
-    signal vld_branch_taken         : std_logic;
 
 begin
 
@@ -181,7 +181,6 @@ begin
     m_axis_rr_tuser         <= rr_tuser;
 
     ext_intr_tvalid         <= s_axis_ext_intr_tvalid;
-    s_axis_ext_intr_tready  <= ext_intr_tready;
     ext_intr_tdata          <= s_axis_ext_intr_tdata;
 
     dbg_out_valid           <= vld_valid;
@@ -337,7 +336,7 @@ begin
                     if (instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) then
                         instr_tready_mask <= '1';
                     end if;
-                elsif (ext_intr_tvalid = '1' and ext_intr_tready = '0') then
+                elsif (ext_intr_tvalid = '1' and ext_intr_mode = ST_IDLE) then
                     if (combined_instr = '0') then
                         instr_tready_mask <= '1';
                     end if;
@@ -368,20 +367,21 @@ begin
     ext_interrupt_process : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
-                ext_intr_tready <= '0';
+                ext_intr_mode <= ST_IDLE;
             else
 
-                if (ext_intr_tvalid = '1' and instr_tready_mask = '1' and ext_intr_tready = '0') then
-                    -- if there is an external interrupt we wait till we have the next instruction
+                -- there is a waiting external interrupt and we locked the instruction queue
+                if (ext_intr_tvalid = '1' and instr_tready_mask = '1' and ext_intr_mode = ST_IDLE) then
+                    -- if there is an external interrupt then we wait till we have the next instruction
                     -- from the instruction queue and we have passed the current instruction next
                     -- then we can acknowledge the interrupt request
                     if (instr_tvalid = '1' and rr_tvalid = '0' and combined_instr = '0' and
                         ss_s_tvalid = '1' and sp_s_tvalid = '1' and flags_s_tvalid = '1')
                     then
-                        ext_intr_tready <= '1';
+                        ext_intr_mode <= ST_ACK;
                     end if;
-                elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
-                    ext_intr_tready <= '0';
+                -- elsif (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
+                --     ext_intr_mode <= ST_IDLE;
                 end if;
 
             end if;
@@ -440,7 +440,7 @@ begin
                         (instr_tdata.lock_dreg = '1' and instr_tdata.dreg = CX) or
                         (instr_tdata.lock_sreg = '1' and instr_tdata.sreg = CX)
                     then
-                        if (instr_tdata.op = REP and cx_s_tdata = x"0000") then
+                        if (instr_tdata.op = PREFIX and (instr_tdata.code = PREFIX_REPZ or instr_tdata.code = PREFIX_REPNZ) and cx_s_tdata = x"0000") then
                             cx_m_lock_tvalid <= '0';
                         else
                             cx_m_lock_tvalid <= '1';
@@ -582,7 +582,7 @@ begin
                 skip_next <= '0';
             else
                 if (instr_tvalid = '1' and instr_tready = '1') then
-                    if (instr_tdata.op = REP and cx_s_tdata = x"0000") then
+                    if (instr_tdata.op = PREFIX and (instr_tdata.code = PREFIX_REPZ or instr_tdata.code = PREFIX_REPNZ) and cx_s_tdata = x"0000") then
                         skip_next <= '1';
                     else
                         skip_next <= '0';
@@ -600,14 +600,17 @@ begin
                 rr_tvalid <= '0';
             else
                 if (instr_tvalid = '1' and instr_tready = '1') then
-                    if ((instr_tdata.op = SET_SEG) or (skip_next = '1') or
-                        (instr_tdata.op = REP and cx_s_tdata = x"0000"))
+                    if ((instr_tdata.op = PREFIX and instr_tdata.code = PREFIX_SEGM) or
+                        (instr_tdata.op = PREFIX and instr_tdata.code = PREFIX_LOCK) or
+                        (instr_tdata.op = PREFIX and instr_tdata.code = PREFIX_REPZ  and cx_s_tdata = x"0000") or
+                        (instr_tdata.op = PREFIX and instr_tdata.code = PREFIX_REPNZ and cx_s_tdata = x"0000") or
+                        (skip_next = '1'))
                     then
                         rr_tvalid <= '0';
                     else
                         rr_tvalid <= '1';
                     end if;
-                elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+                elsif (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
                     rr_tvalid <= '1';
                 elsif rr_tready = '1' then
                     rr_tvalid <= '0';
@@ -626,13 +629,15 @@ begin
                     (instr_tdata.op = XCHG and instr_tdata.dir = R2R) or
                     (instr_tdata.op = XCHG and instr_tdata.dir = I2R) or
                     (instr_tdata.op = JMPU and instr_tdata.code(3) = '0') or
-                    (instr_tdata.op = REP) or (instr_tdata.op = FEU))
+                    (instr_tdata.op = PREFIX and instr_tdata.code = PREFIX_REPZ) or
+                    (instr_tdata.op = PREFIX and instr_tdata.code = PREFIX_REPNZ) or
+                    (instr_tdata.op = FEU))
                 then
                     rr_tdata.fast_instr <= '1';
                 else
                     rr_tdata.fast_instr <= '0';
                 end if;
-            elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+            elsif (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
                 rr_tdata.op         <= SYS;
                 rr_tdata.code       <= SYS_EXT_INT_OP;
                 rr_tdata.fast_instr <= '0';
@@ -641,12 +646,12 @@ begin
             end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') then
-                rr_tdata.bpu_first <= instr_tdata.bpu_first;
-                rr_tdata.bpu_taken <= instr_tdata.bpu_taken;
+                rr_tdata.bpu_first  <= instr_tdata.bpu_first;
+                rr_tdata.bpu_taken  <= instr_tdata.bpu_taken;
                 rr_tdata.bpu_bypass <= '0';
-            elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
-                rr_tdata.bpu_first <= '1';
-                rr_tdata.bpu_taken <= '0';
+            elsif (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
+                rr_tdata.bpu_first  <= '1';
+                rr_tdata.bpu_taken  <= '0';
                 rr_tdata.bpu_bypass <= '1';
             end if;
 
@@ -655,7 +660,7 @@ begin
                 rr_tdata.bpu_taken_ip <= instr_tdata.bpu_taken_ip;
             end if;
 
-            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
                 rr_tdata.fl         <= instr_tdata.fl;
                 rr_tdata.dir        <= instr_tdata.dir;
                 rr_tdata.ea         <= instr_tdata.ea;
@@ -691,12 +696,12 @@ begin
                     rr_tdata.sp_offset <= x"0002";
                     rr_tdata.sp_val <= sp_s_tdata;
                 end if;
-            elsif (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+            elsif (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
                 rr_tdata.sp_val <= std_logic_vector(unsigned(sp_s_tdata) - to_unsigned(2, 16));
                 rr_tdata.sp_offset <= x"FFFE";
             end if;
 
-            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
                 rr_tdata.ax_tdata <= ax_s_tdata;
                 rr_tdata.bx_tdata <= bx_s_tdata;
                 rr_tdata.cx_tdata <= cx_s_tdata;
@@ -707,7 +712,7 @@ begin
                 rr_tdata.fl_tdata <= flags_s_tdata;
             end if;
 
-            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
                 rr_tuser <= instr_tuser;
             end if;
 
@@ -721,7 +726,7 @@ begin
             else
 
                 if (instr_tvalid = '1' and instr_tready = '1') then
-                    if (instr_tdata.op = SET_SEG) then
+                    if (instr_tdata.op = PREFIX and instr_tdata.code = PREFIX_SEGM) then
                         seg_override_tvalid <= '1';
                     else
                         seg_override_tvalid <= '0';
@@ -748,7 +753,7 @@ begin
                 combined_instr <= '0';
             else
                 if (instr_tvalid = '1' and instr_tready = '1') then
-                    if (instr_tdata.op = REP or instr_tdata.op = SET_SEG) then
+                    if (instr_tdata.op = PREFIX) then
                         combined_instr <= '1';
                     else
                         combined_instr <= '0';
@@ -764,7 +769,7 @@ begin
                 vld_valid <= '0';
                 vld_skip_next <= '0';
             else
-                if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+                if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
                     if (vld_skip_next = '0') then
                         vld_valid <= '1';
                     else
@@ -775,7 +780,7 @@ begin
                 end if;
 
                 if (instr_tvalid = '1' and instr_tready = '1') then
-                    if (instr_tdata.op = REP or instr_tdata.op = SET_SEG) then
+                    if (instr_tdata.op = PREFIX) then
                         vld_skip_next <= '1';
                     else
                         vld_skip_next <= '0';
@@ -783,7 +788,7 @@ begin
                 end if;
             end if;
 
-            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_tready = '1') then
+            if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
                 vld_cs           <= instr_tuser(USER_T_CS);
                 vld_ip           <= instr_tuser(USER_T_IP);
                 vld_op           <= std_logic_vector(to_unsigned(op_t'pos(instr_tdata.op), 5));
@@ -799,11 +804,6 @@ begin
                 vld_sreg         <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.sreg), 4));
                 vld_dreg         <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.dreg), 4));
                 vld_fl           <= flags_s_tdata;
-                if (instr_tdata.bpu_first = '0' and instr_tdata.bpu_taken = '1') then
-                    vld_branch_taken <=  '1';
-                else
-                    vld_branch_taken <=  '0';
-                end if;
             end if;
         end if;
     end process;
