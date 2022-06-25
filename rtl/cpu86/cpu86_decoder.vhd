@@ -262,7 +262,7 @@ begin
                                      x"92" | x"93" | x"94" | x"95" | x"96" | x"97" | x"98" | x"99" | x"9B" | x"9C" | x"9D" | x"9E" |
                                      x"9F" | x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AC" | x"AD" | x"AE" | x"AF" | x"CB" |
                                      x"C9" | x"CC" | x"CE" | x"CF" | x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" | x"F5" | x"F4" |
-                                     x"40" | x"27" | x"D7" | x"EC" | x"ED" | x"D6" | x"F1" =>
+                                     x"40" | x"27" | x"D7" | x"EC" | x"ED" | x"D6" | x"F1" | x"F0" =>
                                     byte_pos_chain(0) <= first_byte;
                                     instr_tvalid <= '1';
 
@@ -750,12 +750,6 @@ begin
                 when x"69" => set_op(MULU, IMUL_RR,   '1', LOCK_FL, WAIT_NO_WAIT);
                 when x"6B" => set_op(MULU, IMUL_RR,   '1', LOCK_FL, WAIT_NO_WAIT);
 
-                -- SET SEG
-                when x"26" => set_op(SET_SEG, "0000", '1', LOCK_NO_LOCK, WAIT_ES);
-                when x"2E" => set_op(SET_SEG, "0000", '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
-                when x"36" => set_op(SET_SEG, "0000", '1', LOCK_NO_LOCK, WAIT_SS);
-                when x"3E" => set_op(SET_SEG, "0000", '1', LOCK_NO_LOCK, WAIT_DS);
-
                 -- BCD
                 when x"27" => set_op(BCDU, BCDU_DAA,  '0', LOCK_AX or LOCK_FL, WAIT_AX or WAIT_FL);
                 when x"2F" => set_op(BCDU, BCDU_DAS,  '0', LOCK_AX or LOCK_FL, WAIT_AX or WAIT_FL);
@@ -917,16 +911,6 @@ begin
                 when x"DE" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
                 when x"DF" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
 
-                -- invalid opcodes
-                when x"0F" => set_op(SYS, SYS_INT_INT_OP,'0', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
-                when x"63" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
-                when x"64" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
-                when x"65" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
-                when x"66" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
-                when x"67" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
-                when x"D6" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
-                when x"F1" => set_op(SYS, SYS_INT_INT_OP,'1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
-
                 -- LOOP
                 when x"E0" => set_op(LOOPU, LOOP_OP_NE,  '1', LOCK_DREG,    WAIT_CX or WAIT_FL);
                 when x"E1" => set_op(LOOPU, LOOP_OP_E,   '1', LOCK_DREG,    WAIT_CX or WAIT_FL);
@@ -971,9 +955,14 @@ begin
                 when x"6E" => set_op(IO, IO_OUTS_DX,     '0', LOCK_NO_LOCK, WAIT_DX or WAIT_DI or WAIT_ES or WAIT_FL);
                 when x"6F" => set_op(IO, IO_OUTS_DX,     '1', LOCK_NO_LOCK, WAIT_DX or WAIT_DI or WAIT_ES or WAIT_FL);
 
-                -- REP
-                when x"F2" => set_op(REP, REPNZ_OP,      '1', LOCK_DREG, WAIT_CX);
-                when x"F3" => set_op(REP, REPZ_OP,       '1', LOCK_DREG, WAIT_CX);
+                -- PREFIXES
+                when x"26" => set_op(PREFIX, PREFIX_SEGM,   '1', LOCK_NO_LOCK, WAIT_ES);
+                when x"2E" => set_op(PREFIX, PREFIX_SEGM,   '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"36" => set_op(PREFIX, PREFIX_SEGM,   '1', LOCK_NO_LOCK, WAIT_SS);
+                when x"3E" => set_op(PREFIX, PREFIX_SEGM,   '1', LOCK_NO_LOCK, WAIT_DS);
+                when x"F0" => set_op(PREFIX, PREFIX_LOCK,   '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
+                when x"F2" => set_op(PREFIX, PREFIX_REPNZ,  '1', LOCK_DREG,    WAIT_CX);
+                when x"F3" => set_op(PREFIX, PREFIX_REPZ,   '1', LOCK_DREG,    WAIT_CX);
 
                 -- FLG
                 when x"F5" => set_flag_op(FLAG_CF, TOGGLE, LOCK_DREG or LOCK_FL, WAIT_FL);
@@ -984,7 +973,16 @@ begin
                 when x"FC" => set_flag_op(FLAG_DF, CLR,    LOCK_DREG or LOCK_FL, WAIT_FL);
                 when x"FD" => set_flag_op(FLAG_DF, SET,    LOCK_DREG or LOCK_FL, WAIT_FL);
 
-                when others => set_op(ILLEGAL, "0000");
+                -- invalid opcodes
+                when x"0F"  => set_op(SYS, SYS_INT_INT_OP, '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"63"  => set_op(SYS, SYS_INT_INT_OP, '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"64"  => set_op(SYS, SYS_INT_INT_OP, '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"65"  => set_op(SYS, SYS_INT_INT_OP, '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"66"  => set_op(SYS, SYS_INT_INT_OP, '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"67"  => set_op(SYS, SYS_INT_INT_OP, '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"D6"  => set_op(SYS, SYS_INT_INT_OP, '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when x"F1"  => set_op(SYS, SYS_INT_INT_OP, '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
+                when others => set_op(SYS, SYS_INT_INT_OP, '1', LOCK_SP or LOCK_FL,   WAIT_FL or WAIT_SS or WAIT_SP);
             end case;
         end;
 
