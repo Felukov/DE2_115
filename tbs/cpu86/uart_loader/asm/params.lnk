@@ -1,0 +1,7 @@
+format dos
+output raw
+file bootstrap.obj
+file uart.obj
+file terminal.obj
+file x86mmu.obj
+option verbose
