@@ -856,7 +856,7 @@ begin
 
                 --
                 when x"80" => no_lock; no_wait; set_lock(LOCK_FL);
-                when x"81" => no_lock; no_wait;
+                when x"81" => no_lock; no_wait; set_lock(LOCK_FL);
                 when x"83" => no_lock; no_wait; set_lock(LOCK_FL);
                 when x"8F" => no_lock; no_wait;
                 when x"C0" => no_lock; no_wait;
@@ -1262,19 +1262,41 @@ begin
             end case;
 
             if (u8_tdata(7 downto 6) = "11") then
-                case u8_tdata_rm is
-                    when "000" => instr_tdata.wait_ax <= '1';
-                    when "001" => instr_tdata.wait_cx <= '1';
-                    when "010" => instr_tdata.wait_dx <= '1';
-                    when "011" => instr_tdata.wait_bx <= '1';
-                    when "100" => instr_tdata.wait_sp <= '1';
-                    when "101" => instr_tdata.wait_bp <= '1';
-                    when "110" => instr_tdata.wait_si <= '1';
-                    when "111" => instr_tdata.wait_di <= '1';
-                    when others => null;
-                end case;
+                if (w = '0') then
+                    case u8_tdata_rm is
+                        when "000"  => instr_tdata.wait_ax <= '1';
+                        when "001"  => instr_tdata.wait_cx <= '1';
+                        when "010"  => instr_tdata.wait_dx <= '1';
+                        when "011"  => instr_tdata.wait_bx <= '1';
+                        when "100"  => instr_tdata.wait_ax <= '1';
+                        when "101"  => instr_tdata.wait_cx <= '1';
+                        when "110"  => instr_tdata.wait_dx <= '1';
+                        when "111"  => instr_tdata.wait_bx <= '1';
+                        when others => null;
+                    end case;
+                else
+                    case u8_tdata_rm is
+                        when "000"  => instr_tdata.wait_ax <= '1';
+                        when "001"  => instr_tdata.wait_cx <= '1';
+                        when "010"  => instr_tdata.wait_dx <= '1';
+                        when "011"  => instr_tdata.wait_bx <= '1';
+                        when "100"  => instr_tdata.wait_sp <= '1';
+                        when "101"  => instr_tdata.wait_bp <= '1';
+                        when "110"  => instr_tdata.wait_si <= '1';
+                        when "111"  => instr_tdata.wait_di <= '1';
+                        when others => null;
+                    end case;
+                end if;
             end if;
 
+            if (u8_tdata(7 downto 6) = "11") then
+                upd_lock(LOCK_DREG or LOCK_FL);
+            else
+                upd_lock(LOCK_FL);
+            end if;
+        end;
+
+        procedure mod_aux_rm_upd_lock is begin
             if (u8_tdata(7 downto 6) = "11") then
                 upd_lock(LOCK_DREG or LOCK_FL);
             else
@@ -1314,8 +1336,8 @@ begin
                 when x"FF" =>
                     instr_tdata.w <= '1';
                     case u8_tdata(5 downto 3) is
-                        when "000" => set_op(ALU, ALU_OP_INC, '1');
-                        when "001" => set_op(ALU, ALU_OP_DEC, '1');
+                        when "000" => set_op(ALU, ALU_OP_INC, '1'); mod_aux_rm_upd_lock;
+                        when "001" => set_op(ALU, ALU_OP_DEC, '1'); mod_aux_rm_upd_lock;
                         when "010" => set_op(JCALL, CALL_RM16,   '1'); upd_lock(LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
                         when "011" => set_op(JCALL, CALL_M16_16, '1'); upd_lock(LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';
                         when "110" => set_stack_op(STACKU_PUSHM, LOCK_SP); instr_tdata.wait_ss <= '1'; instr_tdata.wait_sp <= '1';

@@ -59,6 +59,7 @@ entity cpu86 is
         dbg_out_rr_cs                   : out std_logic_vector(15 downto 0);
         dbg_out_rr_ip                   : out std_logic_vector(15 downto 0);
         dbg_out_rr_op                   : out std_logic_vector(4 downto 0);
+        dbg_out_rr_dir                  : out std_logic_vector(2 downto 0);
         dbg_out_rr_code                 : out std_logic_vector(3 downto 0);
         dbg_out_rr_sreg                 : out std_logic_vector(3 downto 0);
         dbg_out_rr_dreg                 : out std_logic_vector(3 downto 0);
@@ -191,6 +192,7 @@ architecture rtl of cpu86 is
             dbg_out_rr_cs               : out std_logic_vector(15 downto 0);
             dbg_out_rr_ip               : out std_logic_vector(15 downto 0);
             dbg_out_rr_op               : out std_logic_vector(4 downto 0);
+            dbg_out_rr_dir              : out std_logic_vector(2 downto 0);
             dbg_out_rr_code             : out std_logic_vector(3 downto 0);
             dbg_out_rr_sreg             : out std_logic_vector(3 downto 0);
             dbg_out_rr_dreg             : out std_logic_vector(3 downto 0);
@@ -420,6 +422,7 @@ begin
         dbg_out_rr_cs               => dbg_out_rr_cs,
         dbg_out_rr_ip               => dbg_out_rr_ip,
         dbg_out_rr_op               => dbg_out_rr_op,
+        dbg_out_rr_dir              => dbg_out_rr_dir,
         dbg_out_rr_code             => dbg_out_rr_code,
         dbg_out_rr_sreg             => dbg_out_rr_sreg,
         dbg_out_rr_dreg             => dbg_out_rr_dreg,

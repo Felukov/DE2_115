@@ -1270,10 +1270,10 @@ begin
                             for i in 11 downto 8 loop
                                 flags_wr_be(i) <= alu_res_tdata.dmask(1);
                             end loop;
-
+                            flags_wr_be(FLAG_SF) <= alu_res_tdata.dmask(0);
                             flags_wr_be(FLAG_ZF) <= alu_res_tdata.dmask(0);
                             flags_wr_be(FLAG_05) <= '0';
-                            flags_wr_be(FLAG_AF) <= '0';
+                            flags_wr_be(FLAG_AF) <= alu_res_tdata.dmask(0);
                             flags_wr_be(FLAG_03) <= '0';
                             flags_wr_be(FLAG_PF) <= alu_res_tdata.dmask(0);
                             flags_wr_be(FLAG_01) <= '0';
@@ -1387,10 +1387,14 @@ begin
                 flags_wr_vector(FLAG_CF) <= res_tdata.dval_lo(FLAG_CF);
                 flags_wr_vector(FLAG_DF) <= res_tdata.dval_lo(FLAG_DF);
                 flags_wr_vector(FLAG_IF) <= res_tdata.dval_lo(FLAG_IF);
+                flags_wr_vector(FLAG_AF) <= res_tdata.dval_lo(FLAG_AF);
+                flags_wr_vector(FLAG_SF) <= res_tdata.dval_lo(FLAG_SF);
             when RES_USER =>
                 flags_wr_vector(FLAG_CF) <= res_tuser(FLAG_CF);
                 flags_wr_vector(FLAG_DF) <= res_tuser(FLAG_DF);
                 flags_wr_vector(FLAG_IF) <= res_tuser(FLAG_IF);
+                flags_wr_vector(FLAG_AF) <= res_tuser(FLAG_AF);
+                flags_wr_vector(FLAG_SF) <= res_tuser(FLAG_SF);
             when others =>
                 if (flags_toggle_cf = '1') then
                     flags_wr_vector(FLAG_CF) <= not flags_tdata(FLAG_CF);

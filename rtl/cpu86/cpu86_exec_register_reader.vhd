@@ -100,6 +100,7 @@ entity cpu86_exec_register_reader is
         dbg_out_cs              : out std_logic_vector(15 downto 0);
         dbg_out_ip              : out std_logic_vector(15 downto 0);
         dbg_out_op              : out std_logic_vector(4 downto 0);
+        dbg_out_dir             : out std_logic_vector(2 downto 0);
         dbg_out_code            : out std_logic_vector(3 downto 0);
         dbg_out_sreg            : out std_logic_vector(3 downto 0);
         dbg_out_dreg            : out std_logic_vector(3 downto 0);
@@ -154,6 +155,7 @@ architecture rtl of cpu86_exec_register_reader is
     signal vld_cs                   : std_logic_vector(15 downto 0);
     signal vld_ip                   : std_logic_vector(15 downto 0);
     signal vld_op                   : std_logic_vector(4 downto 0);
+    signal vld_dir                  : std_logic_vector(2 downto 0);
     signal vld_code                 : std_logic_vector(3 downto 0);
     signal vld_sreg                 : std_logic_vector(3 downto 0);
     signal vld_dreg                 : std_logic_vector(3 downto 0);
@@ -187,6 +189,7 @@ begin
     dbg_out_cs              <= vld_cs;
     dbg_out_ip              <= vld_ip;
     dbg_out_op              <= vld_op;
+    dbg_out_dir             <= vld_dir;
     dbg_out_code            <= vld_code;
     dbg_out_sreg            <= vld_sreg;
     dbg_out_dreg            <= vld_dreg;
@@ -345,7 +348,8 @@ begin
         end if;
     end process;
 
-    -- forcing instruction queue to stall till flag is valid
+    -- forcing instruction queue to stall till flag is valid after POPF and IRET instructions.
+    -- it's necessary since we can change TF and IF bits and they affect execution of the next instructions
     instr_wait_fl_valid_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
@@ -789,21 +793,22 @@ begin
             end if;
 
             if (instr_tvalid = '1' and instr_tready = '1') or (ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK) then
-                vld_cs           <= instr_tuser(USER_T_CS);
-                vld_ip           <= instr_tuser(USER_T_IP);
-                vld_op           <= std_logic_vector(to_unsigned(op_t'pos(instr_tdata.op), 5));
-                vld_code         <= instr_tdata.code;
-                vld_ax           <= ax_s_tdata;
-                vld_bx           <= bx_s_tdata;
-                vld_cx           <= cx_s_tdata;
-                vld_dx           <= dx_s_tdata;
-                vld_bp           <= bp_s_tdata;
-                vld_sp           <= sp_s_tdata;
-                vld_di           <= di_s_tdata;
-                vld_si           <= si_s_tdata;
-                vld_sreg         <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.sreg), 4));
-                vld_dreg         <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.dreg), 4));
-                vld_fl           <= flags_s_tdata;
+                vld_cs      <= instr_tuser(USER_T_CS);
+                vld_ip      <= instr_tuser(USER_T_IP);
+                vld_op      <= std_logic_vector(to_unsigned(op_t'pos(instr_tdata.op), 5));
+                vld_dir     <= std_logic_vector(to_unsigned(direction_t'pos(instr_tdata.dir), 3));
+                vld_code    <= instr_tdata.code;
+                vld_ax      <= ax_s_tdata;
+                vld_bx      <= bx_s_tdata;
+                vld_cx      <= cx_s_tdata;
+                vld_dx      <= dx_s_tdata;
+                vld_bp      <= bp_s_tdata;
+                vld_sp      <= sp_s_tdata;
+                vld_di      <= di_s_tdata;
+                vld_si      <= si_s_tdata;
+                vld_sreg    <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.sreg), 4));
+                vld_dreg    <= std_logic_vector(to_unsigned(reg_t'pos(instr_tdata.dreg), 4));
+                vld_fl      <= flags_s_tdata;
             end if;
         end if;
     end process;

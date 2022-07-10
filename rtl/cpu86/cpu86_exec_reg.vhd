@@ -70,8 +70,10 @@ begin
             else
                 if (unlk_s_tvalid = '1') then
                     reg_tvalid <= '1';
-                elsif (wr_s_tvalid = '1' and (hs_cnt = 1 or hs_cnt = 0)) then
-                    reg_tvalid <= '1';
+                elsif (wr_s_tvalid = '1') then
+                    if (lock_s_tvalid = '0' and (hs_cnt = 1 or hs_cnt = 0)) then
+                        reg_tvalid <= '1';
+                    end if;
                 elsif (lock_s_tvalid = '1') then
                     reg_tvalid <= '0';
                 end if;

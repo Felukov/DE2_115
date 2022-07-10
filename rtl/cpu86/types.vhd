@@ -72,28 +72,26 @@ package cpu86_types is
     attribute enum_encoding of direction_t : type is "sequential";
 
     type op_t is (
-        MOVU,     -- 00000
-        ALU,      -- 00001
-        DIVU,     -- 00010
-        MULU,     -- 00011
-        FEU,      -- 00100
-        STACKU,   -- 00101
-        LOOPU,    -- 00110
-        JMPU,     -- 00111
-        BRANCH,   -- 01000
-        JCALL,    -- 01001
-        RET,      -- 01010
-        SET_SEG,  -- 01011
-        REP,      -- 01100
-        STR,      -- 01101
-        SET_FLAG, -- 01110
-        XCHG,     -- 10000
-        SYS,      -- 10001
-        LFP,      -- 10010
-        SHFU,     -- 10011
-        BCDU,     -- 10100
-        IO,       -- 10101
-        ILLEGAL   -- 10110
+        MOVU,
+        ALU,
+        DIVU,
+        MULU,
+        FEU,
+        STACKU,
+        LOOPU,
+        JMPU,
+        BRANCH,
+        JCALL,
+        RET,
+        PREFIX,
+        STR,
+        SET_FLAG,
+        XCHG,
+        SYS,
+        LFP,
+        SHFU,
+        BCDU,
+        IO
     );
     attribute enum_encoding of op_t : type is "sequential";
 
@@ -154,8 +152,10 @@ package cpu86_types is
     constant LOOP_OP_NE     : std_logic_vector (3 downto 0) := "0010";
     constant LOOP_JCXZ      : std_logic_vector (3 downto 0) := "0011";
 
-    constant REPZ_OP        : std_logic_vector (3 downto 0) := "0000";
-    constant REPNZ_OP       : std_logic_vector (3 downto 0) := "0001";
+    constant PREFIX_REPZ    : std_logic_vector (3 downto 0) := "0000";
+    constant PREFIX_REPNZ   : std_logic_vector (3 downto 0) := "0001";
+    constant PREFIX_LOCK    : std_logic_vector (3 downto 0) := "0010";
+    constant PREFIX_SEGM    : std_logic_vector (3 downto 0) := "0011";
 
     constant LFP_LDS        : std_logic_vector (3 downto 0) := "0000";
     constant LFP_LES        : std_logic_vector (3 downto 0) := "0001";
@@ -394,10 +394,6 @@ package cpu86_types is
     constant MICRO_MEM_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000000000001";
     constant MICRO_NOP_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "000000000000";
 
-    --constant MICRO_DBG_OP       : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0) := "0000000100000";
-    --type micro_op_src_a_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
-    --type micro_op_src_b_t is (sreg_val, dreg_val, mem_val, ea_val, imm);
-
     type micro_op_jmp_cond_t is (
         j_always,        -- 00000
         j_never,         -- 00001
@@ -598,7 +594,7 @@ package cpu86_types is
     type div_req_t is record
         code            : std_logic_vector(3 downto 0);
         w               : std_logic;
-        wb              : std_logic;
+        --wb              : std_logic;
         dreg            : reg_t;
         nval            : std_logic_vector(31 downto 0);
         dval            : std_logic_vector(15 downto 0);
