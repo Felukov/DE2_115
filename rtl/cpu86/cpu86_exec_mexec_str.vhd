@@ -42,24 +42,24 @@ entity cpu86_exec_mexec_str is
         m_axis_res_tdata        : out str_res_t;
         m_axis_res_tuser        : out std_logic_vector(15 downto 0);
 
-        lsu_req_m_tvalid        : out std_logic;
-        lsu_req_m_tready        : in std_logic;
-        lsu_req_m_tcmd          : out std_logic;
-        lsu_req_m_twidth        : out std_logic;
-        lsu_req_m_taddr         : out std_logic_vector(19 downto 0);
-        lsu_req_m_tdata         : out std_logic_vector(15 downto 0);
+        m_axis_lsu_req_tvalid   : out std_logic;
+        m_axis_lsu_req_tready   : in std_logic;
+        m_axis_lsu_req_tcmd     : out std_logic;
+        m_axis_lsu_req_twidth   : out std_logic;
+        m_axis_lsu_req_taddr    : out std_logic_vector(19 downto 0);
+        m_axis_lsu_req_tdata    : out std_logic_vector(15 downto 0);
 
-        lsu_rd_s_tvalid         : in std_logic;
-        lsu_rd_s_tready         : out std_logic;
-        lsu_rd_s_tdata          : in std_logic_vector(15 downto 0);
+        s_axis_lsu_rd_tvalid    : in std_logic;
+        s_axis_lsu_rd_tready    : out std_logic;
+        s_axis_lsu_rd_tdata     : in std_logic_vector(15 downto 0);
 
-        io_req_m_tvalid         : out std_logic;
-        io_req_m_tready         : in std_logic;
-        io_req_m_tdata          : out std_logic_vector(39 downto 0);
+        m_axis_io_req_tvalid    : out std_logic;
+        m_axis_io_req_tready    : in std_logic;
+        m_axis_io_req_tdata     : out std_logic_vector(39 downto 0);
 
-        io_rd_s_tvalid          : in std_logic;
-        io_rd_s_tready          : out std_logic;
-        io_rd_s_tdata           : in std_logic_vector(15 downto 0);
+        s_axis_io_rd_tvalid     : in std_logic;
+        s_axis_io_rd_tready     : out std_logic;
+        s_axis_io_rd_tdata      : in std_logic_vector(15 downto 0);
 
         event_interrupt         : in std_logic
     );
@@ -137,8 +137,15 @@ architecture rtl of cpu86_exec_mexec_str is
     signal rep_cnt_m1           : natural range 0 to 2**16-1;
     signal increment            : std_logic_vector(15 downto 0);
 
+    signal lsu_rd_s_tvalid      : std_logic;
+    signal lsu_rd_s_tready      : std_logic;
+    signal lsu_rd_s_tdata       : std_logic_vector(15 downto 0);
     signal lsu_rd_s_tlast       : std_logic;
     signal lsu_rd_s_tready_mask : std_logic;
+
+    signal io_rd_s_tvalid       : std_logic;
+    signal io_rd_s_tready       : std_logic;
+    signal io_rd_s_tdata        : std_logic_vector(15 downto 0);
     signal io_rd_s_tready_mask  : std_logic;
 
     signal work_done_fl         : std_logic;
@@ -207,14 +214,49 @@ architecture rtl of cpu86_exec_mexec_str is
 begin
 
     -- i/o assigns
+    -- s_axis_req
     req_s_tvalid        <= s_axis_req_tvalid;
     req_s_tdata         <= s_axis_req_tdata;
 
+    -- m_axis_res
     m_axis_res_tvalid   <= res_m_tvalid;
     m_axis_res_tdata    <= res_m_tdata;
     m_axis_res_tuser    <= res_m_tuser;
 
+    -- m_axis_lsu_req
+    m_axis_lsu_req_tvalid <= '1' when wr_req_tvalid = '1' or rd_req_tvalid = '1' else '0';
 
+    rd_req_tready <= m_axis_lsu_req_tready;
+    wr_req_tready <= m_axis_lsu_req_tready;
+
+    m_axis_lsu_req_twidth <= req_s_tdata.w;
+    m_axis_lsu_req_tdata <= wr_req_tdata;
+
+    m_axis_lsu_req_tcmd <= '1' when wr_req_tvalid = '1' else '0';
+    m_axis_lsu_req_taddr <= es_di_addr when wr_req_tvalid = '1' or (rd_req_tvalid = '1' and (instr_scas = '1' or (instr_cmps = '1' and cmps_res_iter = st_second))) else ds_si_addr;
+
+    -- s_axis_lsu_rd
+    lsu_rd_s_tvalid <= s_axis_lsu_rd_tvalid;
+    s_axis_lsu_rd_tready <= lsu_rd_s_tready;
+    lsu_rd_s_tdata <= s_axis_lsu_rd_tdata;
+
+    -- m_axis_io_req
+    m_axis_io_req_tvalid <= '1' when io_rd_req_tvalid = '1' or io_wr_req_tvalid = '1' else '0';
+    io_rd_req_tready <= m_axis_io_req_tready;
+    io_wr_req_tready <= m_axis_io_req_tready;
+
+    m_axis_io_req_tdata(39 downto 34) <= (others => '0');
+    m_axis_io_req_tdata(33)           <= req_s_tdata.w;
+    m_axis_io_req_tdata(32)           <= '1' when io_wr_req_tvalid = '1' else '0';
+    m_axis_io_req_tdata(31 downto 16) <= req_s_tdata.io_port;
+    m_axis_io_req_tdata(15 downto 0)  <= io_wr_req_tdata;
+
+    -- s_axis_io_rd
+    io_rd_s_tvalid <= s_axis_io_rd_tvalid;
+    s_axis_io_rd_tready <= io_rd_s_tready;
+    io_rd_s_tdata <= s_axis_io_rd_tdata;
+
+    -- module axis_fifo instantiation
     axis_fifo_inst : axis_fifo generic map (
         FIFO_DEPTH              => 16,
         FIFO_WIDTH              => 16,
@@ -232,18 +274,7 @@ begin
         fifo_m_tdata            => fifo_m_tdata
     );
 
-
-    lsu_req_m_tvalid <= '1' when wr_req_tvalid = '1' or rd_req_tvalid = '1' else '0';
-
-    rd_req_tready <= lsu_req_m_tready;
-    wr_req_tready <= lsu_req_m_tready;
-
-    lsu_req_m_twidth <= req_s_tdata.w;
-    lsu_req_m_tdata <= wr_req_tdata;
-
-    lsu_req_m_tcmd <= '1' when wr_req_tvalid = '1' else '0';
-    lsu_req_m_taddr <= es_di_addr when wr_req_tvalid = '1' or (rd_req_tvalid = '1' and (instr_scas = '1' or (instr_cmps = '1' and cmps_res_iter = st_second))) else ds_si_addr;
-
+    -- assigns
     reg_wr_tready <= '1' when (wr_req_tvalid = '0' or (wr_req_tvalid = '1' and wr_req_tready = '1')) else '0';
 
     es_di_addr <= std_logic_vector(unsigned(req_s_tdata.es_val & x"0") + unsigned(x"0" & di_addr_val));
@@ -258,15 +289,6 @@ begin
     io_rd_s_tready <= '1' when io_rd_s_tready_mask = '0' and
         (wr_req_tvalid = '0' or (wr_req_tvalid = '1' and wr_req_tready = '1')) else '0';
 
-    io_req_m_tvalid <= '1' when io_rd_req_tvalid = '1' or io_wr_req_tvalid = '1' else '0';
-    io_rd_req_tready <= io_req_m_tready;
-    io_wr_req_tready <= io_req_m_tready;
-
-    io_req_m_tdata(39 downto 34) <= (others => '0');
-    io_req_m_tdata(33)           <= req_s_tdata.w;
-    io_req_m_tdata(32)           <= '1' when io_wr_req_tvalid = '1' else '0';
-    io_req_m_tdata(31 downto 16) <= req_s_tdata.io_port;
-    io_req_m_tdata(15 downto 0)  <= io_wr_req_tdata;
 
     fifo_m_tready <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and (instr_scas = '1' or (instr_cmps = '1' and cmps_res_iter = st_second)) else '0';
     cmp_tready <= '1' when instr_scas = '1' or instr_cmps = '1' else '0';

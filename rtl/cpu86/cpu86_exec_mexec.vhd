@@ -197,36 +197,36 @@ architecture rtl of cpu86_exec_mexec is
 
     component cpu86_exec_mexec_str is
         port (
-            clk                 : in std_logic;
-            resetn              : in std_logic;
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
 
-            s_axis_req_tvalid   : in std_logic;
-            s_axis_req_tdata    : in str_req_t;
+            s_axis_req_tvalid       : in std_logic;
+            s_axis_req_tdata        : in str_req_t;
 
-            m_axis_res_tvalid   : out std_logic;
-            m_axis_res_tdata    : out str_res_t;
-            m_axis_res_tuser    : out std_logic_vector(15 downto 0);
+            m_axis_res_tvalid       : out std_logic;
+            m_axis_res_tdata        : out str_res_t;
+            m_axis_res_tuser        : out std_logic_vector(15 downto 0);
 
-            lsu_req_m_tvalid    : out std_logic;
-            lsu_req_m_tready    : in std_logic;
-            lsu_req_m_tcmd      : out std_logic;
-            lsu_req_m_twidth    : out std_logic;
-            lsu_req_m_taddr     : out std_logic_vector(19 downto 0);
-            lsu_req_m_tdata     : out std_logic_vector(15 downto 0);
+            m_axis_lsu_req_tvalid   : out std_logic;
+            m_axis_lsu_req_tready   : in std_logic;
+            m_axis_lsu_req_tcmd     : out std_logic;
+            m_axis_lsu_req_twidth   : out std_logic;
+            m_axis_lsu_req_taddr    : out std_logic_vector(19 downto 0);
+            m_axis_lsu_req_tdata    : out std_logic_vector(15 downto 0);
 
-            lsu_rd_s_tvalid     : in std_logic;
-            lsu_rd_s_tready     : out std_logic;
-            lsu_rd_s_tdata      : in std_logic_vector(15 downto 0);
+            s_axis_lsu_rd_tvalid    : in std_logic;
+            s_axis_lsu_rd_tready    : out std_logic;
+            s_axis_lsu_rd_tdata     : in std_logic_vector(15 downto 0);
 
-            io_req_m_tvalid     : out std_logic;
-            io_req_m_tready     : in std_logic;
-            io_req_m_tdata      : out std_logic_vector(39 downto 0);
+            m_axis_io_req_tvalid    : out std_logic;
+            m_axis_io_req_tready    : in std_logic;
+            m_axis_io_req_tdata     : out std_logic_vector(39 downto 0);
 
-            io_rd_s_tvalid      : in std_logic;
-            io_rd_s_tready      : out std_logic;
-            io_rd_s_tdata       : in std_logic_vector(15 downto 0);
+            s_axis_io_rd_tvalid     : in std_logic;
+            s_axis_io_rd_tready     : out std_logic;
+            s_axis_io_rd_tdata      : in std_logic_vector(15 downto 0);
 
-            event_interrupt     : in std_logic
+            event_interrupt         : in std_logic
         );
     end component;
 
@@ -518,24 +518,24 @@ begin
         m_axis_res_tdata        => str_res_tdata,
         m_axis_res_tuser        => str_res_tuser,
 
-        lsu_req_m_tvalid        => str_lsu_req_tvalid,
-        lsu_req_m_tready        => str_lsu_req_tready,
-        lsu_req_m_tcmd          => str_lsu_req_tcmd,
-        lsu_req_m_twidth        => str_lsu_req_twidth,
-        lsu_req_m_taddr         => str_lsu_req_taddr,
-        lsu_req_m_tdata         => str_lsu_req_tdata,
+        m_axis_lsu_req_tvalid   => str_lsu_req_tvalid,
+        m_axis_lsu_req_tready   => str_lsu_req_tready,
+        m_axis_lsu_req_tcmd     => str_lsu_req_tcmd,
+        m_axis_lsu_req_twidth   => str_lsu_req_twidth,
+        m_axis_lsu_req_taddr    => str_lsu_req_taddr,
+        m_axis_lsu_req_tdata    => str_lsu_req_tdata,
 
-        lsu_rd_s_tvalid         => str_lsu_rd_tvalid,
-        lsu_rd_s_tready         => str_lsu_rd_tready,
-        lsu_rd_s_tdata          => str_lsu_rd_tdata,
+        s_axis_lsu_rd_tvalid    => str_lsu_rd_tvalid,
+        s_axis_lsu_rd_tready    => str_lsu_rd_tready,
+        s_axis_lsu_rd_tdata     => str_lsu_rd_tdata,
 
-        io_req_m_tvalid         => io_req_m_tvalid,
-        io_req_m_tready         => io_req_m_tready,
-        io_req_m_tdata          => io_req_m_tdata,
+        m_axis_io_req_tvalid    => io_req_m_tvalid,
+        m_axis_io_req_tready    => io_req_m_tready,
+        m_axis_io_req_tdata     => io_req_m_tdata,
 
-        io_rd_s_tvalid          => io_rd_s_tvalid,
-        io_rd_s_tready          => io_rd_s_tready,
-        io_rd_s_tdata           => io_rd_s_tdata,
+        s_axis_io_rd_tvalid     => io_rd_s_tvalid,
+        s_axis_io_rd_tready     => io_rd_s_tready,
+        s_axis_io_rd_tdata      => io_rd_s_tdata,
 
         event_interrupt         => '0'
     );
