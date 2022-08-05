@@ -10,18 +10,18 @@ module axis_interconnect_tb;
     // AXIS interface
     interface axis_s_intf(input logic aclk, input logic aresetn);
         // signals
-        logic                   tvalid;
-        logic                   tready;
-        logic                   tlast;
-        logic [TDATA_WIDTH-1:0] tdata;
-        logic [TUSER_WIDTH-1:0] tuser;
+        logic                       tvalid;
+        logic                       tready;
+        logic                       tlast;
+        logic [TDATA_WIDTH-1:0]     tdata;
+        logic [TUSER_WIDTH-1:0]     tuser;
 
         task send_data(
             input [TDATA_WIDTH-1:0] data_tdata,
             input [TUSER_WIDTH-1:0] data_tuser,
             input                   data_tlast
         );
-            // local delcarations
+            // local declarations
             int rnd_delay;
 
             // sending data
@@ -51,19 +51,19 @@ module axis_interconnect_tb;
 
     interface axis_m_intf(input logic aclk, input logic aresetn);
         // signals
-        logic                   tvalid;
-        logic                   tready;
-        logic                   tlast;
-        logic [TDATA_WIDTH-1:0] tdata;
-        logic [TUSER_WIDTH-1:0] tuser;
-        int                     cnt = 0;
+        logic                       tvalid;
+        logic                       tready;
+        logic                       tlast;
+        logic [TDATA_WIDTH-1:0]     tdata;
+        logic [TUSER_WIDTH-1:0]     tuser;
+        int                         cnt = 0;
 
         task wait_data(
             output [TDATA_WIDTH-1:0] data_tdata,
             output [TUSER_WIDTH-1:0] data_tuser,
             output                   data_tlast
         );
-            // local delcarations
+            // local declarations
             int rnd_delay;
 
             // set ready
