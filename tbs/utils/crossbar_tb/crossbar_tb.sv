@@ -1,3 +1,7 @@
+//
+// 2022, Konstantin Felukov
+//
+
 `timescale 1ns/1ns
 
 module crossbar_tb;
@@ -20,6 +24,9 @@ module crossbar_tb;
     logic [$bits(req_message_t)-1:0]        req_queue[S_QTY][$];
     logic [TDATA_WIDTH-1:0]                 resp_queue[M_QTY][$];
 
+    event                                   e_data_sent[M_QTY];
+    event                                   e_test_completed;
+
     interface req_ack_m_intf(input logic aclk, input logic aresetn);
         // signals
         logic                       req;
@@ -31,6 +38,7 @@ module crossbar_tb;
         logic                       resp;
         logic [TDATA_WIDTH-1:0]     rdata;
 
+        // methods
         task send_req(
             input                   p_cmd,
             input [TADDR_WIDTH-1:0] p_addr,
@@ -86,6 +94,7 @@ module crossbar_tb;
         logic                           resp;
         logic [TDATA_WIDTH-1:0]         rdata;
 
+        // methods
         task wait_data(
             output                      p_cmd,
             output [TADDR_WIDTH-1:0]    p_addr,
@@ -115,12 +124,77 @@ module crossbar_tb;
 
     endinterface
 
+    // Scoreboard
+    class scoreboard_c;
+        // fields
+        semaphore   m_sem = new(1);
+        int         m_errcnt = 0;
+
+        // methods
+        task register_master_req(input int s_ch, input req_message_t ref_msg);
+            m_sem.get(1);
+            req_queue[s_ch].push_back(ref_msg);
+            m_sem.put(1);
+        endtask
+
+        task check_master_req(input int s_ch, input req_message_t hw_req);
+            // task variables
+            int                         idx;
+            req_message_t               expected_req;
+
+            // task logic
+            idx = -1;
+            for (int i = 0; i < req_queue[s_ch].size(); i++) begin
+                expected_req = req_message_t'(req_queue[s_ch][i]);
+                if (expected_req.data == hw_req.data && expected_req.addr == hw_req.addr) begin
+                    idx = i;
+                    break;
+                end
+            end
+
+            if (idx == -1) begin
+                $error("Request data error: cmd = %h, addr = %h, wdata = %h", hw_req.cmd, hw_req.addr, hw_req.data);
+                m_errcnt++;
+            end else begin
+                m_sem.get(1);
+                req_queue[s_ch].delete(idx);
+                m_sem.put(1);
+            end
+        endtask
+
+        task register_slave_resp(input int m_ch, input logic[TDATA_WIDTH-1:0] rdata);
+            m_sem.get(1);
+            resp_queue[m_ch].push_back(rdata);
+            m_sem.put(1);
+        endtask
+
+        task check_slave_resp(input int m_ch, input logic[TDATA_WIDTH-1:0] hw_data);
+            // task variables
+            logic [TDATA_WIDTH-1:0] expected_rdata;
+
+            // task logic
+            m_sem.get(1);
+            expected_rdata = resp_queue[m_ch].pop_front();
+            m_sem.put(1);
+
+            if (expected_rdata != hw_data) begin
+                $error("Resp data mismatch. Expected: %h, Received: %h", expected_rdata, hw_data);
+                m_errcnt++;
+            end else begin
+                // $display("%h", hw_data);
+            end
+        endtask
+
+    endclass
+
     // Driver
     class data_driver_c;
+        // fields
         virtual req_ack_m_intf  m_intf;
         int                     m_init_delay;
         int                     m_m_ch;
 
+        // constructor
         function new(virtual req_ack_m_intf intf, int ch, int seed);
             int rnd_val;
 
@@ -134,6 +208,7 @@ module crossbar_tb;
             m_intf.cmd = 0;
         endfunction
 
+        // methods
         task wait_after_reset();
             wait (m_intf.aresetn == 1);
             repeat(m_init_delay) @(posedge m_intf.aclk);
@@ -153,27 +228,20 @@ module crossbar_tb;
             msg.data  = $urandom_range(2**TDATA_WIDTH-1, 0);
 
             m_intf.send_req(msg.cmd, msg.addr, msg.data);
-            req_queue[s_ch].push_back(msg);
+            scoreboard.register_master_req(s_ch, msg);
 
             if (msg.cmd == 1) begin
-                resp_queue[m_m_ch].push_back(msg.data);
+                scoreboard.register_slave_resp(m_m_ch, msg.data);
             end
         endtask
 
         task wait_resp();
             // task variables
-            logic [TDATA_WIDTH-1:0] expected_rdata;
             logic [TDATA_WIDTH-1:0] hw_data;
 
             // task logic
             m_intf.wait_resp(hw_data);
-            expected_rdata = resp_queue[m_m_ch].pop_front();
-
-            if (expected_rdata != hw_data) begin
-                $error("Resp data mismatch. Expected: %h, Received: %h", expected_rdata, hw_data);
-            end else begin
-                $display("%h", hw_data);
-            end
+            scoreboard.check_slave_resp(m_m_ch, hw_data);
         endtask
 
     endclass
@@ -181,14 +249,18 @@ module crossbar_tb;
     // Receiver
     class data_recv_c;
         virtual req_ack_s_intf  m_intf;
-        int                     m_ch;
+        int                     m_s_ch;
         logic                   m_cmd;
         logic [TADDR_WIDTH-1:0] m_addr;
         logic [TDATA_WIDTH-1:0] m_wdata;
 
+        logic [TDATA_WIDTH-1:0] m_rdata_queue[$];
+        semaphore               m_sem = new(1);
+
         function new(virtual req_ack_s_intf intf, int ch, int seed);
             int rnd_val;
             m_intf = intf;
+            m_s_ch = ch;
 
             rnd_val = $urandom(seed);
 
@@ -201,37 +273,44 @@ module crossbar_tb;
             wait (m_intf.aresetn == 1);
         endtask
 
-        task wait_data();
+        task wait_req();
             // task variables
             logic                       hw_cmd;
             logic [TADDR_WIDTH-1:0]     hw_addr;
             logic [TDATA_WIDTH-1:0]     hw_wdata;
             logic [S_CH_WIDTH-1:0]      hw_ch;
-            int                         idx;
-            req_message_t               expected_req;
+            req_message_t               hw_msg;
 
             // task logic
             m_intf.wait_data(hw_cmd, hw_addr, hw_wdata);
             hw_ch = hw_addr[TADDR_WIDTH-1:TADDR_WIDTH-S_CH_WIDTH];
 
-            idx = -1;
-            for (int i = 0; i < req_queue[hw_ch].size(); i++) begin
-                expected_req = req_message_t'(req_queue[hw_ch][i]);
-                if (expected_req.data == hw_wdata && expected_req.addr == hw_addr) begin
-                    idx = i;
-                    break;
-                end
-            end
+            hw_msg.cmd = hw_cmd;
+            hw_msg.m_ch = hw_ch;
+            hw_msg.addr = hw_addr;
+            hw_msg.data = hw_wdata;
 
-            if (idx == -1) begin
-                $error("Request data error: cmd = %h, addr = %h, wdata = %h", hw_cmd, hw_addr, hw_wdata);
-            end else begin
-                req_queue[hw_ch].delete(idx);
-            end
+            scoreboard.check_master_req(m_s_ch, hw_msg);
 
             if (hw_cmd == 1'b1) begin
-                m_intf.send_resp(hw_wdata);
+                m_sem.get(1);
+                m_rdata_queue.push_back(hw_wdata);
+                m_sem.put(1);
             end
+        endtask
+
+        task send_resp();
+            // task variables
+            int delay = $urandom_range(3, 0);
+
+            // task logic
+            repeat (delay) @(posedge m_intf.aclk);
+
+            m_sem.get(1);
+            if (m_rdata_queue.size() > 0) begin
+                m_intf.send_resp(m_rdata_queue.pop_front());
+            end
+            m_sem.put(1);
         endtask
 
     endclass
@@ -259,6 +338,8 @@ module crossbar_tb;
 
     bit [M_QTY-1:0]                     sync_st_0 = '{default:'0};
     bit [M_QTY-1:0]                     sync_st_1 = '{default:'0};
+
+    scoreboard_c                        scoreboard = new();
 
     // dut
     crossbar crossbar_inst (
@@ -381,6 +462,7 @@ module crossbar_tb;
                     data_driver.send_req();
                 end
 
+                -> e_data_sent[i];
             end
 
             // master resp handler
@@ -399,7 +481,8 @@ module crossbar_tb;
     // Receiving processes
     generate
         for (genvar i = 0; i < M_QTY; i++) begin: data_recv
-            req_ack_s_intf s_intf(clk, resetn);
+            req_ack_s_intf  s_intf(clk, resetn);
+            data_recv_c     data_recv = new(s_intf, i, 1000 + i);
 
             assign s_intf.req = s_req[i];
             assign s_ack[i] = s_intf.ack;
@@ -411,20 +494,56 @@ module crossbar_tb;
             assign s_rdata[i] = s_intf.rdata;
 
             initial begin
-                // local variables
-                automatic data_recv_c   data_recv = null;
-
-                // behaviour
-                data_recv = new(s_intf, i, 1000 + i);
-
                 data_recv.wait_after_reset();
 
                 forever begin
-                    data_recv.wait_data();
+                    data_recv.wait_req();
+                end
+            end
+
+            initial begin
+                data_recv.wait_after_reset();
+
+                forever begin
+                    data_recv.send_resp();
                 end
             end
 
         end
     endgenerate
+
+    initial begin
+
+        for(int i = 0; i < M_QTY; i++) begin
+            automatic int j = i;
+            fork
+                wait (e_data_sent[j].triggered);
+            join
+        end
+
+        $display("All data sent");
+
+        for(int i = 0; i < S_QTY; i++) begin
+            automatic int j = i;
+            fork
+                wait (req_queue[j].size() == 0);
+            join_none
+        end
+
+        for(int i = 0; i < M_QTY; i++) begin
+            automatic int j = i;
+            fork
+                wait (resp_queue[j].size() == 0);
+            join_none
+        end
+
+        wait fork;
+        -> e_test_completed;
+
+        $display("Test completed");
+        $display("Errors : %0d", scoreboard.m_errcnt);
+        //$stop;
+    end
+
 
 endmodule

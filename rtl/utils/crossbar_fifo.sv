@@ -1,3 +1,7 @@
+//
+// 2022, Konstantin Felukov
+//
+
 module crossbar_fifo #(
     parameter integer                           FIFO_DEPTH = 4,
     parameter integer                           FIFO_WIDTH = 32
@@ -6,30 +10,40 @@ module crossbar_fifo #(
     input  logic                                resetn,
 
     input  logic                                s_axis_data_tvalid,
-    input  logic                                s_axis_data_tready,
-    input  logic [TDATA_WIDTH-1:0]              s_axis_data_tdata,
+    output logic                                s_axis_data_tready,
+    input  logic [FIFO_WIDTH-1:0]               s_axis_data_tdata,
 
     output logic                                m_axis_data_tvalid,
     input  logic                                m_axis_data_tready,
-    output logic [TDATA_WIDTH-1:0]              m_axis_data_tdata
+    output logic [FIFO_WIDTH-1:0]               m_axis_data_tdata
 );
+
+    localparam integer                          ADDR_WIDTH = $clog2(FIFO_DEPTH);
 
     // Local signals
     logic                                       wr_data_tvalid;
     logic                                       wr_data_tready;
-    logic [FIFO_DEPTH-1:0]                      wr_addr;
-    logic [FIFO_DEPTH-1:0]                      wr_addr_next;
+    logic [FIFO_WIDTH-1:0]                      wr_data_tdata;
+    logic [ADDR_WIDTH-1:0]                      wr_addr;
+    logic [ADDR_WIDTH-1:0]                      wr_addr_next;
 
     logic                                       rd_data_tvalid;
     logic                                       rd_data_tready;
-    logic [TUSER_WIDTH-1:0]                     rd_addr;
-    logic [TUSER_WIDTH-1:0]                     rd_addr_next;
+    logic [ADDR_WIDTH-1:0]                      rd_addr;
+    logic [ADDR_WIDTH-1:0]                      rd_addr_next;
 
     logic [FIFO_WIDTH-1:0]                      fifo_data[FIFO_DEPTH];
 
 
     // Assigns
-    assign rd_data_tready = ~m_axis_data_tvalid | m_axis_data_tready;
+    assign wr_data_tvalid = s_axis_data_tvalid;
+    assign s_axis_data_tready = wr_data_tready;
+    assign wr_data_tdata = s_axis_data_tdata;
+
+    assign m_axis_data_tvalid = rd_data_tvalid;
+    assign rd_data_tready = m_axis_data_tready;
+    assign m_axis_data_tdata = fifo_data[rd_addr];
+
 
     // Controlling ready
     always_ff @(posedge clk) begin
@@ -53,6 +67,22 @@ module crossbar_fifo #(
         end
     end
 
+    // Writing
+    always_ff @(posedge clk) begin
+        // Control
+        if (resetn == 1'b0) begin
+            wr_addr <= '{default:'0};
+        end else begin
+            wr_addr <= wr_addr_next;
+        end
+        // Data
+        begin
+            if (wr_data_tvalid == 1'b1 && wr_data_tready == 1'b1) begin
+                fifo_data[wr_addr] <= wr_data_tdata;
+            end
+        end
+    end
+
     // Reading
     always_ff @(posedge clk) begin
         if (resetn == 1'b0) begin
@@ -60,7 +90,7 @@ module crossbar_fifo #(
         end else begin
             if (wr_addr_next != rd_addr_next) begin
                 rd_data_tvalid <= 1'b1;
-            end else begin
+            end else if (rd_data_tready == 1'b1) begin
                 rd_data_tvalid <= 1'b0;
             end
         end
@@ -68,7 +98,7 @@ module crossbar_fifo #(
 
     // Next read address
     always_comb begin
-        if (rd_data_tvalid == 1'b1 && rd_data_tready == 1'b1 && fifo_valid[rd_addr] == 1'b1) begin
+        if (rd_data_tvalid == 1'b1 && rd_data_tready == 1'b1) begin
             rd_addr_next = rd_addr + 'd1;
         end else begin
             rd_addr_next = rd_addr;
@@ -81,26 +111,6 @@ module crossbar_fifo #(
             rd_addr <= '{default:'0};
         end else begin
             rd_addr <= rd_addr_next;
-        end
-    end
-
-    // Forming output
-    always_ff @(posedge clk) begin
-        // Control
-        if (resetn == 1'b0) begin
-            m_axis_data_tvalid <= 1'b0;
-        end else begin
-            if (rd_data_tvalid == 1'b1 && rd_data_tready == 1'b1) begin
-                m_axis_data_tvalid <= 1'b1;
-            end else if (m_axis_data_tready == 1'b1) begin
-                m_axis_data_tvalid <= 1'b0;
-            end
-        end
-        // Data
-        begin
-            if (rd_data_tready == 1'b1) begin
-                m_axis_data_tdata <= fifo_data[rd_addr];
-            end
         end
     end
 

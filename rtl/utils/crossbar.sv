@@ -1,3 +1,7 @@
+//
+// 2022, Konstantin Felukov
+//
+
 module crossbar #(
     parameter integer                               TADDR_WIDTH = 32,
     parameter integer                               TDATA_WIDTH = 32
@@ -182,27 +186,29 @@ module crossbar #(
 
 
     generate
-        for (genvar s_id = 0; s_id < S_QTY; s_id++) begin : gen_fifo
+        genvar s_id;
+        genvar m_id;
 
-            // module axis_fifo instantiation
-            axis_fifo #(
-                .FIFO_DEPTH         (6),
-                .FIFO_WIDTH         (TAG_WIDTH + ARB_WIDTH),
-                .REGISTER_OUTPUT    (1'b0)
-            ) axis_fifo_inst (
+        for (s_id = 0; s_id < S_QTY; s_id++) begin : gen_fifo
+
+            // module crossbar_fifo instantiation
+            crossbar_fifo #(
+                .FIFO_DEPTH         (8),
+                .FIFO_WIDTH         (TAG_WIDTH + ARB_WIDTH)
+            ) crossbar_fifo_inst (
                 .clk                (clk),
                 .resetn             (resetn),
-                .fifo_s_tvalid      (slave_ack[s_id] & slave_cmd[s_id]),
-                .fifo_s_tready      (),
-                .fifo_s_tdata       ({slave_s_tag[s_id], slave_s_m_id[s_id]}),
-                .fifo_m_tvalid      (),
-                .fifo_m_tready      (slave_resp[s_id]),
-                .fifo_m_tdata       ({slave_m_tag[s_id], slave_m_m_id[s_id]})
+                .s_axis_data_tvalid (slave_ack[s_id] & slave_cmd[s_id]),
+                .s_axis_data_tready (),
+                .s_axis_data_tdata  ({slave_s_tag[s_id], slave_s_m_id[s_id]}),
+                .m_axis_data_tvalid (),
+                .m_axis_data_tready (slave_resp[s_id]),
+                .m_axis_data_tdata  ({slave_m_tag[s_id], slave_m_m_id[s_id]})
             );
 
         end
 
-        for (genvar m_id = 0; m_id < M_QTY; m_id++) begin : gen_rob
+        for (m_id = 0; m_id < M_QTY; m_id++) begin : gen_rob
 
             // module crossbar_rob instantiation
             crossbar_rob #(
