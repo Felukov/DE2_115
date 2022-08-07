@@ -103,15 +103,15 @@ module sdram_ctrl (
     reg     [  2: 0] i_refs;
     reg     [  2: 0] i_state;
     reg              init_done;
-    reg     [ 12: 0] m_addr /* synthesis ALTERA_ATTRIBUTE = "FAST_OUTPUT_REGISTER=ON"  */;
-    reg     [  1: 0] m_bank /* synthesis ALTERA_ATTRIBUTE = "FAST_OUTPUT_REGISTER=ON"  */;
-    reg     [  3: 0] m_cmd /* synthesis ALTERA_ATTRIBUTE = "FAST_OUTPUT_REGISTER=ON"  */;
+    reg     [ 12: 0] m_addr /* synthesis1 ALTERA_ATTRIBUTE1 = "FAST_OUTPUT_REGISTER=ON"  */;
+    reg     [  1: 0] m_bank /* synthesis1 ALTERA_ATTRIBUTE1 = "FAST_OUTPUT_REGISTER=ON"  */;
+    reg     [  3: 0] m_cmd /* synthesis1 ALTERA_ATTRIBUTE1 = "FAST_OUTPUT_REGISTER=ON"  */;
     reg     [  2: 0] m_count;
-    reg     [ 31: 0] m_data /* synthesis ALTERA_ATTRIBUTE = "FAST_OUTPUT_REGISTER=ON ; FAST_OUTPUT_ENABLE_REGISTER=ON"  */;
-    reg     [  3: 0] m_dqm /* synthesis ALTERA_ATTRIBUTE = "FAST_OUTPUT_REGISTER=ON"  */;
+    reg     [ 31: 0] m_data /* synthesis1 ALTERA_ATTRIBUTE1 = "FAST_OUTPUT_REGISTER=ON ; FAST_OUTPUT_ENABLE_REGISTER=ON"  */;
+    reg     [  3: 0] m_dqm /* synthesis1 ALTERA_ATTRIBUTE1 = "FAST_OUTPUT_REGISTER=ON"  */;
     reg     [  8: 0] m_next;
     reg     [  8: 0] m_state;
-    reg              oe /* synthesis ALTERA_ATTRIBUTE = "FAST_OUTPUT_ENABLE_REGISTER=ON"  */;
+    reg              oe;
     wire             pending;
     wire             rd_strobe;
     reg     [  2: 0] rd_valid;
@@ -121,7 +121,7 @@ module sdram_ctrl (
     wire             row_match;
     wire    [ 23: 0] txt_code;
     reg              za_cannotrefresh;
-    reg     [ 31: 0] za_data /* synthesis ALTERA_ATTRIBUTE = "FAST_INPUT_REGISTER=ON"  */;
+    reg     [ 31: 0] za_data /* synthesis1 ALTERA_ATTRIBUTE1 = "FAST_INPUT_REGISTER=ON"  */;
     reg              za_valid;
     wire             za_waitrequest;
     wire    [ 12: 0] zs_addr;
@@ -281,6 +281,18 @@ module sdram_ctrl (
     assign pending     = csn_match && rnw_match && bank_match && row_match && !f_empty;
     assign cas_addr    = f_select ? { {3{1'b0}},f_addr[9 : 0] } : { {3{1'b0}},active_addr[9 : 0] };
 
+    reg oe_next;
+    always @ * begin
+        oe_next = 0;
+
+        if (m_state == 9'b000010000) begin
+            oe_next = 1;
+            if (~pending & f_pop) begin
+                oe_next = 1'b0;
+            end
+        end
+    end
+
     // **** Main FSM ****
     always @(posedge clk) begin
         if (reset_n == 0) begin
@@ -297,9 +309,8 @@ module sdram_ctrl (
             oe <= 1'b0;
         end else begin
             f_pop <= 1'b0;
-            oe <= 1'b0;
+            oe <= oe_next;
             case (m_state) // synthesis parallel_case full_case
-
                 9'b000000001: begin
                     //Wait for init-fsm to be done...
                     if (init_done) begin
@@ -387,7 +398,6 @@ module sdram_ctrl (
 
                 9'b000010000: begin
                     m_cmd <= {csn_decode,3'h4};
-                    oe <= 1'b1;
                     m_data <= f_select ? f_data : active_data;
                     m_dqm <= f_select ? f_dqm  : active_dqm;
                     m_bank <= f_select ? f_bank : active_bank;
@@ -411,7 +421,6 @@ module sdram_ctrl (
                         //correctly end WR spin cycle if fifo empty
                         if (~pending & f_pop) begin
                             m_cmd <= {csn_decode,3'h7};
-                            oe <= 1'b0;
                         end
                         m_state <= 9'b100000000;
                     end
