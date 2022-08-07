@@ -88,7 +88,8 @@ module crossbar #(
     logic [M_QTY-1:0]                               master_cmd;
     logic [M_QTY-1:0][TDATA_WIDTH-1:0]              master_wdata;
     logic [M_QTY-1:0]                               master_ack;
-    logic [M_QTY-1:0][TAG_WIDTH-1:0]                master_tag;
+    logic [M_QTY-1:0]                               master_tag_tvalid;
+    logic [M_QTY-1:0][TAG_WIDTH-1:0]                master_tag_tdata;
     logic [M_QTY-1:0]                               master_resp;
     logic [M_QTY-1:0][TDATA_WIDTH-1:0]              master_rdata;
     logic [M_QTY-1:0][ADDR_CH_BITS-1:0]             master_s_id;
@@ -217,9 +218,9 @@ module crossbar #(
             ) crossbar_rob_inst (
                 .clk                (clk),
                 .resetn             (resetn),
-                .m_axis_tag_tvalid  (),
+                .m_axis_tag_tvalid  (master_tag_tvalid[m_id]),
                 .m_axis_tag_tready  (master_ack[m_id] & master_cmd[m_id]),
-                .m_axis_tag_tdata   (master_tag[m_id]),
+                .m_axis_tag_tdata   (master_tag_tdata[m_id]),
                 .s_axis_data_tvalid (s2m_resp[m_id]),
                 .s_axis_data_tdata  (slave_rdata),
                 .s_axis_data_tuser  (slave_m_tag),
@@ -237,7 +238,7 @@ module crossbar #(
         for (int m_id = 0; m_id < M_QTY; m_id++) begin
             master_s_id[m_id] = master_addr[m_id][TADDR_WIDTH-1:TADDR_WIDTH-ADDR_CH_BITS];
 
-            master_rdy[m_id] = ~m2a_req[master_s_id[m_id]][m_id] | m2a_rdy[master_s_id[m_id]][m_id];
+            master_rdy[m_id] = (~m2a_req[master_s_id[m_id]][m_id] | m2a_rdy[master_s_id[m_id]][m_id]) & master_tag_tvalid[m_id];
             master_ack[m_id] = master_req[m_id] & master_rdy[m_id];
         end
     end
@@ -266,7 +267,7 @@ module crossbar #(
                         m2a_addr[s_id][m_id] <= master_addr[m_id];
                         m2a_cmd[s_id][m_id] <= master_cmd[m_id];
                         m2a_wdata[s_id][m_id] <= master_wdata[m_id];
-                        m2a_tag[s_id][m_id] <= master_tag[m_id];
+                        m2a_tag[s_id][m_id] <= master_tag_tdata[m_id];
                     end
                 end
             end

@@ -18,6 +18,7 @@ module crossbar_fifo #(
     output logic [FIFO_WIDTH-1:0]               m_axis_data_tdata
 );
 
+    // Constants
     localparam integer                          ADDR_WIDTH = $clog2(FIFO_DEPTH);
 
     // Local signals
@@ -33,6 +34,7 @@ module crossbar_fifo #(
     logic [ADDR_WIDTH-1:0]                      rd_addr_next;
 
     logic [FIFO_WIDTH-1:0]                      fifo_data[FIFO_DEPTH];
+    logic [ADDR_WIDTH-1:0]                      fifo_cnt;
 
 
     // Assigns
@@ -45,16 +47,42 @@ module crossbar_fifo #(
     assign m_axis_data_tdata = fifo_data[rd_addr];
 
 
-    // Controlling ready
+    // Controlling fifo throughput
     always_ff @(posedge clk) begin
         if (resetn == 1'b0) begin
+            fifo_cnt <= '{default:'0};
             wr_data_tready <= 1'b1;
+            rd_data_tvalid <= 1'b0;
         end else begin
-            if ((wr_addr_next + 'd1) != rd_addr_next) begin
-                wr_data_tready <= 1'b1;
-            end else begin
-                wr_data_tready <= 1'b0;
+
+            if (wr_data_tvalid == 1'b1 && wr_data_tready == 1'b1 && rd_data_tvalid == 1'b1 && rd_data_tready == 1'b1) begin
+                fifo_cnt <= fifo_cnt;
+            end else if (wr_data_tvalid == 1'b1 && wr_data_tready == 1'b1) begin
+                fifo_cnt <= fifo_cnt + 'd1;
+            end else if (rd_data_tvalid == 1'b1 && rd_data_tready == 1'b1) begin
+                fifo_cnt <= fifo_cnt - 'd1;
             end
+
+            if (wr_data_tvalid == 1'b1 && wr_data_tready == 1'b1 && rd_data_tvalid == 1'b1 && rd_data_tready == 1'b1) begin
+                wr_data_tready <= wr_data_tready;
+            end else if (wr_data_tvalid == 1'b1 && wr_data_tready == 1'b1) begin
+                if ((fifo_cnt + 'd1) == FIFO_DEPTH-1) begin
+                    wr_data_tready <= 1'b0;
+                end
+            end else if (rd_data_tvalid == 1'b1 && rd_data_tready == 1'b1) begin
+                wr_data_tready <= 1'b1;
+            end
+
+            if (wr_data_tvalid == 1'b1 && wr_data_tready == 1'b1 && rd_data_tvalid == 1'b1 && rd_data_tready == 1'b1) begin
+                rd_data_tvalid <= rd_data_tvalid;
+            end else if (wr_data_tvalid == 1'b1 && wr_data_tready == 1'b1) begin
+                rd_data_tvalid <= 1'b1;
+            end else if (rd_data_tvalid == 1'b1 && rd_data_tready == 1'b1) begin
+                if ((fifo_cnt - 'd1) == 0) begin
+                    rd_data_tvalid <= 1'b0;
+                end
+            end
+
         end
     end
 
@@ -79,19 +107,6 @@ module crossbar_fifo #(
         begin
             if (wr_data_tvalid == 1'b1 && wr_data_tready == 1'b1) begin
                 fifo_data[wr_addr] <= wr_data_tdata;
-            end
-        end
-    end
-
-    // Reading
-    always_ff @(posedge clk) begin
-        if (resetn == 1'b0) begin
-            rd_data_tvalid <= 1'b0;
-        end else begin
-            if (wr_addr_next != rd_addr_next) begin
-                rd_data_tvalid <= 1'b1;
-            end else if (rd_data_tready == 1'b1) begin
-                rd_data_tvalid <= 1'b0;
             end
         end
     end

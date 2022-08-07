@@ -10,7 +10,7 @@ module crossbar_tb;
     parameter int                           S_QTY = 4;
     parameter int                           TDATA_WIDTH = 32;
     parameter int                           TADDR_WIDTH = 32;
-    parameter int                           PKT_QTY = 100;
+    parameter int                           PKT_QTY = 1000;
     parameter int                           S_CH_WIDTH = $clog2(S_QTY);
     parameter int                           M_CH_WIDTH = $clog2(S_QTY);
 
@@ -195,7 +195,7 @@ module crossbar_tb;
         int                     m_m_ch;
 
         // constructor
-        function new(virtual req_ack_m_intf intf, int ch, int seed);
+        function new(virtual req_ack_m_intf intf, input int ch, input int seed);
             int rnd_val;
 
             m_intf = intf;
@@ -257,7 +257,7 @@ module crossbar_tb;
         logic [TDATA_WIDTH-1:0] m_rdata_queue[$];
         semaphore               m_sem = new(1);
 
-        function new(virtual req_ack_s_intf intf, int ch, int seed);
+        function new(virtual req_ack_s_intf intf, input int ch, input int seed);
             int rnd_val;
             m_intf = intf;
             m_s_ch = ch;
