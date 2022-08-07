@@ -82,12 +82,14 @@ architecture rtl of cpu86_exec_lsu_fifo is
     signal upd_tdata        : std_logic_vector(FIFO_WIDTH-1 downto 0);
     signal upd_tag          : std_logic_vector(ADDR_WIDTH-1 downto 0);
 
-    signal data_tvalid      : std_logic;
-    signal data_tready      : std_logic;
+    signal rd_data_tvalid   : std_logic;
+    signal rd_data_tready   : std_logic;
 
     signal out_tvalid       : std_logic;
     signal out_tready       : std_logic;
     signal out_tdata        : std_logic_vector(FIFO_WIDTH-1 downto 0);
+
+    signal fifo_cnt         : integer range 0 to FIFO_DEPTH-1;
 
 begin
 
@@ -110,39 +112,49 @@ begin
 
     -- assigns
     register_output_ready_gen : if (REGISTER_OUTPUT = '1') generate
-        data_tready <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
+        rd_data_tready <= '1' when out_tvalid = '0' or (out_tvalid = '1' and out_tready = '1') else '0';
     end generate;
 
     async_output_ready_gen: if (REGISTER_OUTPUT = '0') generate
-        data_tready <= out_tready;
+        rd_data_tready <= out_tready;
     end generate;
 
     q_thit          <= fifo_ram_valid(rd_addr);
     q_tdata         <= fifo_ram_data(rd_addr);
 
-    wr_data_tready_proc : process (clk) begin
+    fifo_throughput_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
+                fifo_cnt <= 0;
                 wr_data_tready <= '1';
+                rd_data_tvalid <= '0';
             else
-                if (wr_addr_next + 1) mod FIFO_DEPTH /= rd_addr_next then
-                    wr_data_tready <= '1';
-                else
-                    wr_data_tready <= '0';
+                if (wr_data_tvalid = '1' and wr_data_tready = '1' and rd_data_tvalid = '1' and rd_data_tready = '1' and q_thit = '1') then
+                    fifo_cnt <= fifo_cnt;
+                elsif (wr_data_tvalid = '1' and wr_data_tready = '1') then
+                    fifo_cnt <= fifo_cnt + 1;
+                elsif (rd_data_tvalid = '1' and rd_data_tready = '1' and q_thit = '1') then
+                    fifo_cnt <= fifo_cnt - 1;
                 end if;
-            end if;
-        end if;
-    end process;
 
-    data_tvalid_proc : process (clk) begin
-        if rising_edge(clk) then
-            if resetn = '0' then
-                data_tvalid <= '0';
-            else
-                if wr_addr_next /= rd_addr_next then
-                    data_tvalid <= '1';
-                else
-                    data_tvalid <= '0';
+                if (wr_data_tvalid = '1' and wr_data_tready = '1' and rd_data_tvalid = '1' and rd_data_tready = '1' and q_thit = '1') then
+                    wr_data_tready <= wr_data_tready;
+                elsif (wr_data_tvalid = '1' and wr_data_tready = '1') then
+                    if (fifo_cnt + 1) = FIFO_DEPTH-1 then
+                        wr_data_tready <= '0';
+                    end if;
+                elsif (rd_data_tvalid = '1' and rd_data_tready = '1' and q_thit = '1') then
+                    wr_data_tready <= '1';
+                end if;
+
+                if (wr_data_tvalid = '1' and wr_data_tready = '1' and rd_data_tvalid = '1' and rd_data_tready = '1' and q_thit = '1') then
+                    rd_data_tvalid <= rd_data_tvalid;
+                elsif (wr_data_tvalid = '1' and wr_data_tready = '1') then
+                    rd_data_tvalid <= '1';
+                elsif (rd_data_tvalid = '1' and rd_data_tready = '1' and q_thit = '1') then
+                    if (fifo_cnt - 1) = 0 then
+                        rd_data_tvalid <= '0';
+                    end if;
                 end if;
             end if;
         end if;
@@ -188,7 +200,7 @@ begin
     end process;
 
     read_proc_next : process (all) begin
-        if data_tvalid = '1' and data_tready = '1' and q_thit = '1' then
+        if rd_data_tvalid = '1' and rd_data_tready = '1' and q_thit = '1' then
             rd_addr_next <= (rd_addr + 1) mod FIFO_DEPTH;
         else
             rd_addr_next <= rd_addr;
@@ -212,14 +224,14 @@ begin
                 if resetn = '0' then
                     out_tvalid <= '0';
                 else
-                    if data_tvalid = '1' and data_tready = '1' and q_thit = '1' then
+                    if rd_data_tvalid = '1' and rd_data_tready = '1' and q_thit = '1' then
                         out_tvalid <= '1';
                     elsif out_tready = '1' then
                         out_tvalid <= '0';
                     end if;
                 end if;
                 -- Without reset
-                if data_tready = '1' then
+                if rd_data_tready = '1' then
                     out_tdata <= q_tdata(FIFO_WIDTH-1 downto 0);
                 end if;
             end if;
@@ -228,7 +240,7 @@ begin
 
     async_output_gen: if (REGISTER_OUTPUT = '0') generate
 
-        out_tvalid <= '1' when data_tvalid = '1' and q_thit = '1' else '0';
+        out_tvalid <= '1' when rd_data_tvalid = '1' and q_thit = '1' else '0';
         out_tdata <= q_tdata;
 
     end generate;

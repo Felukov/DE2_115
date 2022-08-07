@@ -40,7 +40,7 @@ module async_axis_fifo_bram #(
     output logic [(DATA_WIDTH-1):0]       doutb
 );
 
-    logic [DATA_WIDTH-1:0]                m_ram[0:((2**ADDRESS_WIDTH)-1)] /* synthesis ramstyle = "no_rw_check" */;
+    logic [DATA_WIDTH-1:0]                m_ram[0:((2**ADDRESS_WIDTH)-1)] /* synthesis ramstyle = "no_rw_check, M9K" */;
 
     always_ff @(posedge clka) begin
         if (wea == 1'b1) begin
