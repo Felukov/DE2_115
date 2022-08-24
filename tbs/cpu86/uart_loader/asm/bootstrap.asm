@@ -64,50 +64,65 @@ uart_fsm proc near stdcall uses bx cx dx
     mov dx, 0
 
     infinite_loop:
-
         .if state == UART_FSM_IDLE
-            invoke uart_rx_has_data
-
             .if dh == 00h
-                .if ax == 01h
-                    invoke uart_rx_get_data
-                    mov dh, al
-                    mov dbg_msg[0], '1'
-                    invoke uart_log, offset dbg_msg
-                .endif
+                ; wait for data
+                .repeat
+                    invoke uart_rx_has_data
+                .until (ax == 1)
+
+                ; write data
+                invoke uart_rx_get_data
+                mov dh, al
+
+                ; logging
+                mov dbg_msg[0], '1'
+                invoke uart_log, offset dbg_msg
             .endif
 
             .if dh == 11h
-                invoke uart_rx_has_data
-                .if ax == 01h
-                    invoke uart_rx_get_data
-                    mov dl, al
-                    mov dbg_msg[0], '2'
-                    invoke uart_log, offset dbg_msg
-                .endif
+                ; wait for data
+                .repeat
+                    invoke uart_rx_has_data
+                .until (ax == 1)
+
+                ; write data
+                invoke uart_rx_get_data
+                mov dl, al
+
+                ; logging
+                mov dbg_msg[0], '2'
+                invoke uart_log, offset dbg_msg
 
                 .if dx == 1155h
                     mov state, UART_FSM_WAIT_SIZE
                     invoke terminal_print, offset step_msg
+                    mov dbg_msg[0], '3'
+                    invoke uart_log, offset dbg_msg
                 .endif
             .endif
 
         .endif
 
         .if state == UART_FSM_WAIT_SIZE
-            invoke uart_rx_has_data
-            .if ax == 01h
-                invoke uart_rx_get_data
-                mov ch, al
-            .endif
+            ; get hi byte
+            .repeat
+                invoke uart_rx_has_data
+            .until (ax == 1)
+            invoke uart_rx_get_data
+            mov ch, al
 
-            invoke uart_rx_has_data
-            .if ax == 01h
-                invoke uart_rx_get_data
-                mov cl, al
-            .endif
+            ; get lo byte
+            .repeat
+                invoke uart_rx_has_data
+            .until (ax == 1)
+            invoke uart_rx_get_data
+            mov cl, al
+
+            ; logging
             invoke terminal_print, offset step_msg
-
+            mov dbg_msg[0], '4'
+            invoke uart_log, offset dbg_msg
             mov state, UART_FSM_LOAD_PROG
         .endif
 
@@ -116,12 +131,16 @@ uart_fsm proc near stdcall uses bx cx dx
             mov es, ax
             mov bx, 0100h
             load_prog_bytes_loop:
-                invoke uart_rx_has_data
-                .if ax == 01h
-                    invoke uart_rx_get_data
-                    mov es:[bx], al
-                    inc bx
-                .endif
+                .repeat
+                    invoke uart_rx_has_data
+                .until (ax == 1)
+
+                mov dbg_msg[0], '5'
+                invoke uart_log, offset dbg_msg
+
+                invoke uart_rx_get_data
+                mov es:[bx], al
+                inc bx
             loop load_prog_bytes_loop
             invoke terminal_print, offset step_msg
             mov state, UART_FSM_PARKING
@@ -129,6 +148,8 @@ uart_fsm proc near stdcall uses bx cx dx
 
         .if state == UART_FSM_PARKING
             invoke terminal_print, offset done_msg
+            mov dbg_msg[0], '6'
+            invoke uart_log, offset dbg_msg
             ret
         .endif
 
