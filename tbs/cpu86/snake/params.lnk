@@ -1,0 +1,6 @@
+format dos com
+file cstart.obj
+file kernel.obj
+file main.obj
+option verbose
+option nodefaultlibs
