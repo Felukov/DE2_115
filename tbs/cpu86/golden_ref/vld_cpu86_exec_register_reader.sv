@@ -4,6 +4,7 @@ module vld_cpu86_exec_register_reader (
 
     input logic             vld_valid,
     input logic [4:0]       vld_op,
+    input logic [2:0]       vld_dir,
     input logic [3:0]       vld_code,
     input logic [15:0]      vld_cs,
     input logic [15:0]      vld_ip,
@@ -17,34 +18,32 @@ module vld_cpu86_exec_register_reader (
     input logic [15:0]      vld_di,
     input logic [15:0]      vld_fl,
     input logic [3:0]       vld_sreg,
-    input logic [3:0]       vld_dreg,
-    input logic             vld_branch_taken
+    input logic [3:0]       vld_dreg
 );
     // instruction execution starts here
 
     typedef enum logic[4:0] {
-        MOVU      = 5'b00000,
-        ALU       = 5'b00001,
-        DIVU      = 5'b00010,
-        MULU      = 5'b00011,
-        FEU       = 5'b00100,
-        STACKU    = 5'b00101,
-        LOOPU     = 5'b00110,
-        JMPU      = 5'b00111,
-        BRANCH    = 5'b01000,
-        JCALL     = 5'b01001,
-        RET       = 5'b01010,
-        SET_SEG   = 5'b01011,
-        REP       = 5'b01100,
-        STR       = 5'b01101,
-        SET_FLAG  = 5'b01110,
-        XCHG      = 5'b01111,
-        SYS       = 5'b10000,
-        LFP       = 5'b10001,
-        SHFU      = 5'b10010,
-        BCDU      = 5'b10011,
-        IO        = 5'b10100,
-        ILLEGAL   = 5'b10101
+        MOVU,
+        ALU,
+        DIVU,
+        MULU,
+        FEU,
+        STACKU,
+        LOOPU,
+        JMPU,
+        BRANCH,
+        JCALL,
+        RET,
+        PREFIX,
+        STR,
+        SET_FLAG,
+        XCHG,
+        SYS,
+        LFP,
+        SHFU,
+        BCDU,
+        IO,
+        ILLEGAL
     } opcode_t;
 
     typedef enum logic[3:0] {
@@ -62,6 +61,16 @@ module vld_cpu86_exec_register_reader (
         DS = 4'd11,
         FL = 4'd12
     } reg_t;
+
+    typedef enum logic[2:0] {
+        R2R = 3'd0,
+        M2R = 3'd1,
+        R2M = 3'd2,
+        I2R = 3'd3,
+        I2M = 3'd4,
+        R2F = 3'd5,
+        M2M = 3'd6
+    } dir_t;
 
     localparam logic [3:0] STACKU_POPM    = 4'b0000;
     localparam logic [3:0] STACKU_POPR    = 4'b0001;
@@ -84,8 +93,22 @@ module vld_cpu86_exec_register_reader (
     localparam logic [3:0] INS_OP         = 4'b1010;
     localparam logic [3:0] IN_OP          = 4'b1011;
 
+    localparam logic [3:0] PREFIX_REPZ    = 4'b0000;
+    localparam logic [3:0] PREFIX_REPNZ   = 4'b0001;
+    localparam logic [3:0] PREFIX_LOCK    = 4'b0010;
+    localparam logic [3:0] PREFIX_SEGM    = 4'b0011;
+
+    localparam integer     CF             = 0;
+    localparam integer     PF             = 2;
+    localparam integer     AF             = 4;
+    localparam integer     ZF             = 6;
+    localparam integer     SF             = 7;
+    localparam integer     TF             = 8;
+    localparam integer     IF             = 9;
+    localparam integer     DF             = 10;
+    localparam integer     OF             = 11;
+
     bit             check_event;
-    bit             try_next_csip = 0;
     bit [15:0]      sim_cs;
     bit [15:0]      sim_ip;
     bit [15:0]      sim_ax;
@@ -114,10 +137,9 @@ module vld_cpu86_exec_register_reader (
     bit [15:0]      dut_si;
     bit [15:0]      dut_di;
     bit [15:0]      dut_fl;
-    bit             dut_branch_taken;
     reg_t           dut_sreg;
     reg_t           dut_dreg;
-
+    dir_t           dut_dir;
     string          instr_str;
 
     int             error_cnt = 0;
@@ -141,6 +163,7 @@ module vld_cpu86_exec_register_reader (
             dut_sreg    <= AX;
             dut_dreg    <= AX;
             instr_str   <= "invalid";
+            dut_dir     <= R2R;
             sim_completed  <= 0;
         end else begin
             check_event <= vld_valid;
@@ -173,29 +196,27 @@ module vld_cpu86_exec_register_reader (
                 dut_fl           <= vld_fl;
                 dut_sreg         <= reg_t'(vld_sreg);
                 dut_dreg         <= reg_t'(vld_dreg);
-                dut_branch_taken <= vld_branch_taken;
+                dut_dir          <= dir_t'(vld_dir);
             end
         end
     end
 
     initial begin
-        try_next_csip = 0;
+        // try_next_csip = 0;
         forever begin
             @(negedge clk);
             if (resetn == 1'b1 && check_event == 1'b1) begin
 
-                if (dut_op == BRANCH) begin
-                    // it could be misprediction
-                    if (sim_completed == 0 && dut_branch_taken == 1) begin
-                        try_next_csip = 1;
-                    end
-                end else if (try_next_csip == 1) begin
-                    if (sim_ip == dut_ip && sim_cs == dut_cs) begin
-                        try_next_csip = 0;
-                    end else begin
-                        $error("CS:IP mismatch after jump");
-                    end
-                end
+                // if (dut_op == BRANCH) begin
+                //     // it could be misprediction
+                //     try_next_csip = 1;
+                // end else if (try_next_csip == 1) begin
+                //     if (sim_ip == dut_ip && sim_cs == dut_cs) begin
+                //         try_next_csip = 0;
+                //     end else begin
+                //         $error("CS:IP mismatch after jump");
+                //     end
+                // end
 
                 if (sim_ip != dut_ip) begin
                     $error("IP mismatch");
@@ -219,7 +240,9 @@ module vld_cpu86_exec_register_reader (
                 check_lods();
                 check_ins();
                 check_outs();
+                check_lahf();
 
+                check_mov();
                 if (error_cnt > 100) begin
                     $display("too many errors");
                     $stop();
@@ -227,6 +250,18 @@ module vld_cpu86_exec_register_reader (
             end
         end
     end
+
+    task check_mov;
+        if (dut_op == MOVU && dut_dir == R2R) begin
+            check_sreg;
+        end
+    endtask
+
+    task check_lahf;
+        if (dut_op == MOVU && dut_dir == R2F && dut_sreg == FL) begin
+            check_fl;
+        end
+    endtask
 
     task check_ins;
         if (dut_op == STR && dut_code == INS_OP) begin
@@ -288,13 +323,14 @@ module vld_cpu86_exec_register_reader (
     endtask
 
     task check_rep;
-        if (dut_op == REP) begin
+        if ((dut_op == PREFIX && dut_code == PREFIX_REPZ) ||
+            (dut_op == PREFIX && dut_code == PREFIX_REPNZ)) begin
             check_cx();
         end
     endtask
 
     task check_pusha;
-        if (dut_op == STACKU && (dut_code == STACKU_POPA || dut_code == STACKU_PUSHA)) begin
+        if (dut_op == STACKU && (dut_code == STACKU_PUSHA)) begin
             check_ax();
             check_bx();
             check_cx();
@@ -405,11 +441,23 @@ module vld_cpu86_exec_register_reader (
         end
     endtask
 
-    task check_fl;
-        if (dut_fl != sim_fl) begin
-            $error("FL mismatch");
+    task check_fl_bit(int bit_idx);
+        if (dut_fl[bit_idx] != sim_fl[bit_idx]) begin
+            $error("FL(%0d) mismatch", bit_idx);
             error_cnt++;
         end
+    endtask
+
+    task check_fl;
+        check_fl_bit(CF);
+        check_fl_bit(PF);
+        check_fl_bit(AF);
+        check_fl_bit(ZF);
+        check_fl_bit(SF);
+        check_fl_bit(TF);
+        check_fl_bit(IF);
+        check_fl_bit(DF);
+        check_fl_bit(OF);
     endtask
 
     import "DPI-C" function void c_tb_cpu_exec(

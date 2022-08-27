@@ -26,6 +26,24 @@ module cpu86_e8086_tb ();
     logic [7:0]     interrupt_data;
     logic           interrupt_ack;
 
+    logic           dbg_out_rr_valid;
+    logic [4:0]     dbg_out_rr_op;
+    logic [3:0]     dbg_out_rr_code;
+    logic [2:0]     dbg_out_rr_dir;
+    logic [15:0]    dbg_out_rr_cs;
+    logic [15:0]    dbg_out_rr_ip;
+    logic [15:0]    dbg_out_rr_ax;
+    logic [15:0]    dbg_out_rr_bx;
+    logic [15:0]    dbg_out_rr_cx;
+    logic [15:0]    dbg_out_rr_dx;
+    logic [15:0]    dbg_out_rr_bp;
+    logic [15:0]    dbg_out_rr_sp;
+    logic [15:0]    dbg_out_rr_si;
+    logic [15:0]    dbg_out_rr_di;
+    logic [15:0]    dbg_out_rr_fl;
+    logic [3:0]     dbg_out_rr_sreg;
+    logic [3:0]     dbg_out_rr_dreg;
+
 
     // module cpu86_e8086_mem instantiation
     cpu86_e8086_mem cpu86_e8086_mem_inst(
@@ -79,7 +97,49 @@ module cpu86_e8086_tb ();
         // interrupt
         .interrupt_valid            (interrupt_valid),
         .interrupt_data             (interrupt_data),
-        .interrupt_ack              (interrupt_ack)
+        .interrupt_ack              (interrupt_ack),
+        // dbg register reader interface
+        .dbg_out_rr_valid           (dbg_out_rr_valid),
+        .dbg_out_rr_cs              (dbg_out_rr_cs),
+        .dbg_out_rr_ip              (dbg_out_rr_ip),
+        .dbg_out_rr_op              (dbg_out_rr_op),
+        .dbg_out_rr_code            (dbg_out_rr_code),
+        .dbg_out_rr_dir             (dbg_out_rr_dir),
+        .dbg_out_rr_sreg            (dbg_out_rr_sreg),
+        .dbg_out_rr_dreg            (dbg_out_rr_dreg),
+        .dbg_out_rr_ax              (dbg_out_rr_ax),
+        .dbg_out_rr_bx              (dbg_out_rr_bx),
+        .dbg_out_rr_cx              (dbg_out_rr_cx),
+        .dbg_out_rr_dx              (dbg_out_rr_dx),
+        .dbg_out_rr_bp              (dbg_out_rr_bp),
+        .dbg_out_rr_sp              (dbg_out_rr_sp),
+        .dbg_out_rr_di              (dbg_out_rr_di),
+        .dbg_out_rr_si              (dbg_out_rr_si),
+        .dbg_out_rr_fl              (dbg_out_rr_fl)
+    );
+
+    vld_cpu86_exec_register_reader vld_cpu86_exec_register_reader_inst(
+        // clk & reset
+        .clk                        (clk),
+        .resetn                     (resetn),
+        // dbg register reader interface
+        .vld_valid                  (dbg_out_rr_valid),
+        .vld_cs                     (dbg_out_rr_cs),
+        .vld_ip                     (dbg_out_rr_ip),
+        .vld_op                     (dbg_out_rr_op),
+        .vld_dir                    (dbg_out_rr_dir),
+        .vld_code                   (dbg_out_rr_code),
+        .vld_sreg                   (dbg_out_rr_sreg),
+        .vld_dreg                   (dbg_out_rr_dreg),
+        .vld_ax                     (dbg_out_rr_ax),
+        .vld_bx                     (dbg_out_rr_bx),
+        .vld_cx                     (dbg_out_rr_cx),
+        .vld_dx                     (dbg_out_rr_dx),
+        .vld_bp                     (dbg_out_rr_bp),
+        .vld_sp                     (dbg_out_rr_sp),
+        .vld_di                     (dbg_out_rr_di),
+        .vld_si                     (dbg_out_rr_si),
+        .vld_fl                     (dbg_out_rr_fl)
     );
 
 
