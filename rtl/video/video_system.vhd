@@ -244,6 +244,7 @@ begin
         end if;
     end process;
 
+    -- Timer counter
     process (vid_clk) begin
         if rising_edge(vid_clk) then
             if vid_resetn = '0' then
