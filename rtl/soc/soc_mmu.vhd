@@ -23,6 +23,8 @@
 -- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+-- MMU maps
+
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -91,6 +93,8 @@ architecture rtl of soc_mmu is
     constant MAP_RECORD_CNT : natural := 32;
     constant MAP_SLOT_WIDTH : integer := integer(ceil(log2(real(MAP_RECORD_CNT))));
 
+    -- hi address contains upper part of the address.
+    -- so address from CPU will effectively converted into the following address
     type map_record_t is record
         hi_addr     : std_logic_vector(11 downto 0);
         target      : std_logic;

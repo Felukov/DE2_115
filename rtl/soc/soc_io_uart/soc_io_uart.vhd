@@ -101,6 +101,15 @@ architecture rtl of soc_io_uart is
         );
     end component;
 
+    -- component signal_tap is
+    --     port (
+    --         acq_data_in    : in std_logic_vector(15 downto 0) := (others => 'X'); -- acq_data_in
+    --         acq_trigger_in : in std_logic_vector(0 downto 0)  := (others => 'X'); -- acq_trigger_in
+    --         acq_clk        : in std_logic                     := 'X';             -- clk
+    --         storage_enable : in std_logic                     := 'X'              -- storage_enable
+    --     );
+    -- end component signal_tap;
+
     signal rx_tvalid            : std_logic;
     signal rx_tdata             : std_logic_vector(7 downto 0);
 
@@ -125,6 +134,10 @@ architecture rtl of soc_io_uart is
     signal tx_fifo_m_tvalid     : std_logic;
     signal tx_fifo_m_tready     : std_logic;
     signal tx_fifo_m_tdata      : std_logic_vector(7 downto 0);
+
+    -- signal acq_data_in          : std_logic_vector(15 downto 0);
+    -- signal acq_trigger_in       : std_logic_vector(0 downto 0);
+    -- signal storage_enable       : std_logic;
 
 begin
 
@@ -159,6 +172,21 @@ begin
         fifo_m_tready       => rx_fifo_m_tready,
         fifo_m_tdata        => rx_fifo_m_tdata
     );
+
+    -- acq_data_in(15 downto 10) <= (others => '0');
+    -- acq_data_in( 9 downto  9) <= (others => rx_fifo_m_tvalid);
+    -- acq_data_in( 8 downto  8) <= (others => rx_fifo_m_tready);
+    -- acq_data_in( 7 downto  0) <= rx_fifo_m_tdata;
+
+    -- acq_trigger_in(0) <= '1' when rx_fifo_m_tvalid = '1' and rx_fifo_m_tready = '1' else '0';
+    -- storage_enable    <= '1' when rx_fifo_m_tvalid = '1' and rx_fifo_m_tready = '1' else '0';
+
+    -- u0 : component signal_tap port map (
+    --     acq_clk         => clk,            -- acq_clk
+    --     acq_data_in     => acq_data_in,    -- acq_data_in
+    --     acq_trigger_in  => acq_trigger_in, -- acq_trigger_in
+    --     storage_enable  => storage_enable  -- storage_enable
+    -- );
 
     -- module axis_fifo instantiation
     axis_fifo_inst_1 : axis_fifo generic map (
