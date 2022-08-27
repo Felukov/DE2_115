@@ -25,6 +25,52 @@
 ## DEVICE  "EP4CE115F29C7"
 ##
 
+# SDRAM
+set sdram_tsu       1.5
+set sdram_th        0.8
+set sdram_tco_min   2.7
+set sdram_tco_max   6.4
+
+# FPGA timing constraints for SDRAM
+set sdram_input_delay_min        $sdram_tco_min
+set sdram_input_delay_max        $sdram_tco_max
+set sdram_output_delay_min      -$sdram_th
+set sdram_output_delay_max       $sdram_tsu
+
+# SDRAM outputs
+set sdram_outputs [get_ports {
+    DRAM_ADDR[*]
+    DRAM_BA[*]
+    DRAM_RAS_N
+    DRAM_CAS_N
+    DRAM_WE_N
+    DRAM_CKE
+    DRAM_CS_N
+    DRAM_DQ[*]
+    DRAM_DQM[*]
+}]
+
+# SDRAM inputs
+set sdram_inputs [get_ports {
+	DRAM_DQ[*]
+}]
+
+# VGA
+set adv7123_tsu 0.5
+set adv7123_th  1.5
+
+set vga_output_delay_min     -$adv7123_th
+set vga_output_delay_max      $adv7123_tsu
+
+set vga_outputs [get_ports {
+    VGA_BLANK_N
+    VGA_SYNC_N
+    VGA_B[*]
+    VGA_G[*]
+    VGA_R[*]
+    VGA_HS
+    VGA_VS
+}]
 
 #**************************************************************
 # Time Information
@@ -50,7 +96,11 @@ set_clock_groups -asynchronous -group [get_clocks {CLOCK2_50}]
 #**************************************************************
 derive_pll_clocks
 
+
+create_generated_clock -name sdram_clk -source [get_nets {clock_manager_inst|altpll_component|auto_generated|wire_pll1_clk[1]}] [get_ports {DRAM_CLK}]
 create_generated_clock -name vga_clk -source [get_nets {vga_pll_inst|altpll_component|auto_generated|wire_pll1_clk[0]}] [get_ports {VGA_CLK}]
+
+#create_clock -name VGA_CLK_VIRT -period 9.259
 
 
 #**************************************************************
@@ -64,18 +114,23 @@ create_generated_clock -name vga_clk -source [get_nets {vga_pll_inst|altpll_comp
 #**************************************************************
 derive_clock_uncertainty
 
+#set_clock_uncertainty -from { VGA_CLK_VIRT } -setup 0.2
 
 #**************************************************************
 # Set Input Delay
 #**************************************************************
 
-
+set_input_delay -clock sdram_clk -min $sdram_input_delay_min $sdram_inputs
+set_input_delay -clock sdram_clk -max $sdram_input_delay_max $sdram_inputs
 
 #**************************************************************
 # Set Output Delay
 #**************************************************************
-set_output_delay -clock [get_clocks {vga_clk}] -max 0.8 [get_ports {VGA_BLANK_N VGA_SYNC_N VGA_B[*] VGA_G[*] VGA_R[*] VGA_HS VGA_VS}]
-set_output_delay -clock [get_clocks {vga_clk}] -min -1.7 [get_ports {VGA_BLANK_N VGA_SYNC_N VGA_B[*] VGA_G[*] VGA_R[*] VGA_HS VGA_VS}]
+set_output_delay -clock vga_clk -max $vga_output_delay_max $vga_outputs
+set_output_delay -clock vga_clk -min $vga_output_delay_min $vga_outputs
+
+set_output_delay -clock sdram_clk -min $sdram_output_delay_min $sdram_outputs
+set_output_delay -clock sdram_clk -max $sdram_output_delay_max $sdram_outputs
 
 
 #**************************************************************
@@ -118,6 +173,7 @@ set_false_path -from [get_clocks {vga_pll_inst|altpll_component|auto_generated|p
 #**************************************************************
 # Set Multicycle Path
 #**************************************************************
+set_multicycle_path -setup -end -from sdram_clk -to [get_clocks {clock_manager_inst|altpll_component|auto_generated|pll1|clk[0]}] 2
 
 
 
