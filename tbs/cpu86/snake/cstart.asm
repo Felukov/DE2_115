@@ -70,6 +70,17 @@ int8_hook proc far c
     iret
 int8_hook endp
 
+int15_hook proc far c
+    local   regs_ax : word
+    local   regs_bx : word
+    local   regs_cx : word
+    local   regs_dx : word
+    pusha
+    invoke interrupt_handler, 8, addr regs_ax, addr regs_bx, addr regs_cx, addr regs_dx
+    popa
+    iret
+int15_hook endp
+
 _TEXT   ends
 
 CONST   segment word public 'DATA'
