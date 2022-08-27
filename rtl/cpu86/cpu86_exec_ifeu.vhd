@@ -99,6 +99,15 @@ end entity cpu86_exec_ifeu;
 
 architecture rtl of cpu86_exec_ifeu is
 
+    component signal_tap is
+        port (
+            acq_data_in    : in std_logic_vector(31 downto 0) := (others => 'X'); -- acq_data_in
+            acq_trigger_in : in std_logic_vector(0 downto 0)  := (others => 'X'); -- acq_trigger_in
+            acq_clk        : in std_logic                     := 'X';             -- clk
+            storage_enable : in std_logic                     := 'X'              -- storage_enable
+        );
+    end component signal_tap;
+
     constant FLAG_DF            : natural := 10;
     constant FLAG_ZF            : natural := 6;
 
@@ -168,6 +177,10 @@ architecture rtl of cpu86_exec_ifeu is
 
     signal cmd_mask             : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0);
 
+    signal acq_data_in          : std_logic_vector(31 downto 0);
+    signal acq_trigger_in       : std_logic_vector(0 downto 0);
+    signal storage_enable       : std_logic;
+
 begin
     -- i/o assigns
     rr_tvalid           <= rr_s_tvalid;
@@ -189,6 +202,19 @@ begin
     ss_tdata            <= s_axis_ss_tdata;
     sp_tvalid           <= s_axis_sp_tvalid;
     sp_tdata            <= s_axis_sp_tdata;
+
+    acq_data_in( 31 downto 16) <= rr_tuser(USER_T_CS);
+    acq_data_in( 15 downto  0) <= rr_tuser(USER_T_IP);
+
+    acq_trigger_in(0) <= '1' when rr_tvalid = '1' and rr_tready = '1' else '0';
+    storage_enable    <= '1' when rr_tvalid = '1' and rr_tready = '1' else '0';
+
+    u0 : component signal_tap port map (
+        acq_clk         => clk,            -- acq_clk
+        acq_data_in     => acq_data_in,    -- acq_data_in
+        acq_trigger_in  => acq_trigger_in, -- acq_trigger_in
+        storage_enable  => storage_enable  -- storage_enable
+    );
 
     -- assigns
     rr_tready <= '1' when trap_tvalid = '0' and halt_mode = '0' and jmp_lock_s_tvalid = '1' and
