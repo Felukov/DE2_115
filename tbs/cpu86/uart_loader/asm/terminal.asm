@@ -21,6 +21,7 @@ terminal_clean proc near stdcall uses es di
 terminal_clean endp
 
 terminal_shift proc near stdcall uses es ax cx si di
+    ; shift screen
     push    ds
     mov     ax, TERMINAL_BASE_ADDR
     mov     es, ax
@@ -30,9 +31,22 @@ terminal_shift proc near stdcall uses es ax cx si di
     mov     cx, 80*25
     cld
     rep     movsw
+
+    ; clean last line
+    mov     di, 24*80*2
+
+    .while (di < 25*80*2)
+        mov     word ptr es:[di], 3020h
+        inc     di
+        mov     word ptr es:[di], 3020h
+        inc     di
+    .endw
+
+    ; set position
     pop     ds
     mov     x_pos, 0
     mov     y_pos, 24
+    ;return
     ret
 terminal_shift endp
 
