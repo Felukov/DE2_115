@@ -35,18 +35,22 @@ module sync_resets (
 
     (* useioff = 0 *)
     (* preserve *)
+    (* srl_style = "register" *)
     logic [2:0]     clk_a_cdc_resetn_a = '{default:'0};
 
     (* useioff = 0 *)
     (* preserve *)
+    (* srl_style = "register" *)
     logic [2:0]     clk_a_cdc_resetn_b = '{default:'0};
 
     (* useioff = 0 *)
     (* preserve *)
+    (* srl_style = "register" *)
     logic [2:0]     clk_b_cdc_resetn_a = '{default:'0};
 
     (* useioff = 0 *)
     (* preserve *)
+    (* srl_style = "register" *)
     logic [2:0]     clk_b_cdc_resetn_b = '{default:'0};
 
     logic           sync_resetn_a_ff = 1'b0;
