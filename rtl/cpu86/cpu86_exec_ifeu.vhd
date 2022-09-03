@@ -193,10 +193,10 @@ begin
     m_axis_micro_tlast  <= micro_tlast;
     m_axis_micro_tdata  <= micro_tdata;
 
-    trap_tvalid        <= s_axis_trap_tvalid;
-    s_axis_trap_tready <= trap_tready;
-    trap_tdata         <= s_axis_trap_tdata;
-    trap_tuser         <= s_axis_trap_tuser;
+    trap_tvalid         <= s_axis_trap_tvalid;
+    s_axis_trap_tready  <= trap_tready;
+    trap_tdata          <= s_axis_trap_tdata;
+    trap_tuser          <= s_axis_trap_tuser;
 
     ss_tvalid           <= s_axis_ss_tvalid;
     ss_tdata            <= s_axis_ss_tdata;
@@ -1651,8 +1651,15 @@ begin
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '0';
                     micro_tdata.jump_cond   <= j_always;
-                    micro_tdata.jump_cs     <= rr_tuser(31 downto 16);
-                    micro_tdata.jump_ip     <= rr_tdata.sreg_val;
+
+                    case (rr_tdata.code) is
+                        when JMP_PTR16_16 =>
+                            micro_tdata.jump_cs <= rr_tdata.data;
+                            micro_tdata.jump_ip <= rr_tdata.disp;
+                        when others =>
+                            micro_tdata.jump_cs <= rr_tuser(31 downto 16);
+                            micro_tdata.jump_ip <= rr_tdata.sreg_val;
+                    end case;
 
             end case;
         end procedure;

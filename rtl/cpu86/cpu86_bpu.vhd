@@ -304,7 +304,7 @@ begin
                 jump_m_tdata(31 downto 16) <= jump_s_tdata.jump_cs;
                 jump_m_tdata(15 downto 0)  <= jump_s_tdata.jump_ip;
             elsif (instr_s_tvalid = '1' and instr_s_tready = '1' and (instr_s_tdata.op = JMPU or instr_s_tdata.op = JCALL)) then
-                if (instr_s_tdata.code = JMP_PTR16_16 or instr_s_tdata.code = CALL_PTR16_16) then
+                if (instr_s_tdata.code = CALL_PTR16_16) then
                     jump_m_tdata(31 downto 16) <= instr_s_tdata.data;
                     jump_m_tdata(15 downto 0)  <= instr_s_tdata.disp;
                 else

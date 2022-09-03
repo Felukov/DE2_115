@@ -150,7 +150,7 @@ begin
 
         in_s_tvalid     => cmd_tvalid,
         in_s_tready     => cmd_tready,
-        in_s_tdata      => cmd_tdata,
+        in_s_tdata      => "00" & cmd_tdata(19 downto 2),
 
         out_m_tvalid    => m_axis_mem_req_tvalid,
         out_m_tready    => m_axis_mem_req_tready,
@@ -206,7 +206,7 @@ begin
     mem_inc_hs      <= '1' when (cmd_tvalid = '1' and cmd_tready = '1') else '0';
     mem_dec_hs      <= '1' when (mem_rd_tvalid = '1') else '0';
 
-    cmd_tdata       <= std_logic_vector(unsigned(cs_tdata & x"0") + unsigned(x"0" & ip_tdata(15 downto 2)));
+    cmd_tdata       <= std_logic_vector(unsigned(cs_tdata & x"0") + unsigned(x"0" & ip_tdata));
 
     -- requesting commands from memory and requests housekeeping
     process (clk) begin

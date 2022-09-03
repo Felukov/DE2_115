@@ -233,9 +233,9 @@ package cpu86_types is
     -- 2 downto 0 - instruction code
     constant JMP_REL8       : std_logic_vector (3 downto 0) := "0001";
     constant JMP_REL16      : std_logic_vector (3 downto 0) := "0010";
-    constant JMP_PTR16_16   : std_logic_vector (3 downto 0) := "0100";
-    constant JMP_RM16       : std_logic_vector (3 downto 0) := "1000";
-    constant JMP_M16_16     : std_logic_vector (3 downto 0) := "1001";
+    constant JMP_PTR16_16   : std_logic_vector (3 downto 0) := "1001";
+    constant JMP_RM16       : std_logic_vector (3 downto 0) := "1010";
+    constant JMP_M16_16     : std_logic_vector (3 downto 0) := "1100";
 
     -- CALL bits encoding
     -- 3          - '0' : fast instruction, '1' : slow instruction

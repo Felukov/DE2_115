@@ -170,7 +170,7 @@ begin
 
     write_proc: process (clk) begin
         if rising_edge(clk) then
-            -- Resettable
+            -- Control
             if resetn = '0' then
                 wr_addr <= 0;
                 fifo_ram_valid <= (others => '0');
@@ -178,22 +178,19 @@ begin
                 wr_addr <= wr_addr_next;
 
                 for i in 0 to FIFO_DEPTH-1 loop
-                    if (wr_data_tvalid = '1' and wr_data_tready = '1' and i = wr_addr) or
-                       (upd_tvalid = '1' and i = to_integer(unsigned(upd_tag))) then
-                        fifo_ram_valid(i) <= wr_data_hit or upd_tvalid;
+                    if (wr_data_tvalid = '1' and wr_data_tready = '1' and i = wr_addr) then
+                        fifo_ram_valid(i) <= wr_data_hit;
+                    elsif (upd_tvalid = '1' and i = to_integer(unsigned(upd_tag))) then
+                        fifo_ram_valid(i) <= '1';
                     end if;
                 end loop;
             end if;
-            -- Without reset
+            -- Data
             for i in 0 to FIFO_DEPTH-1 loop
-                if (wr_data_tvalid = '1' and wr_data_tready = '1' and i = wr_addr) or
-                    (upd_tvalid = '1' and i = to_integer(unsigned(upd_tag)))
-                then
-                    if upd_tvalid = '1' then
-                        fifo_ram_data(i) <= upd_tdata;
-                    else
-                        fifo_ram_data(i) <= wr_data_tdata;
-                    end if;
+                if (wr_data_tvalid = '1' and wr_data_tready = '1' and i = wr_addr) then
+                    fifo_ram_data(i) <= wr_data_tdata;
+                elsif (upd_tvalid = '1' and i = to_integer(unsigned(upd_tag))) then
+                    fifo_ram_data(i) <= upd_tdata;
                 end if;
             end loop;
         end if;

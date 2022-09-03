@@ -147,7 +147,6 @@ architecture rtl of cpu86_exec_lsu is
 
     signal add_tvalid           : std_logic;
     signal add_tready           : std_logic;
-    signal add_tdata            : std_logic_vector(3 downto 0);
 
     signal tag_tdata            : std_logic_vector(3 downto 0);
 
