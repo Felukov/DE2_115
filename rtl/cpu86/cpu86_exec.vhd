@@ -392,26 +392,25 @@ architecture rtl of cpu86_exec is
             clk                     : in std_logic;
             resetn                  : in std_logic;
 
-            lsu_req_s_tvalid        : in std_logic;
-            lsu_req_s_tready        : out std_logic;
-            lsu_req_s_tcmd          : in std_logic;
-            lsu_req_s_taddr         : in std_logic_vector(19 downto 0);
-            lsu_req_s_twidth        : in std_logic;
-            lsu_req_s_tdata         : in std_logic_vector(15 downto 0);
-
-            dcache_s_tvalid         : in std_logic;
-            dcache_s_tdata          : in std_logic_vector(15 downto 0);
+            s_axis_lsu_req_tvalid   : in std_logic;
+            s_axis_lsu_req_tready   : out std_logic;
+            s_axis_lsu_req_tcmd     : in std_logic;
+            s_axis_lsu_req_taddr    : in std_logic_vector(19 downto 0);
+            s_axis_lsu_req_twidth   : in std_logic;
+            s_axis_lsu_req_tdata    : in std_logic_vector(15 downto 0);
+            s_axis_lsu_req_thit     : in std_logic;
+            s_axis_lsu_req_tcache   : in std_logic_vector(15 downto 0);
 
             m_axis_mem_req_tvalid   : out std_logic;
             m_axis_mem_req_tready   : in std_logic;
             m_axis_mem_req_tdata    : out std_logic_vector(63 downto 0);
 
-            mem_rd_s_tvalid         : in std_logic;
-            mem_rd_s_tdata          : in std_logic_vector(31 downto 0);
+            s_axis_mem_rd_tvalid    : in std_logic;
+            s_axis_mem_rd_tdata     : in std_logic_vector(31 downto 0);
 
-            lsu_rd_m_tvalid         : out std_logic;
-            lsu_rd_m_tready         : in std_logic;
-            lsu_rd_m_tdata          : out std_logic_vector(15 downto 0)
+            m_axis_lsu_rd_tvalid    : out std_logic;
+            m_axis_lsu_rd_tready    : in std_logic;
+            m_axis_lsu_rd_tdata     : out std_logic_vector(15 downto 0)
         );
     end component cpu86_exec_lsu;
 
@@ -1241,26 +1240,26 @@ begin
         clk                     => clk,
         resetn                  => resetn,
 
-        lsu_req_s_tvalid        => dcache_tvalid,
-        lsu_req_s_tready        => dcache_tready,
-        lsu_req_s_tcmd          => dcache_tcmd,
-        lsu_req_s_taddr         => dcache_taddr,
-        lsu_req_s_twidth        => dcache_twidth,
-        lsu_req_s_tdata         => dcache_tdata,
+        s_axis_lsu_req_tvalid   => dcache_tvalid,
+        s_axis_lsu_req_tready   => dcache_tready,
+        s_axis_lsu_req_tcmd     => dcache_tcmd,
+        s_axis_lsu_req_taddr    => dcache_taddr,
+        s_axis_lsu_req_twidth   => dcache_twidth,
+        s_axis_lsu_req_tdata    => dcache_tdata,
 
-        dcache_s_tvalid         => dcache_thit,
-        dcache_s_tdata          => dcache_tcache,
+        s_axis_lsu_req_thit     => dcache_thit,
+        s_axis_lsu_req_tcache   => dcache_tcache,
 
         m_axis_mem_req_tvalid   => mem_req_m_tvalid,
         m_axis_mem_req_tready   => mem_req_m_tready,
         m_axis_mem_req_tdata    => mem_req_m_tdata,
 
-        mem_rd_s_tvalid         => mem_rd_s_tvalid,
-        mem_rd_s_tdata          => mem_rd_s_tdata,
+        s_axis_mem_rd_tvalid    => mem_rd_s_tvalid,
+        s_axis_mem_rd_tdata     => mem_rd_s_tdata,
 
-        lsu_rd_m_tvalid         => lsu_rd_tvalid,
-        lsu_rd_m_tready         => lsu_rd_tready,
-        lsu_rd_m_tdata          => lsu_rd_tdata
+        m_axis_lsu_rd_tvalid    => lsu_rd_tvalid,
+        m_axis_lsu_rd_tready    => lsu_rd_tready,
+        m_axis_lsu_rd_tdata     => lsu_rd_tdata
     );
 
     -- assigns
