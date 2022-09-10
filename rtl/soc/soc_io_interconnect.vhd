@@ -111,6 +111,13 @@ entity soc_io_interconnect is
         s_axis_uart_res_tvalid      : in std_logic;
         s_axis_uart_res_tready      : out std_logic;
         s_axis_uart_res_tdata       : in std_logic_vector(15 downto 0);
+        -- kbd (port 60)
+        m_axis_kbd_req_tvalid       : out std_logic;
+        m_axis_kbd_req_tready       : in std_logic;
+        m_axis_kbd_req_tdata        : out std_logic_vector(39 downto 0);
+        s_axis_kbd_res_tvalid       : in std_logic;
+        s_axis_kbd_res_tready       : out std_logic;
+        s_axis_kbd_res_tdata        : in std_logic_vector(15 downto 0);
         -- port 61
         m_axis_port_61_req_tvalid   : out std_logic;
         m_axis_port_61_req_tready   : in std_logic;
@@ -225,6 +232,13 @@ architecture rtl of soc_io_interconnect is
     signal uart_rd_s_tvalid     : std_logic;
     signal uart_rd_s_tready     : std_logic;
     signal uart_rd_s_tdata      : std_logic_vector(15 downto 0);
+        -- kbd (port 60)
+    signal kbd_req_m_tvalid     : std_logic;
+    signal kbd_req_m_tready     : std_logic;
+    signal kbd_req_m_tdata      : std_logic_vector(39 downto 0);
+    signal kbd_rd_s_tvalid      : std_logic;
+    signal kbd_rd_s_tready      : std_logic;
+    signal kbd_rd_s_tdata       : std_logic_vector(15 downto 0);
         -- port 61
     signal port_61_req_m_tvalid : std_logic;
     signal port_61_req_m_tready : std_logic;
@@ -252,16 +266,17 @@ architecture rtl of soc_io_interconnect is
     signal port_61_req_cs       : std_logic;
     signal uart_req_cs          : std_logic;
     signal mmu_req_cs           : std_logic;
+    signal kbd_req_cs           : std_logic;
 
     signal fifo_io_s_tvalid     : std_logic;
     signal fifo_io_s_tready     : std_logic;
     signal fifo_io_s_tdata      : std_logic_vector(3 downto 0);
-    signal fifo_io_s_selector   : std_logic_vector(10 downto 0);
+    signal fifo_io_s_selector   : std_logic_vector(12 downto 0);
     signal fifo_io_m_tvalid     : std_logic;
     signal fifo_io_m_tready     : std_logic;
     signal fifo_io_m_tdata      : std_logic_vector(3 downto 0);
 
-    signal rd_selector          : std_logic_vector(11 downto 0);
+    signal rd_selector          : std_logic_vector(12 downto 0);
 
 begin
     -- i/o assigns
@@ -342,6 +357,13 @@ begin
     uart_rd_s_tvalid            <= s_axis_uart_res_tvalid;
     s_axis_uart_res_tready      <= uart_rd_s_tready;
     uart_rd_s_tdata             <= s_axis_uart_res_tdata;
+    -- port 60
+    m_axis_kbd_req_tvalid       <= kbd_req_m_tvalid;
+    kbd_req_m_tready            <= m_axis_kbd_req_tready;
+    m_axis_kbd_req_tdata        <= kbd_req_m_tdata;
+    kbd_rd_s_tvalid             <= s_axis_kbd_res_tvalid;
+    s_axis_kbd_res_tready       <= kbd_rd_s_tready;
+    kbd_rd_s_tdata              <= s_axis_kbd_res_tdata;
     -- port 61
     m_axis_port_61_req_tvalid   <= port_61_req_m_tvalid;
     port_61_req_m_tready        <= m_axis_port_61_req_tready;
@@ -384,6 +406,7 @@ begin
         (sw_1_req_m_tvalid = '0' or (sw_1_req_m_tvalid = '1' and sw_1_req_m_tready = '1')) and
         (hex_0_req_m_tvalid = '0' or (hex_0_req_m_tvalid = '1' and hex_0_req_m_tready = '1')) and
         (hex_1_req_m_tvalid = '0' or (hex_1_req_m_tvalid = '1' and hex_1_req_m_tready = '1')) and
+        (kbd_req_m_tvalid = '0' or (kbd_req_m_tvalid = '1' and kbd_req_m_tready = '1')) and
         (port_61_req_m_tvalid = '0' or (port_61_req_m_tvalid = '1' and port_61_req_m_tready = '1')) and
         (uart_req_m_tvalid = '0' or (uart_req_m_tvalid = '1' and uart_req_m_tready = '1')) and
         (mmu_req_m_tvalid = '0' or (mmu_req_m_tvalid = '1' and mmu_req_m_tready = '1')) and
@@ -402,6 +425,7 @@ begin
     hex_1_rd_s_tready   <= '1' when (io_rd_m_tvalid = '0' or (io_rd_m_tvalid = '1' and io_rd_m_tready = '1')) and fifo_io_m_tvalid = '1' and fifo_io_m_tdata = x"9" else '0';
     uart_rd_s_tready    <= '1' when (io_rd_m_tvalid = '0' or (io_rd_m_tvalid = '1' and io_rd_m_tready = '1')) and fifo_io_m_tvalid = '1' and fifo_io_m_tdata = x"A" else '0';
     mmu_rd_s_tready     <= '1' when (io_rd_m_tvalid = '0' or (io_rd_m_tvalid = '1' and io_rd_m_tready = '1')) and fifo_io_m_tvalid = '1' and fifo_io_m_tdata = x"B" else '0';
+    kbd_rd_s_tready     <= '1' when (io_rd_m_tvalid = '0' or (io_rd_m_tvalid = '1' and io_rd_m_tready = '1')) and fifo_io_m_tvalid = '1' and fifo_io_m_tdata = x"C" else '0';
 
     fifo_io_s_tvalid    <= '1' when io_req_s_tvalid = '1' and io_req_s_tready = '1' and io_req_s_tdata(32) = '0' else '0';
     fifo_io_m_tready    <= '1' when io_rd_m_tvalid = '1' and io_rd_m_tready = '1' else '0';
@@ -417,6 +441,8 @@ begin
     fifo_io_s_selector(8)  <= hex_0_req_cs;
     fifo_io_s_selector(9)  <= hex_1_req_cs;
     fifo_io_s_selector(10) <= uart_req_cs;
+    fifo_io_s_selector(11) <= mmu_req_cs;
+    fifo_io_s_selector(12) <= kbd_req_cs;
 
     process (all) begin
         fifo_io_s_tdata <= (others => '0');
@@ -477,6 +503,10 @@ begin
 
     port_61_req_cs <= '1' when (
         io_req_s_tdata(31 downto 16) = x"0061"
+    ) else '0';
+
+    kbd_req_cs <= '1' when (
+        io_req_s_tdata(31 downto 16) = x"0060"
     ) else '0';
 
     -- latching pit request
@@ -679,6 +709,26 @@ begin
         end if;
     end process;
 
+    -- latching kbd request
+    latch_kbd_req_proc: process (clk) begin
+        if rising_edge(clk) then
+            -- Resettable
+            if resetn = '0' then
+                kbd_req_m_tvalid <= '0';
+            else
+                if (io_req_s_tvalid = '1' and io_req_s_tready = '1' and kbd_req_cs = '1') then
+                    kbd_req_m_tvalid <= '1';
+                elsif (kbd_req_m_tready = '1') then
+                    kbd_req_m_tvalid <= '0';
+                end if;
+            end if;
+            -- Without reset
+            if (io_req_s_tvalid = '1' and io_req_s_tready = '1') then
+                kbd_req_m_tdata <= io_req_s_tdata;
+            end if;
+        end if;
+    end process;
+
     -- latching uart request
     latch_uart_req_proc: process (clk) begin
         if rising_edge(clk) then
@@ -731,6 +781,7 @@ begin
     rd_selector(9)  <= '1' when (hex_1_rd_s_tvalid = '1' and hex_1_rd_s_tready = '1')  else '0';
     rd_selector(10) <= '1' when (uart_rd_s_tvalid = '1' and uart_rd_s_tready = '1')  else '0';
     rd_selector(11) <= '1' when (mmu_rd_s_tvalid = '1' and mmu_rd_s_tready = '1')  else '0';
+    rd_selector(12) <= '1' when (kbd_rd_s_tvalid = '1' and kbd_rd_s_tready = '1')  else '0';
 
     latch_resp_proc : process (clk) begin
         if rising_edge(clk) then
@@ -738,7 +789,7 @@ begin
             if resetn = '0' then
                 io_rd_m_tvalid <= '0';
             else
-                if (rd_selector /= "000000000000") then
+                if (rd_selector /= "0000000000000") then
                     io_rd_m_tvalid <= '1';
                 elsif (io_rd_m_tready = '1') then
                     io_rd_m_tvalid <= '0';
@@ -746,18 +797,19 @@ begin
             end if;
             -- Without reset
             case rd_selector is
-                when "000000000001" => io_rd_m_tdata <= pit_rd_s_tdata;
-                when "000000000010" => io_rd_m_tdata <= pic_rd_s_tdata;
-                when "000000000100" => io_rd_m_tdata <= led_0_rd_s_tdata;
-                when "000000001000" => io_rd_m_tdata <= led_1_rd_s_tdata;
-                when "000000010000" => io_rd_m_tdata <= led_2_rd_s_tdata;
-                when "000000100000" => io_rd_m_tdata <= sw_0_rd_s_tdata;
-                when "000001000000" => io_rd_m_tdata <= sw_0_rd_s_tdata;
-                when "000010000000" => io_rd_m_tdata <= port_61_rd_s_tdata;
-                when "000100000000" => io_rd_m_tdata <= hex_0_rd_s_tdata;
-                when "001000000000" => io_rd_m_tdata <= hex_1_rd_s_tdata;
-                when "010000000000" => io_rd_m_tdata <= uart_rd_s_tdata;
-                when "100000000000" => io_rd_m_tdata <= mmu_rd_s_tdata;
+                when "0000000000001" => io_rd_m_tdata <= pit_rd_s_tdata;
+                when "0000000000010" => io_rd_m_tdata <= pic_rd_s_tdata;
+                when "0000000000100" => io_rd_m_tdata <= led_0_rd_s_tdata;
+                when "0000000001000" => io_rd_m_tdata <= led_1_rd_s_tdata;
+                when "0000000010000" => io_rd_m_tdata <= led_2_rd_s_tdata;
+                when "0000000100000" => io_rd_m_tdata <= sw_0_rd_s_tdata;
+                when "0000001000000" => io_rd_m_tdata <= sw_0_rd_s_tdata;
+                when "0000010000000" => io_rd_m_tdata <= port_61_rd_s_tdata;
+                when "0000100000000" => io_rd_m_tdata <= hex_0_rd_s_tdata;
+                when "0001000000000" => io_rd_m_tdata <= hex_1_rd_s_tdata;
+                when "0010000000000" => io_rd_m_tdata <= uart_rd_s_tdata;
+                when "0100000000000" => io_rd_m_tdata <= mmu_rd_s_tdata;
+                when "1000000000000" => io_rd_m_tdata <= kbd_rd_s_tdata;
                 when others         => io_rd_m_tdata <= led_0_rd_s_tdata;
             end case;
         end if;

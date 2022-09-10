@@ -55,7 +55,10 @@ entity soc is
         HEX7                        : out std_logic_vector(6 downto 0);
 
         BT_UART_RX                  : in std_logic;
-        BT_UART_TX                  : out std_logic
+        BT_UART_TX                  : out std_logic;
+
+        PS2_CLK                     : inout std_logic;
+        PS2_DAT                     : inout std_logic
     );
 end entity soc;
 
@@ -115,7 +118,24 @@ architecture rtl of soc is
 
             interrupt_valid         : in std_logic;
             interrupt_data          : in std_logic_vector(7 downto 0);
-            interrupt_ack           : out std_logic
+            interrupt_ack           : out std_logic;
+
+            dbg_out_rr_valid        : out std_logic;
+            dbg_out_rr_cs           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_ip           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_op           : out std_logic_vector(4 downto 0);
+            dbg_out_rr_code         : out std_logic_vector(3 downto 0);
+            dbg_out_rr_sreg         : out std_logic_vector(3 downto 0);
+            dbg_out_rr_dreg         : out std_logic_vector(3 downto 0);
+            dbg_out_rr_ax           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_bx           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_cx           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_dx           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_bp           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_sp           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_di           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_si           : out std_logic_vector(15 downto 0);
+            dbg_out_rr_fl           : out std_logic_vector(15 downto 0)
         );
     end component cpu86;
 
@@ -237,6 +257,13 @@ architecture rtl of soc is
             s_axis_uart_res_tvalid      : in std_logic;
             s_axis_uart_res_tready      : out std_logic;
             s_axis_uart_res_tdata       : in std_logic_vector(15 downto 0);
+            -- kbd
+            m_axis_kbd_req_tvalid       : out std_logic;
+            m_axis_kbd_req_tready       : in std_logic;
+            m_axis_kbd_req_tdata        : out std_logic_vector(39 downto 0);
+            s_axis_kbd_res_tvalid       : in std_logic;
+            s_axis_kbd_res_tready       : out std_logic;
+            s_axis_kbd_res_tdata        : in std_logic_vector(15 downto 0);
             -- port 61
             m_axis_port_61_req_tvalid   : out std_logic;
             m_axis_port_61_req_tready   : in std_logic;
@@ -387,6 +414,28 @@ architecture rtl of soc is
         );
     end component soc_io_uart;
 
+    component soc_ps2 is
+        port(
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+
+            -- cpu io
+            s_axis_io_req_tvalid    : in std_logic;
+            s_axis_io_req_tready    : out std_logic;
+            s_axis_io_req_tdata     : in std_logic_vector(39 downto 0);
+            m_axis_io_res_tvalid    : out std_logic;
+            m_axis_io_res_tready    : in std_logic;
+            m_axis_io_res_tdata     : out std_logic_vector(15 downto 0);
+
+            -- interrupt request
+            event_kb_int_req        : out std_logic;
+
+            -- PS2
+            ps2d                    : inout std_logic;
+            ps2c                    : inout std_logic
+        );
+    end component soc_ps2;
+
     attribute keep: boolean;
     attribute maxfan : integer;
     signal cpu_resetn               : std_logic;
@@ -459,6 +508,13 @@ architecture rtl of soc is
     signal leds_0_rd_tready         : std_logic;
     signal leds_0_rd_tdata          : std_logic_vector(15 downto 0);
 
+    signal kbd_req_tvalid           : std_logic;
+    signal kbd_req_tready           : std_logic;
+    signal kbd_req_tdata            : std_logic_vector(39 downto 0);
+    signal kbd_rd_tvalid            : std_logic;
+    signal kbd_rd_tready            : std_logic;
+    signal kbd_rd_tdata             : std_logic_vector(15 downto 0);
+
     signal port_61_req_tvalid       : std_logic;
     signal port_61_req_tready       : std_logic;
     signal port_61_req_tdata        : std_logic_vector(39 downto 0);
@@ -498,6 +554,7 @@ architecture rtl of soc is
 
     signal event_timer              : std_logic;
     signal event_irq                : std_logic;
+    signal event_kb_int_req         : std_logic;
 
     signal interrupt_vector         : std_logic_vector(15 downto 0);
 
@@ -549,7 +606,24 @@ begin
 
         interrupt_valid         => interrupt_valid,
         interrupt_data          => interrupt_data,
-        interrupt_ack           => interrupt_ack
+        interrupt_ack           => interrupt_ack,
+
+        dbg_out_rr_valid        => open,
+        dbg_out_rr_cs           => open,
+        dbg_out_rr_ip           => open,
+        dbg_out_rr_op           => open,
+        dbg_out_rr_code         => open,
+        dbg_out_rr_sreg         => open,
+        dbg_out_rr_dreg         => open,
+        dbg_out_rr_ax           => open,
+        dbg_out_rr_bx           => open,
+        dbg_out_rr_cx           => open,
+        dbg_out_rr_dx           => open,
+        dbg_out_rr_bp           => open,
+        dbg_out_rr_sp           => open,
+        dbg_out_rr_di           => open,
+        dbg_out_rr_si           => open,
+        dbg_out_rr_fl           => open
     );
 
     -- Module soc_mmu instantiation
@@ -676,6 +750,13 @@ begin
         s_axis_mmu_res_tvalid       => mmu_rd_tvalid,
         s_axis_mmu_res_tready       => mmu_rd_tready,
         s_axis_mmu_res_tdata        => mmu_rd_tdata,
+        -- kbd
+        m_axis_kbd_req_tvalid       => kbd_req_tvalid,
+        m_axis_kbd_req_tready       => kbd_req_tready,
+        m_axis_kbd_req_tdata        => kbd_req_tdata,
+        s_axis_kbd_res_tvalid       => kbd_rd_tvalid,
+        s_axis_kbd_res_tready       => kbd_rd_tready,
+        s_axis_kbd_res_tdata        => kbd_rd_tdata,
         -- port_61
         m_axis_port_61_req_tvalid   => port_61_req_tvalid,
         m_axis_port_61_req_tready   => port_61_req_tready,
@@ -833,6 +914,25 @@ begin
         tx                      => BT_UART_TX
     );
 
+    -- Module soc_io_uart instantiation
+    soc_io_kbd_inst : soc_ps2 port map(
+        clk                     => clk,
+        resetn                  => dev_resetn,
+
+        s_axis_io_req_tvalid    => kbd_req_tvalid,
+        s_axis_io_req_tready    => kbd_req_tready,
+        s_axis_io_req_tdata     => kbd_req_tdata,
+
+        m_axis_io_res_tvalid    => kbd_rd_tvalid,
+        m_axis_io_res_tready    => kbd_rd_tready,
+        m_axis_io_res_tdata     => kbd_rd_tdata,
+
+        event_kb_int_req        => event_kb_int_req,
+
+        ps2c                    => PS2_CLK,
+        ps2d                    => PS2_DAT
+    );
+
     -- Assigns
     LEDG <= ledg_out(8 downto 0);
 
@@ -856,7 +956,8 @@ begin
     -- mem_res_tvalid <= rd_m_tvalid;
     -- mem_res_tdata <= rd_m_tdata;
 
-    interrupt_vector(15 downto 1)   <= (others => '0');
+    interrupt_vector(15 downto 2)   <= (others => '0');
+    interrupt_vector(1)             <= event_kb_int_req;
     interrupt_vector(0)             <= event_irq;
 
     process (clk) begin
