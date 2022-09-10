@@ -77,6 +77,13 @@ architecture rtl of soc_ps2 is
     signal tx_fifo_m_tvalid     : std_logic;
     signal tx_fifo_m_tready     : std_logic;
     signal tx_fifo_m_tdata      : std_logic_vector(7 downto 0);
+
+    signal ps2d_ff_0            : std_logic;
+    signal ps2d_ff_1            : std_logic;
+    signal ps2c_ff_0            : std_logic;
+    signal ps2c_ff_1            : std_logic;
+    signal rx_en_ff_0           : std_logic;
+    signal rx_en_ff_1           : std_logic;
 begin
 
     -- i/o assigns
@@ -114,8 +121,8 @@ begin
         resetn              => resetn,
         wr_ps2              => wr_ps2,
         din                 => din,
-        ps2d                => ps2d,
         ps2c                => ps2c,
+        ps2d                => ps2d,
         tx_idle             => tx_idle,
         tx_done_tick        => tx_done_tick
     );
@@ -124,9 +131,9 @@ begin
     ps2_rx_unit: entity work.soc_ps2_rx port map(
         clk                 => clk,
         resetn              => resetn,
-        rx_en               => tx_idle,
-        ps2d                => ps2d,
-        ps2c                => ps2c,
+        rx_en               => rx_en_ff_1,
+        ps2c                => ps2c_ff_1,
+        ps2d                => ps2d_ff_1,
         rx_done_tick        => rx_done_tick,
         dout                => dout
     );
@@ -174,6 +181,27 @@ begin
     io_read_wr_fifo_ready <= '1' when io_address(3 downto 0) = x"2" else '0';
 
     io_req_tready <= '1';
+
+    process (clk) begin
+        if rising_edge(clk) then
+            ps2c_ff_0 <= ps2c;
+            ps2c_ff_1 <= ps2c_ff_0;
+            ps2d_ff_0 <= ps2d;
+            ps2d_ff_1 <= ps2d_ff_0;
+        end if;
+    end process;
+
+    process (clk) begin
+        if rising_edge(clk) then
+            if resetn = '0' then
+                rx_en_ff_0 <= '0';
+                rx_en_ff_1 <= '0';
+            else
+                rx_en_ff_0 <= tx_idle;
+                rx_en_ff_1 <= rx_en_ff_0;
+            end if;
+        end if;
+    end process;
 
     -- read process
     read_proc : process (clk) begin

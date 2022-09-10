@@ -23,14 +23,14 @@ entity soc_ps2_tx is
     );
 end soc_ps2_tx;
 
-architecture behavioral of soc_ps2_tx is
+architecture rtl of soc_ps2_tx is
     type state_t is (ST_IDLE, ST_RTS, ST_START, ST_DATA, ST_STOP);
     signal state_reg, state_next: state_t;
     signal filter_reg, filter_next: std_logic_vector(7 downto 0);
     signal f_ps2c_reg, f_ps2c_next: std_logic;
     signal fall_edge: std_logic;
     signal b_reg, b_next: std_logic_vector(8 downto 0);
-    signal c_reg, c_next: unsigned(12 downto 0);
+    signal c_reg, c_next: unsigned(13 downto 0);
     signal n_reg, n_next: unsigned(3 downto 0);
     signal par: std_logic;
     signal ps2c_out, ps2d_out: std_logic;
@@ -42,7 +42,7 @@ begin
             if resetn = '0' then
                 filter_reg <= (others => '0');
                 f_ps2c_reg <= '0';
-            elsif clk'event and clk = '1' then
+            else
                 filter_reg <= filter_next;
                 f_ps2c_reg <= f_ps2c_next;
             end if;
@@ -67,7 +67,7 @@ begin
                 c_reg <= (others => '0');
                 n_reg <= (others => '0');
                 b_reg <= (others => '0');
-            elsif clk'event and clk = '1' then
+            else
                 state_reg <= state_next;
                 c_reg <= c_next;
                 n_reg <= n_next;
@@ -136,4 +136,4 @@ begin
     -- tri-state buffers
     ps2c <= ps2c_out when tri_c = '1' else 'Z';
     ps2d <= ps2d_out when tri_d = '1' else 'Z';
-end behavioral;
+end rtl;

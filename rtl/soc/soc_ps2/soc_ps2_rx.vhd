@@ -71,7 +71,7 @@ begin
                 state_reg <= ST_IDLE;
                 n_reg <= (others => '0');
                 b_reg <= (others => '0');
-            elsif clk'event and clk = '1' then
+            else
                 state_reg <= state_next;
                 n_reg <= n_next;
                 b_reg <= b_next;
@@ -80,15 +80,15 @@ begin
     end process;
 
 
-    u0 : component signal_tap port map (
-        acq_clk                     => clk,             -- acq_clk
-        acq_data_in(31 downto 16)   => (others => '0'), -- acq_data_in
-        acq_data_in(15 downto 12)   => std_logic_vector(n_reg),
-        acq_data_in(11)             => ps2d,
-        acq_data_in(10 downto 0)    => b_reg,
-        acq_trigger_in(0)           => fall_edge,    -- acq_trigger_in
-        storage_enable              => fall_edge     -- storage_enable
-    );
+    -- u0 : component signal_tap port map (
+    --     acq_clk                     => clk,             -- acq_clk
+    --     acq_data_in(31 downto 16)   => (others => '0'), -- acq_data_in
+    --     acq_data_in(15 downto 12)   => std_logic_vector(n_reg),
+    --     acq_data_in(11)             => ps2d,
+    --     acq_data_in(10 downto 0)    => b_reg,
+    --     acq_trigger_in(0)           => fall_edge,    -- acq_trigger_in
+    --     storage_enable              => fall_edge     -- storage_enable
+    -- );
 
 
     -- next-state logic
