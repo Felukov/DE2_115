@@ -99,14 +99,14 @@ end entity cpu86_exec_ifeu;
 
 architecture rtl of cpu86_exec_ifeu is
 
-    component signal_tap is
-        port (
-            acq_data_in    : in std_logic_vector(31 downto 0) := (others => 'X'); -- acq_data_in
-            acq_trigger_in : in std_logic_vector(0 downto 0)  := (others => 'X'); -- acq_trigger_in
-            acq_clk        : in std_logic                     := 'X';             -- clk
-            storage_enable : in std_logic                     := 'X'              -- storage_enable
-        );
-    end component signal_tap;
+    -- component signal_tap is
+    --     port (
+    --         acq_data_in    : in std_logic_vector(31 downto 0) := (others => 'X'); -- acq_data_in
+    --         acq_trigger_in : in std_logic_vector(0 downto 0)  := (others => 'X'); -- acq_trigger_in
+    --         acq_clk        : in std_logic                     := 'X';             -- clk
+    --         storage_enable : in std_logic                     := 'X'              -- storage_enable
+    --     );
+    -- end component signal_tap;
 
     constant FLAG_DF            : natural := 10;
     constant FLAG_ZF            : natural := 6;
@@ -177,9 +177,9 @@ architecture rtl of cpu86_exec_ifeu is
 
     signal cmd_mask             : std_logic_vector(MICRO_OP_CMD_WIDTH-1 downto 0);
 
-    signal acq_data_in          : std_logic_vector(31 downto 0);
-    signal acq_trigger_in       : std_logic_vector(0 downto 0);
-    signal storage_enable       : std_logic;
+    -- signal acq_data_in          : std_logic_vector(31 downto 0);
+    -- signal acq_trigger_in       : std_logic_vector(0 downto 0);
+    -- signal storage_enable       : std_logic;
 
 begin
     -- i/o assigns
@@ -203,18 +203,18 @@ begin
     sp_tvalid           <= s_axis_sp_tvalid;
     sp_tdata            <= s_axis_sp_tdata;
 
-    acq_data_in( 31 downto 16) <= rr_tuser(USER_T_CS);
-    acq_data_in( 15 downto  0) <= rr_tuser(USER_T_IP);
+    -- acq_data_in( 31 downto 16) <= rr_tuser(USER_T_CS);
+    -- acq_data_in( 15 downto  0) <= rr_tuser(USER_T_IP);
 
-    acq_trigger_in(0) <= '1' when rr_tvalid = '1' and rr_tready = '1' else '0';
-    storage_enable    <= '1' when rr_tvalid = '1' and rr_tready = '1' else '0';
+    -- acq_trigger_in(0) <= '1'; --'1' when rr_tvalid = '1' and rr_tready = '1' else '0';
+    -- storage_enable    <= '1'; --'1' when rr_tvalid = '1' and rr_tready = '1' else '0';
 
-    u0 : component signal_tap port map (
-        acq_clk         => clk,            -- acq_clk
-        acq_data_in     => acq_data_in,    -- acq_data_in
-        acq_trigger_in  => acq_trigger_in, -- acq_trigger_in
-        storage_enable  => storage_enable  -- storage_enable
-    );
+    -- u0 : component signal_tap port map (
+    --     acq_clk         => clk,            -- acq_clk
+    --     acq_data_in     => acq_data_in,    -- acq_data_in
+    --     acq_trigger_in  => acq_trigger_in, -- acq_trigger_in
+    --     storage_enable  => storage_enable  -- storage_enable
+    -- );
 
     -- assigns
     rr_tready <= '1' when trap_tvalid = '0' and halt_mode = '0' and jmp_lock_s_tvalid = '1' and
@@ -227,13 +227,13 @@ begin
     jmp_lock_m_lock_tvalid <= '1' when rr_tvalid = '1' and rr_tready = '1' and
         ((rr_tdata.op = LOOPU) or
          (rr_tdata.op = BRANCH) or
-         (rr_tdata.op = JCALL and rr_tdata.code(3) = '1') or
          (rr_tdata.op = RET) or
          (rr_tdata.op = DIVU) or
          (rr_tdata.op = IO) or
+         (rr_tdata.op = JCALL and rr_tdata.code(3) = '1') or
          (rr_tdata.op = JMPU and rr_tdata.code(3) = '1') or
          (rr_tdata.op = LFP and rr_tdata.code = MISC_BOUND) or
-         (rr_tdata.op = SYS and (rr_tdata.code = SYS_INT_INT_OP or rr_tdata.code = SYS_EXT_INT_OP)))
+         (rr_tdata.op = SYS))
     else '0';
 
     ea_val_plus_disp_next <= std_logic_vector(unsigned(rr_tdata.ea_val) + unsigned(rr_tdata.disp));
@@ -548,6 +548,79 @@ begin
     end process;
 
     micro_cmd_gen_proc : process (clk)
+
+        procedure set_undefined is begin
+            micro_tdata.cmd             <= (others => 'U');
+            micro_tdata.trap            <= 'U';
+            micro_tdata.alu_code        <= (others => 'U');
+            micro_tdata.alu_w           <= 'U';
+            micro_tdata.alu_dreg        <= ZERO;
+            micro_tdata.alu_dmask       <= (others => 'U');
+            micro_tdata.alu_a_buf       <= 'U';
+            micro_tdata.alu_a_mem       <= 'U';
+            micro_tdata.alu_a_val       <= (others => 'U');
+            micro_tdata.alu_b_mem       <= 'U';
+            micro_tdata.alu_b_val       <= (others => 'U');
+            micro_tdata.alu_wb          <= 'U';
+            micro_tdata.alu_upd_fl      <= 'U';
+            micro_tdata.mul_code        <= (others => 'U');
+            micro_tdata.mul_w           <= 'U';
+            micro_tdata.mul_dreg        <= ZERO;
+            micro_tdata.mul_a_val       <= (others => 'U');
+            micro_tdata.mul_b_val       <= (others => 'U');
+            micro_tdata.div_code        <= (others => 'U');
+            micro_tdata.div_w           <= 'U';
+            micro_tdata.div_dreg        <= ZERO;
+            micro_tdata.div_a_val       <= (others => 'U');
+            micro_tdata.div_b_val       <= (others => 'U');
+            micro_tdata.bnd_val         <= (others => 'U');
+            micro_tdata.shf_code        <= (others => 'U');
+            micro_tdata.shf_code_ex     <= (others => 'U');
+            micro_tdata.shf_w           <= 'U';
+            micro_tdata.shf_dreg        <= ZERO;
+            micro_tdata.shf_dmask       <= (others => 'U');
+            micro_tdata.shf_sval        <= (others => 'U');
+            micro_tdata.shf_ival        <= (others => 'U');
+            micro_tdata.shf_wb          <= 'U';
+            micro_tdata.bcd_code        <= (others => 'U');
+            micro_tdata.bcd_sval        <= (others => 'U');
+            micro_tdata.str_code        <= (others => 'U');
+            micro_tdata.str_rep         <= 'U';
+            micro_tdata.str_rep_nz      <= 'U';
+            micro_tdata.str_direction   <= 'U';
+            micro_tdata.str_w           <= 'U';
+            micro_tdata.str_port        <= (others => 'U');
+            micro_tdata.str_ax_val      <= (others => 'U');
+            micro_tdata.str_cx_val      <= (others => 'U');
+            micro_tdata.str_es_val      <= (others => 'U');
+            micro_tdata.str_di_val      <= (others => 'U');
+            micro_tdata.str_ds_val      <= (others => 'U');
+            micro_tdata.str_si_val      <= (others => 'U');
+            micro_tdata.jump_cond       <= j_never;
+            micro_tdata.jump_imm        <= 'U';
+            micro_tdata.jump_cs_mem     <= 'U';
+            micro_tdata.jump_cs         <= (others => 'U');
+            micro_tdata.jump_ip_mem     <= 'U';
+            micro_tdata.jump_ip         <= (others => 'U');
+            micro_tdata.jump_cx         <= (others => 'U');
+            micro_tdata.mem_cmd         <= 'U';
+            micro_tdata.mem_width       <= 'U';
+            micro_tdata.mem_seg         <= (others => 'U');
+            micro_tdata.mem_addr        <= (others => 'U');
+            micro_tdata.mem_data_src    <= MEM_DATA_SRC_ONE;
+            micro_tdata.mem_data        <= (others => 'U');
+            micro_tdata.flg_no          <= (others => 'U');
+            micro_tdata.fl              <= TOGGLE;
+            micro_tdata.inst_ss         <= (others => 'U');
+            micro_tdata.inst_cs         <= (others => 'U');
+            micro_tdata.inst_ip         <= (others => 'U');
+            micro_tdata.inst_ip_next    <= (others => 'U');
+            micro_tdata.bpu_first       <= 'U';
+            micro_tdata.bpu_taken       <= 'U';
+            micro_tdata.bpu_bypass      <= 'U';
+            micro_tdata.bpu_taken_cs    <= (others => 'U');
+            micro_tdata.bpu_taken_ip    <= (others => 'U');
+        end procedure;
 
         procedure set_cmd_0(cmd : std_logic_vector) is begin
             micro_tdata.cmd <= cmd and cmd_mask;
@@ -887,6 +960,7 @@ begin
                     micro_tdata.alu_upd_fl <= '1';
                     micro_tdata.alu_a_mem <= '1';
                     micro_tdata.alu_b_val <= rr_tdata_buf.sreg_val;
+                    micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
 
                     micro_tdata.mem_cmd <= '1';
                     micro_tdata.mem_width <= rr_tdata_buf.w;
@@ -906,6 +980,7 @@ begin
                     micro_tdata.alu_upd_fl <= '1';
                     micro_tdata.alu_a_mem <= '1';
                     micro_tdata.alu_b_val <= rr_tdata_buf.data;
+                    micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
 
                     micro_tdata.mem_cmd <= '1';
                     micro_tdata.mem_width <= rr_tdata_buf.w;
@@ -1561,24 +1636,20 @@ begin
         procedure do_loop_cmd_0 is begin
             set_cmd_0(MICRO_ALU_OP);
 
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
+            micro_tdata.jump_cond   <= j_never;
+            micro_tdata.jump_imm    <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
-            micro_tdata.jump_cs <= rr_tuser(31 downto 16);
-            micro_tdata.jump_ip <= ip_val_plus_disp_next;
-            micro_tdata.jump_cx <= rr_tdata.sreg_val;
+            micro_tdata.jump_cs     <= rr_tuser(31 downto 16);
+            micro_tdata.jump_ip     <= ip_val_plus_disp_next;
+            micro_tdata.jump_cx     <= rr_tdata.sreg_val;
 
-            if (rr_tdata.code = LOOP_OP or rr_tdata.code = LOOP_OP_E or rr_tdata.code = LOOP_OP_NE) then
-                -- CX = CX - 1
-                alu_command_imm(cmd => ALU_OP_ADD,
-                    aval => rr_tdata.sreg_val,
-                    bval => rr_tdata.data,
-                    dreg => rr_tdata.dreg,
-                    dmask => rr_tdata.dmask,
-                    upd_fl => '0');
-
-            end if;
+            alu_command_imm(cmd => ALU_OP_ADD,
+                aval   => rr_tdata.sreg_val,
+                bval   => rr_tdata.data,
+                dreg   => rr_tdata.dreg,
+                dmask  => rr_tdata.dmask,
+                upd_fl => '0');
 
         end procedure;
 
@@ -2084,18 +2155,6 @@ begin
                 ea_val_plus_disp <= ea_val_plus_disp_next;
             end if;
 
-            if (rr_tvalid = '1' and rr_tready = '1') then
-                micro_tdata.inst_ss      <= rr_tdata.ss_seg_val;
-                micro_tdata.inst_cs      <= rr_tuser(USER_T_CS);
-                micro_tdata.inst_ip      <= rr_tuser(USER_T_IP);
-                micro_tdata.inst_ip_next <= rr_tuser(USER_T_IP_NEXT);
-            end if;
-
-            if (rr_tvalid = '1' and rr_tready = '1') then
-                micro_tdata.bpu_taken_cs <= rr_tdata.bpu_taken_cs;
-                micro_tdata.bpu_taken_ip <= rr_tdata.bpu_taken_ip;
-            end if;
-
             if (trap_tvalid = '1' and trap_tready = '1') then
                 initialize_signals;
                 do_trap_0;
@@ -2104,7 +2163,16 @@ begin
                 micro_tdata.bpu_taken <= '0';
                 micro_tdata.bpu_bypass <= '1';
             elsif (rr_tvalid = '1' and rr_tready = '1') then
+                set_undefined;
                 initialize_signals;
+
+                micro_tdata.inst_ss      <= rr_tdata.ss_seg_val;
+                micro_tdata.inst_cs      <= rr_tuser(USER_T_CS);
+                micro_tdata.inst_ip      <= rr_tuser(USER_T_IP);
+                micro_tdata.inst_ip_next <= rr_tuser(USER_T_IP_NEXT);
+
+                micro_tdata.bpu_taken_cs <= rr_tdata.bpu_taken_cs;
+                micro_tdata.bpu_taken_ip <= rr_tdata.bpu_taken_ip;
 
                 micro_tdata.bpu_first <= rr_tdata.bpu_first;
                 micro_tdata.bpu_taken <= rr_tdata.bpu_taken;

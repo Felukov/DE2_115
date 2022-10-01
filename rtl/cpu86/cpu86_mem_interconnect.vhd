@@ -61,25 +61,6 @@ end entity cpu86_mem_interconnect;
 
 architecture rtl of cpu86_mem_interconnect is
 
-    component axis_fifo is
-        generic (
-            FIFO_DEPTH          : natural := 8;
-            FIFO_WIDTH          : natural := 128
-        );
-        port (
-            clk                 : in std_logic;
-            resetn              : in std_logic;
-
-            fifo_s_tvalid       : in std_logic;
-            fifo_s_tready       : out std_logic;
-            fifo_s_tdata        : in std_logic_vector(FIFO_WIDTH-1 downto 0);
-
-            fifo_m_tvalid       : out std_logic;
-            fifo_m_tready       : in std_logic;
-            fifo_m_tdata        : out std_logic_vector(FIFO_WIDTH-1 downto 0)
-        );
-    end component;
-
     signal fifo_s_tvalid        : std_logic;
     signal fifo_s_tready        : std_logic;
     signal fifo_s_tdata         : std_logic_vector(1 downto 0);
@@ -91,18 +72,21 @@ architecture rtl of cpu86_mem_interconnect is
 begin
 
     -- Module axis_fifo instantiation
-    axis_fifo_inst : axis_fifo generic map (
-        FIFO_DEPTH      => 32,
-        FIFO_WIDTH      => 2
+    axis_fifo_inst : entity work.axis_fifo_fwft generic map (
+        FIFO_DEPTH          => 32,
+        FIFO_WIDTH          => 2,
+        REGISTER_OUTPUT     => '1'
     ) port map (
-        clk             => clk,
-        resetn          => resetn,
-        fifo_s_tvalid   => fifo_s_tvalid,
-        fifo_s_tready   => fifo_s_tready,
-        fifo_s_tdata    => fifo_s_tdata,
-        fifo_m_tvalid   => fifo_m_tvalid,
-        fifo_m_tready   => mem_rd_s_tvalid,
-        fifo_m_tdata    => fifo_m_tdata
+        clk                 => clk,
+        resetn              => resetn,
+
+        s_axis_fifo_tvalid  => fifo_s_tvalid,
+        s_axis_fifo_tready  => fifo_s_tready,
+        s_axis_fifo_tdata   => fifo_s_tdata,
+
+        m_axis_fifo_tvalid  => fifo_m_tvalid,
+        m_axis_fifo_tready  => mem_rd_s_tvalid,
+        m_axis_fifo_tdata   => fifo_m_tdata
     );
 
     -- Assigns

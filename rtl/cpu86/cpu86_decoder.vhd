@@ -488,6 +488,49 @@ begin
     end process;
 
     process (clk)
+        procedure set_undefined is
+        begin
+            instr_tdata.op           <= BCDU;
+            instr_tdata.code         <= (others => 'U');
+            instr_tdata.w            <= 'U';
+            instr_tdata.dir          <= M2M;
+            instr_tdata.ea           <= XLAT;
+            instr_tdata.dreg         <= ZERO;
+            instr_tdata.dmask        <= (others => 'U');
+            instr_tdata.sreg         <= ZERO;
+            instr_tdata.smask        <= (others => 'U');
+            instr_tdata.data         <= (others => 'U');
+            instr_tdata.disp         <= (others => 'U');
+            instr_tdata.fl           <= TOGGLE;
+            instr_tdata.data_ex      <= (others => 'U');
+            instr_tdata.bpu_taken    <= 'U';
+            instr_tdata.bpu_first    <= 'U';
+            instr_tdata.bpu_taken_cs <= (others => 'U');
+            instr_tdata.bpu_taken_ip <= (others => 'U');
+            instr_tdata.wait_ax      <= 'U';
+            instr_tdata.wait_bx      <= 'U';
+            instr_tdata.wait_cx      <= 'U';
+            instr_tdata.wait_dx      <= 'U';
+            instr_tdata.wait_bp      <= 'U';
+            instr_tdata.wait_si      <= 'U';
+            instr_tdata.wait_di      <= 'U';
+            instr_tdata.wait_sp      <= 'U';
+            instr_tdata.wait_ds      <= 'U';
+            instr_tdata.wait_es      <= 'U';
+            instr_tdata.wait_ss      <= 'U';
+            instr_tdata.wait_fl      <= 'U';
+            instr_tdata.lock_fl      <= 'U';
+            instr_tdata.lock_sreg    <= 'U';
+            instr_tdata.lock_dreg    <= 'U';
+            instr_tdata.lock_ax      <= 'U';
+            instr_tdata.lock_sp      <= 'U';
+            instr_tdata.lock_si      <= 'U';
+            instr_tdata.lock_di      <= 'U';
+            instr_tdata.lock_ds      <= 'U';
+            instr_tdata.lock_es      <= 'U';
+            instr_tdata.lock_all     <= 'U';
+        end procedure;
+
         procedure set_lock (val : std_logic_vector(9 downto 0)) is begin
             instr_tdata.lock_fl   <= val(9);
             instr_tdata.lock_sreg <= val(8);
@@ -589,6 +632,7 @@ begin
         end procedure;
 
         procedure no_lock is begin
+            instr_tdata.lock_fl <= '0';
             instr_tdata.lock_sreg <= '0';
             instr_tdata.lock_dreg <= '0';
             instr_tdata.lock_ax <= '0';
@@ -855,20 +899,20 @@ begin
                 when x"C7" => set_op(MOVU, "0000",    '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
 
                 --
-                when x"80" => no_lock; no_wait; set_lock(LOCK_FL);
-                when x"81" => no_lock; no_wait; set_lock(LOCK_FL);
-                when x"83" => no_lock; no_wait; set_lock(LOCK_FL);
-                when x"8F" => no_lock; no_wait;
-                when x"C0" => no_lock; no_wait;
-                when x"C1" => no_lock; no_wait;
-                when x"D0" => no_lock; no_wait;
-                when x"D1" => no_lock; no_wait;
-                when x"D2" => no_lock; no_wait;
-                when x"D3" => no_lock; no_wait;
-                when x"F6" => no_lock; no_wait;
-                when x"F7" => no_lock; no_wait;
-                when x"FE" => no_lock; no_wait;
-                when x"FF" => no_lock; no_wait;
+                when x"80" => no_lock; no_wait; instr_tdata.w <= '0';
+                when x"81" => no_lock; no_wait; instr_tdata.w <= '1';
+                when x"83" => no_lock; no_wait; instr_tdata.w <= '1';
+                when x"8F" => no_lock; no_wait; instr_tdata.w <= '1';
+                when x"C0" => no_lock; no_wait; instr_tdata.w <= '0';
+                when x"C1" => no_lock; no_wait; instr_tdata.w <= '1';
+                when x"D0" => no_lock; no_wait; instr_tdata.w <= '0';
+                when x"D1" => no_lock; no_wait; instr_tdata.w <= '1';
+                when x"D2" => no_lock; no_wait; instr_tdata.w <= '0';
+                when x"D3" => no_lock; no_wait; instr_tdata.w <= '1';
+                when x"F6" => no_lock; no_wait; instr_tdata.w <= '0';
+                when x"F7" => no_lock; no_wait; instr_tdata.w <= '1';
+                when x"FE" => no_lock; no_wait; instr_tdata.w <= '0';
+                when x"FF" => no_lock; no_wait; instr_tdata.w <= '1';
 
                 -- FEU
                 when x"8D" => set_op(FEU, FEU_LEA,       '1', LOCK_NO_LOCK, WAIT_NO_WAIT);
@@ -1419,7 +1463,7 @@ begin
 
                 when x"04" | x"0C" | x"14" | x"1C" | x"24" | x"2C" | x"34" | x"3C" |
                      x"05" | x"0D" | x"15" | x"1D" | x"25" | x"2D" | x"35" | x"3D" |
-                     x"3F" | x"48" | x"B8" | x"40" | x"49" | x"B9" |
+                     x"3F" | x"48" | x"B8" | x"40" | x"49" | x"B9" | x"44" |
                      x"41" | x"4A" | x"BA" | x"42" | x"4B" | x"BB" |
                      x"43" | x"4C" | x"BC" | x"45" | x"4D" | x"BD" |
                      x"46" | x"4E" | x"BE" | x"47" | x"4F" | x"BF" =>
@@ -1552,6 +1596,10 @@ begin
     begin
         if rising_edge(clk) then
 
+            if (u8_tvalid = '1' and u8_tready = '1' and byte_pos_chain(0) = first_byte) then
+                set_undefined;
+            end if;
+
             if (u8_tvalid = '1' and u8_tready = '1') then
 
                 case byte_pos_chain(0) is
@@ -1622,6 +1670,13 @@ begin
                     when x"B6" => instr_tdata.dreg <= DX; instr_tdata.dmask <= "10";
                     when x"B7" => instr_tdata.dreg <= BX; instr_tdata.dmask <= "10";
 
+                    when x"27" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
+                    when x"2F" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
+                    when x"37" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
+                    when x"3F" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
+                    when x"D4" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
+                    when x"D5" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
+
                     when x"40" | x"48" | x"B8" => instr_tdata.dreg <= AX; instr_tdata.dmask <= "11";
                     when x"41" | x"49" | x"B9" => instr_tdata.dreg <= CX; instr_tdata.dmask <= "11";
                     when x"42" | x"4A" | x"BA" => instr_tdata.dreg <= DX; instr_tdata.dmask <= "11";
@@ -1638,6 +1693,7 @@ begin
                     when x"E0" => instr_tdata.dreg <= CX; instr_tdata.dmask <= "11";
                     when x"E1" => instr_tdata.dreg <= CX; instr_tdata.dmask <= "11";
                     when x"E2" => instr_tdata.dreg <= CX; instr_tdata.dmask <= "11";
+                    when x"E3" => instr_tdata.dreg <= ZERO; instr_tdata.dmask <= "11";
 
                     when x"07" => instr_tdata.dreg <= ES; instr_tdata.dmask <= "11";
                     when x"17" => instr_tdata.dreg <= SS; instr_tdata.dmask <= "11";
@@ -1820,7 +1876,7 @@ begin
                                     when others => null;
                                 end case;
 
-                            when "100" => null;
+                            when "100" => instr_tdata.dreg <= AX;
                             when "101" => instr_tdata.dreg <= AX;
                             when "110" => instr_tdata.dreg <= AX;
                             when "111" => instr_tdata.dreg <= AX;
@@ -1848,7 +1904,7 @@ begin
                                     when others => null;
                                 end case;
 
-                            when "100" => null;
+                            when "100" => instr_tdata.dreg <= DX;
                             when "101" => instr_tdata.dreg <= DX;
                             when "110" => instr_tdata.dreg <= DX;
                             when "111" => instr_tdata.dreg <= DX;
@@ -1963,6 +2019,13 @@ begin
                     when x"2E" => instr_tdata.sreg <= CS; instr_tdata.smask <= "11";
                     when x"36" => instr_tdata.sreg <= SS; instr_tdata.smask <= "11";
                     when x"3E" => instr_tdata.sreg <= DS; instr_tdata.smask <= "11";
+
+                    when x"27" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
+                    when x"2F" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
+                    when x"37" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
+                    when x"3F" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
+                    when x"D4" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
+                    when x"D5" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
 
                     when x"40" | x"48" | x"50" | x"90" => instr_tdata.sreg <= AX; instr_tdata.smask <= "11";
                     when x"41" | x"49" | x"51" | x"91" => instr_tdata.sreg <= CX; instr_tdata.smask <= "11";

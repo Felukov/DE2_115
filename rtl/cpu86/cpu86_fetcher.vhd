@@ -53,41 +53,6 @@ end entity cpu86_fetcher;
 
 architecture rtl of cpu86_fetcher is
 
-    component axis_fifo is
-        generic (
-            FIFO_DEPTH          : natural := 2**8;
-            FIFO_WIDTH          : natural := 128
-        );
-        port (
-            clk                 : in std_logic;
-            resetn              : in std_logic;
-
-            fifo_s_tvalid       : in std_logic;
-            fifo_s_tready       : out std_logic;
-            fifo_s_tdata        : in std_logic_vector(FIFO_WIDTH-1 downto 0);
-
-            fifo_m_tvalid       : out std_logic;
-            fifo_m_tready       : in std_logic;
-            fifo_m_tdata        : out std_logic_vector(FIFO_WIDTH-1 downto 0)
-        );
-    end component;
-
-    component axis_reg is
-        generic (
-            DATA_WIDTH          : natural := 32
-        );
-        port (
-            clk                 : in std_logic;
-            resetn              : in std_logic;
-            in_s_tvalid         : in std_logic;
-            in_s_tready         : out std_logic;
-            in_s_tdata          : in std_logic_vector (DATA_WIDTH-1 downto 0);
-            out_m_tvalid        : out std_logic;
-            out_m_tready        : in std_logic;
-            out_m_tdata         : out std_logic_vector (DATA_WIDTH-1 downto 0)
-        );
-    end component;
-
     signal cmd_tvalid           : std_logic;
     signal cmd_tready           : std_logic;
     signal cmd_tdata            : std_logic_vector(19 downto 0);
@@ -142,7 +107,7 @@ begin
     m_axis_data_tuser   <= fifo_1_m_tdata(63 downto 32);
 
     -- module axis_reg instantiation
-    axis_reg_mem_req_inst : axis_reg generic map (
+    axis_reg_mem_req_inst : entity work.axis_reg generic map (
         DATA_WIDTH      => 20
     ) port map (
         clk             => clk,
@@ -159,34 +124,36 @@ begin
 
 
     -- module axis_fifo instantiation
-    axis_fifo_inst_0 : axis_fifo generic map (
-        FIFO_DEPTH      => 16,
-        FIFO_WIDTH      => 32
+    axis_fifo_inst_0 : entity work.axis_fifo_fwft generic map (
+        FIFO_DEPTH          => 16,
+        FIFO_WIDTH          => 32,
+        REGISTER_OUTPUT     => '1'
     ) port map (
-        clk             => clk,
-        resetn          => fifo_resetn,
-        fifo_s_tvalid   => fifo_0_s_tvalid,
-        fifo_s_tready   => fifo_0_s_tready,
-        fifo_s_tdata    => fifo_0_s_tdata,
-        fifo_m_tvalid   => fifo_0_m_tvalid,
-        fifo_m_tready   => fifo_0_m_tready,
-        fifo_m_tdata    => fifo_0_m_tdata
+        clk                 => clk,
+        resetn              => fifo_resetn,
+        s_axis_fifo_tvalid  => fifo_0_s_tvalid,
+        s_axis_fifo_tready  => fifo_0_s_tready,
+        s_axis_fifo_tdata   => fifo_0_s_tdata,
+        m_axis_fifo_tvalid  => fifo_0_m_tvalid,
+        m_axis_fifo_tready  => fifo_0_m_tready,
+        m_axis_fifo_tdata   => fifo_0_m_tdata
     );
 
 
     -- module axis_fifo instantiation
-    axis_fifo_inst_1 : axis_fifo generic map (
-        FIFO_DEPTH      => 32,
-        FIFO_WIDTH      => 64
+    axis_fifo_inst_1 : entity work.axis_fifo_fwft generic map (
+        FIFO_DEPTH          => 32,
+        FIFO_WIDTH          => 64,
+        REGISTER_OUTPUT     => '1'
     ) port map (
-        clk             => clk,
-        resetn          => fifo_resetn,
-        fifo_s_tvalid   => fifo_1_s_tvalid,
-        fifo_s_tready   => fifo_1_s_tready,
-        fifo_s_tdata    => fifo_1_s_tdata,
-        fifo_m_tvalid   => fifo_1_m_tvalid,
-        fifo_m_tready   => fifo_1_m_tready,
-        fifo_m_tdata    => fifo_1_m_tdata
+        clk                 => clk,
+        resetn              => fifo_resetn,
+        s_axis_fifo_tvalid  => fifo_1_s_tvalid,
+        s_axis_fifo_tready  => fifo_1_s_tready,
+        s_axis_fifo_tdata   => fifo_1_s_tdata,
+        m_axis_fifo_tvalid  => fifo_1_m_tvalid,
+        m_axis_fifo_tready  => fifo_1_m_tready,
+        m_axis_fifo_tdata   => fifo_1_m_tdata
     );
 
 

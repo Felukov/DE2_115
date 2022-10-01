@@ -105,45 +105,6 @@ architecture rtl of cpu86_exec is
         );
     end component cpu86_exec_reg;
 
-    component axis_fifo is
-        generic (
-            FIFO_DEPTH              : natural := 2**8;
-            FIFO_WIDTH              : natural := 128;
-            REGISTER_OUTPUT         : std_logic := '1'
-        );
-        port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
-
-            fifo_s_tvalid           : in std_logic;
-            fifo_s_tready           : out std_logic;
-            fifo_s_tdata            : in std_logic_vector(FIFO_WIDTH-1 downto 0);
-
-            fifo_m_tvalid           : out std_logic;
-            fifo_m_tready           : in std_logic;
-            fifo_m_tdata            : out std_logic_vector(FIFO_WIDTH-1 downto 0)
-        );
-    end component;
-
-    component axis_fifo_er is
-        generic (
-            FIFO_DEPTH      : natural := 2**8;
-            FIFO_WIDTH      : natural := 128
-        );
-        port (
-            clk                 : in std_logic;
-            resetn              : in std_logic;
-
-            s_axis_fifo_tvalid  : in std_logic;
-            s_axis_fifo_tready  : out std_logic;
-            s_axis_fifo_tdata   : in std_logic_vector(FIFO_WIDTH-1 downto 0);
-
-            m_axis_fifo_tvalid  : out std_logic;
-            m_axis_fifo_tready  : in std_logic;
-            m_axis_fifo_tdata   : out std_logic_vector(FIFO_WIDTH-1 downto 0)
-        );
-    end component axis_fifo_er;
-
     component axis_reg is
         generic (
             DATA_WIDTH              : natural := 32
@@ -951,9 +912,10 @@ begin
 
 
     -- module axis_fifo instantiation
-    axis_fifo_inst_0 : axis_fifo_er generic map (
+    axis_fifo_inst_0 : entity work.axis_fifo_fwft generic map (
         FIFO_DEPTH              => 16,
-        FIFO_WIDTH              => DECODED_INSTR_T_WIDTH
+        FIFO_WIDTH              => DECODED_INSTR_T_WIDTH,
+        REGISTER_OUTPUT         => '1'
     ) port map (
         clk                     => clk,
         resetn                  => exec_resetn,
@@ -969,9 +931,10 @@ begin
 
 
     -- module axis_fifo instantiation
-    axis_fifo_inst_1 : axis_fifo_er generic map (
+    axis_fifo_inst_1 : entity work.axis_fifo_fwft generic map (
         FIFO_DEPTH              => 16,
-        FIFO_WIDTH              => 48
+        FIFO_WIDTH              => 48,
+        REGISTER_OUTPUT         => '1'
     ) port map (
         clk                     => clk,
         resetn                  => exec_resetn,

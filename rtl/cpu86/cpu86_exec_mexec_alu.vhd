@@ -181,6 +181,20 @@ begin
         case res_m_tdata.code is
             when ALU_OP_AND | ALU_OP_OR | ALU_OP_XOR | ALU_OP_TST =>
                 flags_cf <= '0';
+            when ALU_OP_NEG =>
+                if (res_m_tdata.w = '0') then
+                    if (res_m_tdata.aval(7 downto 0) = x"00") then
+                        flags_cf <= '0';
+                    else
+                        flags_cf <= '1';
+                    end if;
+                else
+                    if (res_m_tdata.aval(15 downto 0) = x"0000") then
+                        flags_cf <= '0';
+                    else
+                        flags_cf <= '1';
+                    end if;
+                end if;
             when others =>
                 if res_m_tdata.w = '0' then
                     flags_cf <= res_m_tdata.aval(8) xor res_m_tdata.bval(8) xor res_m_tdata.rval(8);

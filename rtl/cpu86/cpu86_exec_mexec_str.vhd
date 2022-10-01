@@ -67,26 +67,6 @@ end entity;
 
 architecture rtl of cpu86_exec_mexec_str is
 
-    component axis_fifo is
-        generic (
-            FIFO_DEPTH          : natural := 16;
-            FIFO_WIDTH          : natural := 16;
-            REGISTER_OUTPUT     : std_logic := '1'
-        );
-        port (
-            clk                 : in std_logic;
-            resetn              : in std_logic;
-
-            fifo_s_tvalid       : in std_logic;
-            fifo_s_tready       : out std_logic;
-            fifo_s_tdata        : in std_logic_vector(FIFO_WIDTH-1 downto 0);
-
-            fifo_m_tvalid       : out std_logic;
-            fifo_m_tready       : in std_logic;
-            fifo_m_tdata        : out std_logic_vector(FIFO_WIDTH-1 downto 0)
-        );
-    end component;
-
     type cmps_iter_t is (st_first, st_second);
 
     signal req_s_tvalid         : std_logic;
@@ -257,7 +237,7 @@ begin
     io_rd_s_tdata <= s_axis_io_rd_tdata;
 
     -- module axis_fifo instantiation
-    axis_fifo_inst : axis_fifo generic map (
+    axis_fifo_inst : entity work.axis_fifo_fwft generic map (
         FIFO_DEPTH              => 16,
         FIFO_WIDTH              => 16,
         REGISTER_OUTPUT         => '1'
@@ -265,13 +245,13 @@ begin
         clk                     => clk,
         resetn                  => resetn,
 
-        fifo_s_tvalid           => fifo_s_tvalid,
-        fifo_s_tready           => fifo_s_tready,
-        fifo_s_tdata            => fifo_s_tdata,
+        s_axis_fifo_tvalid      => fifo_s_tvalid,
+        s_axis_fifo_tready      => fifo_s_tready,
+        s_axis_fifo_tdata       => fifo_s_tdata,
 
-        fifo_m_tvalid           => fifo_m_tvalid,
-        fifo_m_tready           => fifo_m_tready,
-        fifo_m_tdata            => fifo_m_tdata
+        m_axis_fifo_tvalid      => fifo_m_tvalid,
+        m_axis_fifo_tready      => fifo_m_tready,
+        m_axis_fifo_tdata       => fifo_m_tdata
     );
 
     -- assigns

@@ -21,45 +21,11 @@ package cpu86_types is
         CS, -- 1001
         SS, -- 1010
         DS, -- 1011
-        FL  -- 1100
+        FL, -- 1100
+        ZERO
     );
 
     attribute enum_encoding of reg_t : type is "sequential";
-
-    type reg_idx_2_int_t is array(reg_t) of natural;
-    type int_2_reg_idx_t is array(0 to 12) of reg_t;
-
-    constant reg_idx_2_slv_c : reg_idx_2_int_t := (
-        AX => 0,
-        DX => 1,
-        CX => 2,
-        BX => 3,
-        BP => 4,
-        SI => 5,
-        DI => 6,
-        SP => 7,
-        ES => 8,
-        CS => 9,
-        SS => 10,
-        DS => 11,
-        FL => 12
-    );
-
-    constant slv_2_reg_idx_t : int_2_reg_idx_t := (
-        0  => AX,
-        1  => DX,
-        2  => CX,
-        3  => BX,
-        4  => BP,
-        5  => SI,
-        6  => DI,
-        7  => SP,
-        8  => ES,
-        9  => CS,
-        10 => SS,
-        11 => DS,
-        12 => FL
-    );
 
     type ea_t is (
         BX_SI_DISP, BX_DI_DISP, BP_SI_DISP, BP_DI_DISP, SI_DISP, DI_DISP, BP_DISP, BX_DISP, DIRECT, XLAT
