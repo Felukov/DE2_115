@@ -81,26 +81,6 @@ architecture rtl of soc_io_uart is
         );
     end component soc_io_uart_rx;
 
-    component axis_fifo is
-        generic (
-            FIFO_DEPTH          : natural := 2**8;
-            FIFO_WIDTH          : natural := 128;
-            REGISTER_OUTPUT     : std_logic := '1'
-        );
-        port (
-            clk                 : in std_logic;
-            resetn              : in std_logic;
-
-            fifo_s_tvalid       : in std_logic;
-            fifo_s_tready       : out std_logic;
-            fifo_s_tdata        : in std_logic_vector(FIFO_WIDTH-1 downto 0);
-
-            fifo_m_tvalid       : out std_logic;
-            fifo_m_tready       : in std_logic;
-            fifo_m_tdata        : out std_logic_vector(FIFO_WIDTH-1 downto 0)
-        );
-    end component;
-
     -- component signal_tap is
     --     port (
     --         acq_data_in    : in std_logic_vector(15 downto 0) := (others => 'X'); -- acq_data_in
@@ -156,21 +136,20 @@ begin
     );
 
     -- module axis_fifo instantiation
-    axis_fifo_inst_0 : axis_fifo generic map (
+    axis_fifo_inst_0 : entity work.axis_fifo_er generic map (
         FIFO_DEPTH          => 16,
-        FIFO_WIDTH          => 8,
-        REGISTER_OUTPUT     => '1'
+        FIFO_WIDTH          => 8
     ) port map (
         clk                 => clk,
         resetn              => resetn,
 
-        fifo_s_tvalid       => rx_tvalid,
-        fifo_s_tready       => open,
-        fifo_s_tdata        => rx_tdata,
+        s_axis_fifo_tvalid  => rx_tvalid,
+        s_axis_fifo_tready  => open,
+        s_axis_fifo_tdata   => rx_tdata,
 
-        fifo_m_tvalid       => rx_fifo_m_tvalid,
-        fifo_m_tready       => rx_fifo_m_tready,
-        fifo_m_tdata        => rx_fifo_m_tdata
+        m_axis_fifo_tvalid  => rx_fifo_m_tvalid,
+        m_axis_fifo_tready  => rx_fifo_m_tready,
+        m_axis_fifo_tdata   => rx_fifo_m_tdata
     );
 
     -- acq_data_in(15 downto 10) <= (others => '0');
@@ -189,21 +168,20 @@ begin
     -- );
 
     -- module axis_fifo instantiation
-    axis_fifo_inst_1 : axis_fifo generic map (
+    axis_fifo_inst_1 : entity work.axis_fifo_er generic map (
         FIFO_DEPTH          => 16,
-        FIFO_WIDTH          => 8,
-        REGISTER_OUTPUT     => '1'
+        FIFO_WIDTH          => 8
     ) port map (
         clk                 => clk,
         resetn              => resetn,
 
-        fifo_s_tvalid       => tx_fifo_s_tvalid,
-        fifo_s_tready       => tx_fifo_s_tready,
-        fifo_s_tdata        => tx_fifo_s_tdata,
+        s_axis_fifo_tvalid  => tx_fifo_s_tvalid,
+        s_axis_fifo_tready  => tx_fifo_s_tready,
+        s_axis_fifo_tdata   => tx_fifo_s_tdata,
 
-        fifo_m_tvalid       => tx_fifo_m_tvalid,
-        fifo_m_tready       => tx_fifo_m_tready,
-        fifo_m_tdata        => tx_fifo_m_tdata
+        m_axis_fifo_tvalid  => tx_fifo_m_tvalid,
+        m_axis_fifo_tready  => tx_fifo_m_tready,
+        m_axis_fifo_tdata   => tx_fifo_m_tdata
     );
 
     -- module soc_io_uart_tx instantiation
