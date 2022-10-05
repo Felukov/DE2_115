@@ -178,9 +178,12 @@ architecture rtl of cpu86_exec_register_reader is
     signal vld_si                   : std_logic_vector(15 downto 0);
     signal vld_fl                   : std_logic_vector(15 downto 0);
 
-    signal acq_data_in              : std_logic_vector(63 downto 0);
-    signal acq_trigger_in           : std_logic_vector(0 downto 0);
-    signal storage_enable           : std_logic;
+    -- signal acq_data_in              : std_logic_vector(63 downto 0);
+    -- signal acq_trigger_in           : std_logic_vector(0 downto 0);
+    -- signal storage_enable           : std_logic;
+
+    -- signal test_0_cnt               : std_logic_vector(15 downto 0) := (others => '0') ;
+    -- signal test_1_cnt               : std_logic_vector(15 downto 0) := (others => '0') ;
 
 begin
 
@@ -216,49 +219,50 @@ begin
     dbg_out_si              <= vld_si;
     dbg_out_fl              <= vld_fl;
 
-    acq_data_in( 63 downto 59) <= (others => '0');
-    acq_data_in(58) <= ext_intr_tvalid;
-    acq_data_in(57) <= rr_tvalid;
-    acq_data_in(56) <= rr_tready;
+    -- acq_data_in(63 downto 60) <= (others => '0');
+    -- acq_data_in(59) <= flags_s_tdata(FLAG_IF);
+    -- acq_data_in(58) <= ext_intr_tvalid;
+    -- acq_data_in(57) <= rr_tvalid;
+    -- acq_data_in(56) <= rr_tready;
 
-    acq_data_in(55) <= ax_s_tvalid;
-    acq_data_in(54) <= bx_s_tvalid;
-    acq_data_in(53) <= cx_s_tvalid;
-    acq_data_in(52) <= dx_s_tvalid;
-    acq_data_in(51) <= bp_s_tvalid;
-    acq_data_in(50) <= si_s_tvalid;
-    acq_data_in(49) <= di_s_tvalid;
-    acq_data_in(48) <= sp_s_tvalid;
-    acq_data_in(47) <= ds_s_tvalid;
-    acq_data_in(46) <= es_s_tvalid;
-    acq_data_in(45) <= ss_s_tvalid;
-    acq_data_in(44) <= flags_s_tvalid;
+    -- acq_data_in(55) <= ax_s_tvalid;
+    -- acq_data_in(54) <= bx_s_tvalid;
+    -- acq_data_in(53) <= cx_s_tvalid;
+    -- acq_data_in(52) <= dx_s_tvalid;
+    -- acq_data_in(51) <= bp_s_tvalid;
+    -- acq_data_in(50) <= si_s_tvalid;
+    -- acq_data_in(49) <= di_s_tvalid;
+    -- acq_data_in(48) <= sp_s_tvalid;
+    -- acq_data_in(47) <= ds_s_tvalid;
+    -- acq_data_in(46) <= es_s_tvalid;
+    -- acq_data_in(45) <= ss_s_tvalid;
+    -- acq_data_in(44) <= flags_s_tvalid;
 
-    acq_data_in(43) <= instr_tdata.wait_ax;
-    acq_data_in(42) <= instr_tdata.wait_bx;
-    acq_data_in(41) <= instr_tdata.wait_cx;
-    acq_data_in(40) <= instr_tdata.wait_dx;
-    acq_data_in(39) <= instr_tdata.wait_bp;
-    acq_data_in(38) <= instr_tdata.wait_si;
-    acq_data_in(37) <= instr_tdata.wait_di;
-    acq_data_in(36) <= instr_tdata.wait_sp;
-    acq_data_in(35) <= instr_tdata.wait_ds;
-    acq_data_in(34) <= instr_tdata.wait_es;
-    acq_data_in(33) <= instr_tdata.wait_ss;
-    acq_data_in(32) <= instr_tdata.wait_fl;
+    -- acq_data_in(43) <= instr_tdata.wait_ax;
+    -- acq_data_in(42) <= instr_tdata.wait_bx;
+    -- acq_data_in(41) <= instr_tdata.wait_cx;
+    -- acq_data_in(40) <= instr_tdata.wait_dx;
+    -- acq_data_in(39) <= instr_tdata.wait_bp;
+    -- acq_data_in(38) <= instr_tdata.wait_si;
+    -- acq_data_in(37) <= instr_tdata.wait_di;
+    -- acq_data_in(36) <= instr_tdata.wait_sp;
+    -- acq_data_in(35) <= instr_tdata.wait_ds;
+    -- acq_data_in(34) <= instr_tdata.wait_es;
+    -- acq_data_in(33) <= instr_tdata.wait_ss;
+    -- acq_data_in(32) <= instr_tdata.wait_fl;
 
-    acq_data_in( 31 downto 16) <= rr_tuser(USER_T_CS);
-    acq_data_in( 15 downto  0) <= rr_tuser(USER_T_IP);
+    -- acq_data_in( 31 downto 16) <= test_1_cnt; --rr_tuser(USER_T_CS);
+    -- acq_data_in( 15 downto  0) <= test_0_cnt; --rr_tuser(USER_T_IP);
 
-    acq_trigger_in(0) <= '1' when ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK else '0';
-    storage_enable    <= '1' when ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK else '0';
+    -- acq_trigger_in(0) <= '1'; --when ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK else '0';
+    -- storage_enable    <= '1'; --when ext_intr_tvalid = '1' and ext_intr_mode = ST_ACK else '0';
 
-    u0 : component signal_tap port map (
-        acq_clk         => clk,            -- acq_clk
-        acq_data_in     => acq_data_in,    -- acq_data_in
-        acq_trigger_in  => acq_trigger_in, -- acq_trigger_in
-        storage_enable  => storage_enable  -- storage_enable
-    );
+    -- u0 : component signal_tap port map (
+    --     acq_clk         => clk,            -- acq_clk
+    --     acq_data_in     => acq_data_in,    -- acq_data_in
+    --     acq_trigger_in  => acq_trigger_in, -- acq_trigger_in
+    --     storage_enable  => storage_enable  -- storage_enable
+    -- );
 
 
     process (all) begin
@@ -392,11 +396,14 @@ begin
             if resetn = '0' then
                 instr_tready_mask <= '0';
             else
-                if (instr_tvalid = '0' or (instr_tvalid = '1' and instr_tdata.op /= PREFIX)) then
-                    if ((instr_tvalid = '1' and instr_tready = '1' and instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP) or
-                        (ext_intr_tvalid = '1' and ext_intr_mode = ST_IDLE and combined_instr = '0')) then
-                        instr_tready_mask <= '1';
-                    end if;
+                if  (instr_tvalid = '1' and instr_tready = '1' and instr_tdata.op = SYS and instr_tdata.code = SYS_HLT_OP)
+                    or
+                    (
+                        (instr_tvalid = '0' or (instr_tvalid = '1' and instr_tdata.op /= PREFIX and instr_tdata.op /= SYS)) and
+                        (ext_intr_tvalid = '1' and ext_intr_mode = ST_IDLE and combined_instr = '0')
+                    )
+                then
+                    instr_tready_mask <= '1';
                 end if;
             end if;
         end if;

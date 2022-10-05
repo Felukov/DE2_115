@@ -894,23 +894,6 @@ begin
     );
 
 
-    -- module axis_reg instantiation
-    external_interrupt_reg_inst : axis_reg generic map (
-        DATA_WIDTH              => 8
-    ) port map (
-        clk                     => clk,
-        resetn                  => resetn,
-
-        in_s_tvalid             => masked_interrupt,
-        in_s_tready             => ext_intr_s_tready,
-        in_s_tdata              => interrupt_data,
-
-        out_m_tvalid            => ext_intr_m_tvalid,
-        out_m_tready            => ext_intr_m_tready,
-        out_m_tdata             => ext_intr_m_tdata
-    );
-
-
     -- module axis_fifo instantiation
     axis_fifo_inst_0 : entity work.axis_fifo_fwft generic map (
         FIFO_DEPTH              => 16,
@@ -1262,7 +1245,8 @@ begin
     req_m_tvalid <= jump_tvalid;
     req_m_tdata <= jump_tdata;
 
-    masked_interrupt <= '1' when interrupt_valid = '1' and fl_tdata(FLAG_IF) = '1' else '0';
-    interrupt_ack <= '1' when masked_interrupt = '1' and ext_intr_s_tready = '1' else '0';
+    ext_intr_m_tvalid <= '1' when interrupt_valid = '1' and fl_tdata(FLAG_IF) = '1' else '0';
+    ext_intr_m_tdata <= interrupt_data;
+    interrupt_ack <= '1' when ext_intr_m_tvalid = '1' and ext_intr_m_tready = '1' else '0';
 
 end architecture;
