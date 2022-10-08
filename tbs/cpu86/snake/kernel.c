@@ -1,19 +1,40 @@
 #include "kernel.h"
+#include "kbd.h"
 #include "x86.h"
 
 void int8_handler();
+void int9_handler();
 
-void interrupt_handler(unsigned char int_no,
-    unsigned short* regs_ax,
-    unsigned short* regs_bx,
-    unsigned short* regs_cx,
-    unsigned short* regs_dx) {
+uint16_t t1 = 0;
+uint16_t t2 = 0;
+
+void __cdecl interrupt_handler(
+    uint16_t int_no,
+    uint16_t r_ds,
+    uint16_t r_es,
+    uint16_t r_di,
+    uint16_t r_si,
+    uint16_t r_bp,
+    uint16_t r_bx,
+    uint16_t r_dx,
+    uint16_t r_cx,
+    uint16_t r_ax,
+    uint16_t r_ip,
+    uint16_t r_cs,
+    uint16_t r_flags
+)
+{
 
     switch (int_no) {
     case 0x08:
         int8_handler();
         break;
 
+    case 0x09:
+        _inline_outpw(0x305, t1);
+        t1++;
+        int9_handler();
+        break;
     default:
         break;
     }
@@ -21,14 +42,26 @@ void interrupt_handler(unsigned char int_no,
 
 void int8_handler(){
     // acknowledge interrupt request
-    _inline_outp(PIC1_COMMAND, 0x20);
+    //_inline_outp(PIC1_COMMAND, 0x20);
+}
+
+void int9_handler(){
+    // acknowledge interrupt request
+    //_inline_outp(PIC1_COMMAND, 0x20);
+
+    // get keyboard byte
+    // uint8_t b = _inline_inp(KBD_DATA);
+    // _inline_outpw(0x306, b);
+    kbd_isr();
+    _inline_outpw(0x306, t2);
+    t2++;
 }
 
 int init_timer(){
     // configure timer 0
     // toggle each 18.2 Hz
     _inline_outp(PIT_CONTROL, 0x36);
-    _inline_outp(PIT_TIMER_0, 0x00);
+    _inline_outp(PIT_TIMER_0, 0);
     _inline_outp(PIT_TIMER_0, 0x00);
 
     // configure timer 1
@@ -39,29 +72,35 @@ int init_timer(){
     return 0;
 }
 
-int init_pic_1(){
-    // starts the initialization sequence (in cascade mode)
-    _inline_outp(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
-    // ICW2: Master PIC vector offset
-    _inline_outp(PIC1_DATA, 0x08);
-    // ICW3: tell Master PIC that there is a slave PIC at IRQ2 (0000 0100)
-    _inline_outp(PIC1_DATA, 4);
-    _inline_outp(PIC1_DATA, ICW4_8086);
-
+int init_pic_lite(){
+    // allow interrupts
+    _inline_outp(PIC_IMR, 0);
     return 0;
 }
 
-int init_pic_2(){
-    // starts the initialization sequence (in cascade mode)
-    _inline_outp(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
-    // ICW2: Master PIC vector offset
-    _inline_outp(PIC2_DATA, 0x08);
-    // ICW3: tell Slave PIC its cascade identity (0000 0010)
-    _inline_outp(PIC2_DATA, 2);
-    _inline_outp(PIC2_DATA, ICW4_8086);
+// int init_pic_1(){
+//     // starts the initialization sequence (in cascade mode)
+//     _inline_outp(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
+//     // ICW2: Master PIC vector offset
+//     _inline_outp(PIC1_DATA, 0x08);
+//     // ICW3: tell Master PIC that there is a slave PIC at IRQ2 (0000 0100)
+//     _inline_outp(PIC1_DATA, 4);
+//     _inline_outp(PIC1_DATA, ICW4_8086);
 
-    return 0;
-}
+//     return 0;
+// }
+
+// int init_pic_2(){
+//     // starts the initialization sequence (in cascade mode)
+//     _inline_outp(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
+//     // ICW2: Master PIC vector offset
+//     _inline_outp(PIC2_DATA, 0x08);
+//     // ICW3: tell Slave PIC its cascade identity (0000 0010)
+//     _inline_outp(PIC2_DATA, 2);
+//     _inline_outp(PIC2_DATA, ICW4_8086);
+
+//     return 0;
+// }
 
 void kernel_wait(unsigned int times){
     unsigned char x1 = 0x0;
@@ -78,8 +117,9 @@ void kernel_wait(unsigned int times){
 
 int kernel_init(){
     init_timer();
-    init_pic_1();
-    init_pic_2();
+    init_pic_lite();
+    // init_pic_1();
+    // init_pic_2();
     return 0;
 }
 

@@ -6,12 +6,17 @@
 #define PIT_TIMER_1         0x41
 #define PIT_TIMER_2         0x42
 
-#define PIC1                0x20        /* IO base address for master PIC */
-#define PIC2                0xA0        /* IO base address for slave PIC */
-#define PIC1_COMMAND        PIC1
-#define PIC1_DATA           (PIC1+1)
-#define PIC2_COMMAND        PIC2
-#define PIC2_DATA           (PIC2+1)
+#define PIC_IMR             0x20        /* IO base address for master PIC */
+#define PIC_IRR             0xA0        /* IO base address for slave PIC */
+
+// #define PIC1                0x20        /* IO base address for master PIC */
+// #define PIC2                0xA0        /* IO base address for slave PIC */
+// #define PIC1_COMMAND        PIC1
+// #define PIC1_DATA           (PIC1+1)
+// #define PIC2_COMMAND        PIC2
+// #define PIC2_DATA           (PIC2+1)
+
+#define KBD_DATA            0x60
 
 #define UART_DATA           0x0310
 #define UART_RX_HAS_DATA    0x0311
@@ -38,4 +43,16 @@ extern unsigned _inline_outpw(unsigned __port,unsigned __value);
 
 extern unsigned _inline_inp(unsigned __port);
 extern unsigned _inline_inpw(unsigned __port);
+
+#pragma aux read_byte = \
+"       push ds          " \
+"       mov  ds, ax      " \
+"       mov  al, ds:[bx] " \
+"       pop  ds          " \
+parm [ax] [bx] modify [al];
+
+#pragma aux cpu_halt  = "hlt";
+
+void cpu_halt();
+
 #endif

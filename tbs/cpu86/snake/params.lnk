@@ -1,6 +1,8 @@
 format dos com
 file cstart.obj
 file kernel.obj
+file kbd.obj
+file rnd.obj
 file terminal.obj
 file main.obj
 option verbose

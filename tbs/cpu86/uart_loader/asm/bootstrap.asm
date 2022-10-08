@@ -163,7 +163,15 @@ main proc near c
         invoke mmu_map, SLOT_B0000_B7FFF, 0B000h
         ; set uart loader destination memory map
         invoke mmu_map, SLOT_F0000_F7FFF, 0F000h
+        invoke mmu_map, SLOT_F8000_FFFFF, 0F800h
+        ; set loaded program destination memory map
+        invoke mmu_map, SLOT_10000_17FFF, 01000h
+        invoke mmu_map, SLOT_18000_1FFFF, 01800h
         invoke relocate_yourself
+    .else
+        ; set first pages to sdram
+        invoke mmu_map, SLOT_00000_07FFF, 00000h
+        invoke mmu_map, SLOT_08000_0FFFF, 00800h
     .endif
 
     invoke uart_log, offset hello_msg

@@ -41,10 +41,12 @@ module snake_tb;
     logic                           ps_sdram_res_tvalid;
     logic [31:0]                    ps_sdram_res_tdata;
 
+	wire 							ps2_clk = 1'b0;
+	wire 							ps2_dat = 1'b0;
 
     soc_io_uart_tx #(
         .FREQ                       (100_000_000),
-        .RATE                       (115_200)
+        .RATE                       (100_000_00)
     ) soc_io_uart_tx_inst (
         .clk                        (clk),
         .resetn                     (resetn),
@@ -55,7 +57,12 @@ module snake_tb;
     );
 
 
-    soc soc_inst(
+    soc #(
+        .FREQ                       (100_000_000),
+        .UART_RATE                  (100_000_00),
+        .RX_FIFO_SIZE               (4*1024),
+        .TX_FIFO_SIZE               (4*1024)
+    ) soc_inst(
         .clk                        (clk),
         .resetn                     (resetn),
         .m_axis_sdram_req_tvalid    (ps_sdram_req_tvalid),
@@ -74,7 +81,9 @@ module snake_tb;
         .HEX6                       (HEX6),
         .HEX7                       (HEX7),
         .BT_UART_RX                 (tx_rx),
-        .BT_UART_TX                 ()
+        .BT_UART_TX                 (),
+		.PS2_CLK					(ps2_clk),
+		.PS2_DAT					(ps2_dat)
     );
 
 
