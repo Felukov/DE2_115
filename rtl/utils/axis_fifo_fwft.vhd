@@ -4,27 +4,27 @@ use ieee.numeric_std.all;
 use ieee.std_logic_unsigned.all;
 use ieee.math_real.all;
 
-entity axis_fifo is
+entity axis_fifo_fwft is
     generic (
-        FIFO_DEPTH      : natural := 2**8;
-        FIFO_WIDTH      : natural := 128;
-        REGISTER_OUTPUT : std_logic := '1'
+        FIFO_DEPTH          : natural := 2**8;
+        FIFO_WIDTH          : natural := 128;
+        REGISTER_OUTPUT     : std_logic := '1'
     );
     port (
-        clk             : in std_logic;
-        resetn          : in std_logic;
+        clk                 : in std_logic;
+        resetn              : in std_logic;
 
-        fifo_s_tvalid   : in std_logic;
-        fifo_s_tready   : out std_logic;
-        fifo_s_tdata    : in std_logic_vector(FIFO_WIDTH-1 downto 0);
+        s_axis_fifo_tvalid  : in std_logic;
+        s_axis_fifo_tready  : out std_logic;
+        s_axis_fifo_tdata   : in std_logic_vector(FIFO_WIDTH-1 downto 0);
 
-        fifo_m_tvalid   : out std_logic;
-        fifo_m_tready   : in std_logic;
-        fifo_m_tdata    : out std_logic_vector(FIFO_WIDTH-1 downto 0)
+        m_axis_fifo_tvalid  : out std_logic;
+        m_axis_fifo_tready  : in std_logic;
+        m_axis_fifo_tdata   : out std_logic_vector(FIFO_WIDTH-1 downto 0)
     );
-end entity axis_fifo;
+end entity axis_fifo_fwft;
 
-architecture rtl of axis_fifo is
+architecture rtl of axis_fifo_fwft is
 
     constant BRAM_AW        : natural := integer(ceil(log2(real(FIFO_DEPTH))));
 
@@ -43,8 +43,12 @@ architecture rtl of axis_fifo is
     signal rd_data_tvalid   : std_logic;
     signal rd_data_tready   : std_logic;
     signal rd_data_taddr    : std_logic_vector(BRAM_AW-1 downto 0);
+    signal rd_data_tuser    : std_logic_vector(FIFO_WIDTH downto 0);
 
     signal fifo_cnt         : integer range 0 to FIFO_DEPTH-1;
+
+    signal use_bypass       : std_logic;
+    signal bypass_ff        : std_logic_vector(FIFO_WIDTH-1 downto 0);
 
 begin
 
@@ -68,24 +72,29 @@ begin
         s_axis_rd_tvalid    => rd_data_tvalid,
         s_axis_rd_tready    => rd_data_tready,
         s_axis_rd_taddr     => rd_data_taddr,
-        s_axis_rd_tuser     => (others => '0'),
+        s_axis_rd_tuser     => rd_data_tuser,
 
-        m_axis_res_tvalid   => fifo_m_tvalid,
-        m_axis_res_tready   => fifo_m_tready,
-        m_axis_res_tdata    => fifo_m_tdata
+        m_axis_res_tvalid   => m_axis_fifo_tvalid,
+        m_axis_res_tready   => m_axis_fifo_tready,
+        m_axis_res_tdata    => m_axis_fifo_tdata
     );
 
-    wr_data_tvalid  <= fifo_s_tvalid;
-    fifo_s_tready   <= wr_data_tready;
-    wr_data_tdata   <= fifo_s_tdata;
+    wr_data_tvalid      <= s_axis_fifo_tvalid;
+    s_axis_fifo_tready  <= wr_data_tready;
+    wr_data_tdata       <= s_axis_fifo_tdata;
 
+    use_bypass <= '1' when wr_data_tvalid = '1' and wr_data_tready = '1' and fifo_cnt = 0 else '0';
+
+    rd_data_tvalid <= '1' when (wr_data_tvalid = '1' and wr_data_tready = '1') or (fifo_cnt /= 0) else '0';
+
+    rd_data_tuser(FIFO_WIDTH) <= use_bypass;
+    rd_data_tuser(FIFO_WIDTH-1 downto 0) <= wr_data_tdata;
 
     fifo_throughput_proc : process (clk) begin
         if rising_edge(clk) then
             if resetn = '0' then
                 fifo_cnt <= 0;
                 wr_data_tready <= '1';
-                rd_data_tvalid <= '0';
             else
 
                 if (wr_data_tvalid = '1' and wr_data_tready = '1' and rd_data_tvalid = '1' and rd_data_tready = '1') then
@@ -104,16 +113,6 @@ begin
                     end if;
                 elsif (rd_data_tvalid = '1' and rd_data_tready = '1') then
                     wr_data_tready <= '1';
-                end if;
-
-                if (wr_data_tvalid = '1' and wr_data_tready = '1' and rd_data_tvalid = '1' and rd_data_tready = '1') then
-                    rd_data_tvalid <= rd_data_tvalid;
-                elsif (wr_data_tvalid = '1' and wr_data_tready = '1') then
-                    rd_data_tvalid <= '1';
-                elsif (rd_data_tvalid = '1' and rd_data_tready = '1') then
-                    if (fifo_cnt - 1) = 0 then
-                        rd_data_tvalid <= '0';
-                    end if;
                 end if;
 
             end if;

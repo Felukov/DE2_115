@@ -31,6 +31,12 @@ use ieee.numeric_std.all;
 use work.cpu86_types.all;
 
 entity soc is
+    generic (
+        FREQ                    : integer := 100_000_000;
+        UART_RATE               : integer := 115_200;
+        RX_FIFO_SIZE            : integer := 16;
+        TX_FIFO_SIZE            : integer := 16
+    );
     port (
         clk                         : in std_logic;
         resetn                      : in std_logic;
@@ -320,6 +326,28 @@ architecture rtl of soc is
         );
     end component pic;
 
+    component pic_lite is
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+
+            -- cpu io
+            s_axis_io_req_tvalid    : in std_logic;
+            s_axis_io_req_tready    : out std_logic;
+            s_axis_io_req_tdata     : in std_logic_vector(39 downto 0);
+            m_axis_io_res_tvalid    : out std_logic;
+            m_axis_io_res_tready    : in std_logic;
+            m_axis_io_res_tdata     : out std_logic_vector(15 downto 0);
+
+            -- interrutps
+            interrupt_input         : in std_logic_vector(4 downto 0);
+
+            interrupt_valid         : out std_logic;
+            interrupt_data          : out std_logic_vector(7 downto 0);
+            interrupt_ack           : in std_logic
+        );
+    end component pic_lite;
+
     component soc_io_switches is
         port (
             clk                     : in std_logic;
@@ -397,6 +425,12 @@ architecture rtl of soc is
     end component soc_io_seg_7;
 
     component soc_io_uart is
+        generic (
+            FREQ                    : integer := 100_000_000;
+            RATE                    : integer := 115_200;
+            RX_FIFO_SIZE            : integer := 16;
+            TX_FIFO_SIZE            : integer := 16
+        );
         port (
             clk                     : in std_logic;
             resetn                  : in std_logic;
@@ -435,6 +469,15 @@ architecture rtl of soc is
             ps2c                    : inout std_logic
         );
     end component soc_ps2;
+
+    component signal_tap is
+        port (
+            acq_data_in    : in std_logic_vector(63 downto 0) := (others => 'X'); -- acq_data_in
+            acq_trigger_in : in std_logic_vector( 0 downto 0) := (others => 'X'); -- acq_trigger_in
+            acq_clk        : in std_logic                     := 'X';             -- clk
+            storage_enable : in std_logic                     := 'X'              -- storage_enable
+        );
+    end component signal_tap;
 
     attribute keep: boolean;
     attribute maxfan : integer;
@@ -564,7 +607,56 @@ architecture rtl of soc is
 
     signal ledg_out                 : std_logic_vector(15 downto 0);
 
+    -- signal acq_data_in              : std_logic_vector(63 downto 0);
+    -- signal acq_trigger_in           : std_logic_vector(0 downto 0);
+    -- signal storage_enable           : std_logic;
+
+    -- signal test_1_mask              : std_logic;
+    -- signal test_0_cnt               : std_logic_vector(15 downto 0);
+    -- signal test_1_cnt               : std_logic_vector(15 downto 0);
+    -- signal test_buf                 : std_logic_vector(7 downto 0);
+
 begin
+    -- acq_data_in(63 downto 11) <= (others => '0');
+    -- acq_data_in(10) <= event_kb_int_req;
+    -- acq_data_in(9) <= interrupt_valid;
+    -- acq_data_in(8) <= interrupt_ack;
+    -- acq_data_in(7 downto  0) <= interrupt_data;
+
+
+    -- acq_trigger_in(0) <= '1';
+    -- storage_enable    <= '1';
+
+    -- u0 : component signal_tap port map (
+    --     acq_clk         => clk,            -- acq_clk
+    --     acq_data_in     => acq_data_in,    -- acq_data_in
+    --     acq_trigger_in  => acq_trigger_in, -- acq_trigger_in
+    --     storage_enable  => storage_enable  -- storage_enable
+    -- );
+
+    -- process (clk) begin
+    --     if rising_edge(clk) then
+    --         if resetn = '0' then
+    --             test_0_cnt <= (others => '0');
+    --             test_1_cnt <= (others => '0');
+    --             test_1_mask <= '1';
+    --             test_buf <= (others => '0');
+    --         else
+    --             if (interrupt_valid = '1' and interrupt_ack = '1') then
+    --                 test_buf <= interrupt_data;
+    --             end if;
+
+    --             if (interrupt_valid = '1' and interrupt_ack = '1' and interrupt_data = x"09") then
+    --                 test_0_cnt <= test_0_cnt + 1;
+    --                 test_1_mask <= '0';
+    --             end if;
+
+    --             if (pic_req_tvalid = '1' and pic_req_tready = '1' and test_buf = x"09" and test_1_mask = '0') then
+    --                 test_1_cnt <= test_1_cnt + 1;
+    --             end if;
+    --         end if;
+    --     end if;
+    -- end process;
 
     on_chip_ram_inst : on_chip_ram port map (
         clk                     => clk,
@@ -784,19 +876,39 @@ begin
     );
 
     -- Module pic instantiation
-    pic_inst : pic port map(
+    -- pic_inst : pic port map(
+    --     clk                     => clk,
+    --     resetn                  => dev_resetn,
+
+    --     io_req_s_tvalid         => pic_req_tvalid,
+    --     io_req_s_tready         => pic_req_tready,
+    --     io_req_s_tdata          => pic_req_tdata,
+
+    --     io_rd_m_tvalid          => pic_rd_tvalid,
+    --     io_rd_m_tready          => pic_rd_tready,
+    --     io_rd_m_tdata           => pic_rd_tdata,
+
+    --     interrupt_input         => interrupt_vector,
+
+    --     interrupt_valid         => open,
+    --     interrupt_data          => open,
+    --     interrupt_ack           => interrupt_ack
+    -- );
+
+    -- Module pic instantiation
+    pic_lite_inst : pic_lite port map(
         clk                     => clk,
-        resetn                  => dev_resetn,
+        resetn                  => resetn,
 
-        io_req_s_tvalid         => pic_req_tvalid,
-        io_req_s_tready         => pic_req_tready,
-        io_req_s_tdata          => pic_req_tdata,
+        s_axis_io_req_tvalid    => pic_req_tvalid,
+        s_axis_io_req_tready    => pic_req_tready,
+        s_axis_io_req_tdata     => pic_req_tdata,
 
-        io_rd_m_tvalid          => pic_rd_tvalid,
-        io_rd_m_tready          => pic_rd_tready,
-        io_rd_m_tdata           => pic_rd_tdata,
+        m_axis_io_res_tvalid    => pic_rd_tvalid,
+        m_axis_io_res_tready    => pic_rd_tready,
+        m_axis_io_res_tdata     => pic_rd_tdata,
 
-        interrupt_input         => interrupt_vector,
+        interrupt_input         => interrupt_vector(4 downto 0),
 
         interrupt_valid         => interrupt_valid,
         interrupt_data          => interrupt_data,
@@ -898,7 +1010,12 @@ begin
     );
 
     -- Module soc_io_uart instantiation
-    soc_io_uart_inst : soc_io_uart port map(
+    soc_io_uart_inst : soc_io_uart generic map (
+        FREQ                    => FREQ,
+        RATE                    => UART_RATE,
+        RX_FIFO_SIZE            => RX_FIFO_SIZE,
+        TX_FIFO_SIZE            => TX_FIFO_SIZE
+    ) port map(
         clk                     => clk,
         resetn                  => dev_resetn,
 

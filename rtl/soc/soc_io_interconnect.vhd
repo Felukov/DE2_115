@@ -506,7 +506,9 @@ begin
     ) else '0';
 
     kbd_req_cs <= '1' when (
-        io_req_s_tdata(31 downto 16) = x"0060"
+        io_req_s_tdata(31 downto 16) = x"0060" or
+        io_req_s_tdata(31 downto 16) = x"0062" or
+        io_req_s_tdata(31 downto 16) = x"0063"
     ) else '0';
 
     -- latching pit request

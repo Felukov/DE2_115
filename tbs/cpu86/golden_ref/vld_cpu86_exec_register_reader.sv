@@ -59,7 +59,8 @@ module vld_cpu86_exec_register_reader (
         CS = 4'd9,
         SS = 4'd10,
         DS = 4'd11,
-        FL = 4'd12
+        FL = 4'd12,
+        ZERO = 4'd13
     } reg_t;
 
     typedef enum logic[2:0] {
@@ -243,6 +244,7 @@ module vld_cpu86_exec_register_reader (
                 check_lahf();
 
                 check_mov();
+                check_alu();
                 if (error_cnt > 100) begin
                     $display("too many errors");
                     $stop();
@@ -250,6 +252,12 @@ module vld_cpu86_exec_register_reader (
             end
         end
     end
+
+    task check_alu();
+        if (dut_op == ALU && dut_dir == R2R) begin
+            check_sreg;
+        end
+    endtask
 
     task check_mov;
         if (dut_op == MOVU && dut_dir == R2R) begin

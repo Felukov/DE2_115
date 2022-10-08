@@ -268,9 +268,9 @@ module sd_phy_dat(
                 next_dat_out2     = send_crc ? crc_write2[count] : 1'b1;
                 next_dat_out3     = send_crc ? crc_write3[count] : 1'b1;
 
-                if (count == 11'd1)
+                if (count == 11'd1) begin
                     next_send_crc = 1'b0;
-                else if (count == 11'd0) begin
+                end else if (count == 11'd0) begin
                     next_count    = 11'd9;
                     next_state    = CHECK_CRC;
                 end

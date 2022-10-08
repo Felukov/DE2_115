@@ -95,24 +95,21 @@ begin
     io_rd_tready            <= m_axis_io_res_tready;
     m_axis_io_res_tdata     <= io_rd_tdata;
 
-    event_kb_int_req        <= rx_fifo_m_tvalid;
-
     -- module axis_fifo instantiation
-    axis_fifo_tx_inst : entity work.axis_fifo generic map (
+    axis_fifo_tx_inst : entity work.axis_fifo_er generic map (
         FIFO_DEPTH          => 16,
-        FIFO_WIDTH          => 8,
-        REGISTER_OUTPUT     => '1'
+        FIFO_WIDTH          => 8
     ) port map (
         clk                 => clk,
         resetn              => resetn,
 
-        fifo_s_tvalid       => tx_fifo_s_tvalid,
-        fifo_s_tready       => tx_fifo_s_tready,
-        fifo_s_tdata        => tx_fifo_s_tdata,
+        s_axis_fifo_tvalid  => tx_fifo_s_tvalid,
+        s_axis_fifo_tready  => tx_fifo_s_tready,
+        s_axis_fifo_tdata   => tx_fifo_s_tdata,
 
-        fifo_m_tvalid       => tx_fifo_m_tvalid,
-        fifo_m_tready       => tx_fifo_m_tready,
-        fifo_m_tdata        => tx_fifo_m_tdata
+        m_axis_fifo_tvalid  => tx_fifo_m_tvalid,
+        m_axis_fifo_tready  => tx_fifo_m_tready,
+        m_axis_fifo_tdata   => tx_fifo_m_tdata
     );
 
     -- module soc_ps2_tx instantiation
@@ -147,21 +144,20 @@ begin
     -- );
 
     -- module axis_fifo instantiation
-    axis_fifo_rx_inst : entity work.axis_fifo generic map (
+    axis_fifo_rx_inst : entity work.axis_fifo_er generic map (
         FIFO_DEPTH          => 16,
-        FIFO_WIDTH          => 8,
-        REGISTER_OUTPUT     => '1'
+        FIFO_WIDTH          => 8
     ) port map (
         clk                 => clk,
         resetn              => resetn,
 
-        fifo_s_tvalid       => rx_done_tick,
-        fifo_s_tready       => open,
-        fifo_s_tdata        => dout,
+        s_axis_fifo_tvalid  => rx_done_tick,
+        s_axis_fifo_tready  => open,
+        s_axis_fifo_tdata   => dout,
 
-        fifo_m_tvalid       => rx_fifo_m_tvalid,
-        fifo_m_tready       => rx_fifo_m_tready,
-        fifo_m_tdata        => rx_fifo_m_tdata
+        m_axis_fifo_tvalid  => rx_fifo_m_tvalid,
+        m_axis_fifo_tready  => rx_fifo_m_tready,
+        m_axis_fifo_tdata   => rx_fifo_m_tdata
     );
 
     -- assigns
@@ -177,8 +173,8 @@ begin
     io_address <= io_req_tdata(31 downto 16);
 
     io_read_rd_fifo_data  <= '1' when io_address(3 downto 0) = x"0" else '0';
-    io_read_rd_fifo_ready <= '1' when io_address(3 downto 0) = x"1" else '0';
-    io_read_wr_fifo_ready <= '1' when io_address(3 downto 0) = x"2" else '0';
+    io_read_rd_fifo_ready <= '1' when io_address(3 downto 0) = x"2" else '0';
+    io_read_wr_fifo_ready <= '1' when io_address(3 downto 0) = x"3" else '0';
 
     io_req_tready <= '1';
 
@@ -202,6 +198,8 @@ begin
             end if;
         end if;
     end process;
+
+    event_kb_int_req <= rx_done_tick;
 
     -- read process
     read_proc : process (clk) begin

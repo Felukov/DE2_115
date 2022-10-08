@@ -233,7 +233,7 @@ begin
          (rr_tdata.op = JCALL and rr_tdata.code(3) = '1') or
          (rr_tdata.op = JMPU and rr_tdata.code(3) = '1') or
          (rr_tdata.op = LFP and rr_tdata.code = MISC_BOUND) or
-         (rr_tdata.op = SYS))
+         (rr_tdata.op = SYS and rr_tdata.code /= SYS_HLT_OP))
     else '0';
 
     ea_val_plus_disp_next <= std_logic_vector(unsigned(rr_tdata.ea_val) + unsigned(rr_tdata.disp));

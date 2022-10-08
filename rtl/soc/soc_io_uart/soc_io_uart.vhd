@@ -29,6 +29,12 @@ use ieee.numeric_std.all;
 use ieee.math_real.all;
 
 entity soc_io_uart is
+    generic (
+        FREQ                    : integer := 100_000_000;
+        RATE                    : integer := 115_200;
+        RX_FIFO_SIZE            : integer := 16;
+        TX_FIFO_SIZE            : integer := 16
+    );
     port (
         clk                     : in std_logic;
         resetn                  : in std_logic;
@@ -123,8 +129,8 @@ begin
 
     -- module soc_io_uart_rx instantiation
     uart_rx_inst : soc_io_uart_rx generic map (
-        FREQ                => 100_000_000,
-        RATE                => 115_200
+        FREQ                => FREQ,
+        RATE                => RATE
     ) port map (
         clk                 => clk,
         resetn              => resetn,
@@ -137,7 +143,7 @@ begin
 
     -- module axis_fifo instantiation
     axis_fifo_inst_0 : entity work.axis_fifo_er generic map (
-        FIFO_DEPTH          => 16,
+        FIFO_DEPTH          => RX_FIFO_SIZE,
         FIFO_WIDTH          => 8
     ) port map (
         clk                 => clk,
@@ -169,7 +175,7 @@ begin
 
     -- module axis_fifo instantiation
     axis_fifo_inst_1 : entity work.axis_fifo_er generic map (
-        FIFO_DEPTH          => 16,
+        FIFO_DEPTH          => TX_FIFO_SIZE,
         FIFO_WIDTH          => 8
     ) port map (
         clk                 => clk,
@@ -186,8 +192,8 @@ begin
 
     -- module soc_io_uart_tx instantiation
     uart_tx_inst : soc_io_uart_tx generic map (
-        FREQ                => 100_000_000,
-        RATE                => 115_200
+        FREQ                => FREQ,
+        RATE                => RATE
     ) port map (
         clk                 => clk,
         resetn              => resetn,

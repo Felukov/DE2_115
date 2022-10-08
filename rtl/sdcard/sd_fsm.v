@@ -136,7 +136,8 @@ module sd_fsm(
     reg sd_write_enable, next_sd_write_enable;
     reg sd_read_enable, next_sd_read_enable;
     reg [21:0] size, next_size; // last block on the card / 1024
-    reg wide_width_data, next_wide_width_data;  reg erase_error, next_erase_error;
+    reg wide_width_data, next_wide_width_data;
+    reg erase_error, next_erase_error;
 
     wire [21:0] blocks;
 
