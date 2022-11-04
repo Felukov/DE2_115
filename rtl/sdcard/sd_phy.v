@@ -73,8 +73,8 @@ module sd_phy(
     output [3:0]    sd_dat_out;
     output          sd_dat_oe;
 
-    output[7:0]     fifo_dout;
-    input[7:0]      fifo_din;
+    output [7:0]    fifo_dout;
+    input  [7:0]    fifo_din;
     output          fifo_wr;
     output          fifo_rd;
 

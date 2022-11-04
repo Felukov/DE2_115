@@ -48,6 +48,18 @@ entity soc is
         s_axis_sdram_res_tvalid     : in std_logic;
         s_axis_sdram_res_tdata      : in std_logic_vector(31 downto 0);
 
+        sd_error                    : in std_logic;
+        sd_disk_mounted             : in std_logic;
+        sd_blocks                   : in std_logic_vector(21 downto 0);
+        sd_io_lba                   : out std_logic_vector(31 downto 0);
+        sd_io_rd                    : out std_logic;
+        sd_io_wr                    : out std_logic;
+        sd_io_ack                   : in std_logic;
+        sd_io_din                   : in std_logic_vector(7 downto 0);
+        sd_io_din_strobe            : in std_logic;
+        sd_io_dout                  : out std_logic_vector(7 downto 0);
+        sd_io_dout_strobe           : in std_logic;
+
         LEDG                        : out std_logic_vector(8 downto 0);
         SW                          : in std_logic_vector(17 downto 0);
 
@@ -180,112 +192,6 @@ architecture rtl of soc is
             s_axis_bram_res_tdata   : in std_logic_vector(31 downto 0)
         );
     end component soc_mmu;
-
-    component soc_io_interconnect is
-        port (
-            -- global singals
-            clk                         : in std_logic;
-            resetn                      : in std_logic;
-            -- cpu io
-            s_axis_io_req_tvalid        : in std_logic;
-            s_axis_io_req_tready        : out std_logic;
-            s_axis_io_req_tdata         : in std_logic_vector(39 downto 0);
-            m_axis_io_res_tvalid        : out std_logic;
-            m_axis_io_res_tready        : in std_logic;
-            m_axis_io_res_tdata         : out std_logic_vector(15 downto 0);
-            -- pit
-            m_axis_pit_req_tvalid       : out std_logic;
-            m_axis_pit_req_tready       : in std_logic;
-            m_axis_pit_req_tdata        : out std_logic_vector(39 downto 0);
-            s_axis_pit_res_tvalid       : in std_logic;
-            s_axis_pit_res_tready       : out std_logic;
-            s_axis_pit_res_tdata        : in std_logic_vector(15 downto 0);
-            -- pic
-            m_axis_pic_req_tvalid       : out std_logic;
-            m_axis_pic_req_tready       : in std_logic;
-            m_axis_pic_req_tdata        : out std_logic_vector(39 downto 0);
-            s_axis_pic_res_tvalid       : in std_logic;
-            s_axis_pic_res_tready       : out std_logic;
-            s_axis_pic_res_tdata        : in std_logic_vector(15 downto 0);
-            -- led green
-            m_axis_led_0_req_tvalid     : out std_logic;
-            m_axis_led_0_req_tready     : in std_logic;
-            m_axis_led_0_req_tdata      : out std_logic_vector(39 downto 0);
-            s_axis_led_0_res_tvalid     : in std_logic;
-            s_axis_led_0_res_tready     : out std_logic;
-            s_axis_led_0_res_tdata      : in std_logic_vector(15 downto 0);
-            -- led red (15 downto 0)
-            m_axis_led_1_req_tvalid     : out std_logic;
-            m_axis_led_1_req_tready     : in std_logic;
-            m_axis_led_1_req_tdata      : out std_logic_vector(39 downto 0);
-            s_axis_led_1_res_tvalid     : in std_logic;
-            s_axis_led_1_res_tready     : out std_logic;
-            s_axis_led_1_res_tdata      : in std_logic_vector(15 downto 0);
-            -- led red (17 downto 16)
-            m_axis_led_2_req_tvalid     : out std_logic;
-            m_axis_led_2_req_tready     : in std_logic;
-            m_axis_led_2_req_tdata      : out std_logic_vector(39 downto 0);
-            s_axis_led_2_res_tvalid     : in std_logic;
-            s_axis_led_2_res_tready     : out std_logic;
-            s_axis_led_2_res_tdata      : in std_logic_vector(15 downto 0);
-            -- sw (17 downto 16)
-            m_axis_sw_0_req_tvalid      : out std_logic;
-            m_axis_sw_0_req_tready      : in std_logic;
-            m_axis_sw_0_req_tdata       : out std_logic_vector(39 downto 0);
-            s_axis_sw_0_res_tvalid      : in std_logic;
-            s_axis_sw_0_res_tready      : out std_logic;
-            s_axis_sw_0_res_tdata       : in std_logic_vector(15 downto 0);
-            -- sw (15 downto 0)
-            m_axis_sw_1_req_tvalid      : out std_logic;
-            m_axis_sw_1_req_tready      : in std_logic;
-            m_axis_sw_1_req_tdata       : out std_logic_vector(39 downto 0);
-            s_axis_sw_1_res_tvalid      : in std_logic;
-            s_axis_sw_1_res_tready      : out std_logic;
-            s_axis_sw_1_res_tdata       : in std_logic_vector(15 downto 0);
-            -- hex_group_0
-            m_axis_hex_0_req_tvalid     : out std_logic;
-            m_axis_hex_0_req_tready     : in std_logic;
-            m_axis_hex_0_req_tdata      : out std_logic_vector(39 downto 0);
-            s_axis_hex_0_res_tvalid     : in std_logic;
-            s_axis_hex_0_res_tready     : out std_logic;
-            s_axis_hex_0_res_tdata      : in std_logic_vector(15 downto 0);
-            -- hex_group_1
-            m_axis_hex_1_req_tvalid     : out std_logic;
-            m_axis_hex_1_req_tready     : in std_logic;
-            m_axis_hex_1_req_tdata      : out std_logic_vector(39 downto 0);
-            s_axis_hex_1_res_tvalid     : in std_logic;
-            s_axis_hex_1_res_tready     : out std_logic;
-            s_axis_hex_1_res_tdata      : in std_logic_vector(15 downto 0);
-            -- uart
-            m_axis_uart_req_tvalid      : out std_logic;
-            m_axis_uart_req_tready      : in std_logic;
-            m_axis_uart_req_tdata       : out std_logic_vector(39 downto 0);
-            s_axis_uart_res_tvalid      : in std_logic;
-            s_axis_uart_res_tready      : out std_logic;
-            s_axis_uart_res_tdata       : in std_logic_vector(15 downto 0);
-            -- kbd
-            m_axis_kbd_req_tvalid       : out std_logic;
-            m_axis_kbd_req_tready       : in std_logic;
-            m_axis_kbd_req_tdata        : out std_logic_vector(39 downto 0);
-            s_axis_kbd_res_tvalid       : in std_logic;
-            s_axis_kbd_res_tready       : out std_logic;
-            s_axis_kbd_res_tdata        : in std_logic_vector(15 downto 0);
-            -- port 61
-            m_axis_port_61_req_tvalid   : out std_logic;
-            m_axis_port_61_req_tready   : in std_logic;
-            m_axis_port_61_req_tdata    : out std_logic_vector(39 downto 0);
-            s_axis_port_61_res_tvalid   : in std_logic;
-            s_axis_port_61_res_tready   : out std_logic;
-            s_axis_port_61_res_tdata    : in std_logic_vector(15 downto 0);
-            -- mmu
-            m_axis_mmu_req_tvalid       : out std_logic;
-            m_axis_mmu_req_tready       : in std_logic;
-            m_axis_mmu_req_tdata        : out std_logic_vector(39 downto 0);
-            s_axis_mmu_res_tvalid       : in std_logic;
-            s_axis_mmu_res_tready       : out std_logic;
-            s_axis_mmu_res_tdata        : in std_logic_vector(15 downto 0)
-        );
-    end component soc_io_interconnect;
 
     component pit_8254 is
         port (
@@ -593,6 +499,13 @@ architecture rtl of soc is
     signal mmu_rd_tready            : std_logic;
     signal mmu_rd_tdata             : std_logic_vector(15 downto 0);
 
+    signal sdcard_req_tvalid        : std_logic;
+    signal sdcard_req_tready        : std_logic;
+    signal sdcard_req_tdata         : std_logic_vector(39 downto 0);
+    signal sdcard_rd_tvalid         : std_logic;
+    signal sdcard_rd_tready         : std_logic;
+    signal sdcard_rd_tdata          : std_logic_vector(15 downto 0);
+
     signal led_reg                  : std_logic_vector(7 downto 0);
 
     signal event_timer              : std_logic;
@@ -754,7 +667,7 @@ begin
     );
 
     -- Module soc_io_interconnect instantiation
-    soc_io_interconnect_inst : soc_io_interconnect port map (
+    soc_io_interconnect_inst : entity work.soc_io_interconnect port map (
         -- global singals
         clk                         => clk,
         resetn                      => resetn,
@@ -855,7 +768,14 @@ begin
         m_axis_port_61_req_tdata    => port_61_req_tdata,
         s_axis_port_61_res_tvalid   => port_61_rd_tvalid,
         s_axis_port_61_res_tready   => port_61_rd_tready,
-        s_axis_port_61_res_tdata    => port_61_rd_tdata
+        s_axis_port_61_res_tdata    => port_61_rd_tdata,
+        -- sdcard
+        m_axis_sdcard_req_tvalid    => sdcard_req_tvalid,
+        m_axis_sdcard_req_tready    => sdcard_req_tready,
+        m_axis_sdcard_req_tdata     => sdcard_req_tdata,
+        s_axis_sdcard_res_tvalid    => sdcard_rd_tvalid,
+        s_axis_sdcard_res_tready    => sdcard_rd_tready,
+        s_axis_sdcard_res_tdata     => sdcard_rd_tdata
     );
 
     -- Module pit_8254 instantiation
@@ -1031,7 +951,7 @@ begin
         tx                      => BT_UART_TX
     );
 
-    -- Module soc_io_uart instantiation
+    -- Module soc_ps2 instantiation
     soc_io_kbd_inst : soc_ps2 port map(
         clk                     => clk,
         resetn                  => dev_resetn,
@@ -1048,6 +968,32 @@ begin
 
         ps2c                    => PS2_CLK,
         ps2d                    => PS2_DAT
+    );
+
+    -- Module soc_ps2 instantiation
+    ps_io_sdcard_inst : entity work.ps_io_sdcard port map(
+        clk                     => clk,
+        resetn                  => dev_resetn,
+
+        s_axis_io_req_tvalid    => sdcard_req_tvalid,
+        s_axis_io_req_tready    => sdcard_req_tready,
+        s_axis_io_req_tdata     => sdcard_req_tdata,
+
+        m_axis_io_res_tvalid    => sdcard_rd_tvalid,
+        m_axis_io_res_tready    => sdcard_rd_tready,
+        m_axis_io_res_tdata     => sdcard_rd_tdata,
+
+        sd_error                => sd_error,
+        sd_disk_mounted         => sd_disk_mounted,
+        sd_blocks               => sd_blocks,
+        sd_io_lba               => sd_io_lba,
+        sd_io_rd                => sd_io_rd,
+        sd_io_wr                => sd_io_wr,
+        sd_io_ack               => sd_io_ack,
+        sd_io_din               => sd_io_din,
+        sd_io_din_strobe        => sd_io_din_strobe,
+        sd_io_dout              => sd_io_dout,
+        sd_io_dout_strobe       => sd_io_dout_strobe
     );
 
     -- Assigns

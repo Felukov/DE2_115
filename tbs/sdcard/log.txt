@@ -1,0 +1,2 @@
+**Error in sequnce, ACMD 41 should precede 2 in Startup state
+**BUS WIDTH 4 

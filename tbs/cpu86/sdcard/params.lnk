@@ -1,0 +1,7 @@
+format dos com
+file sdcard.obj
+file main.obj
+file kernel.obj
+file terminal.obj
+option verbose
+option nodefaultlibs

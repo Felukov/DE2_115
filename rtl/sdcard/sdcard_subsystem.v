@@ -44,9 +44,9 @@ module sdcard_subsystem(
     io_wr,
     io_ack,
     io_din,
-    io_din_strobe,
+    io_din_tvalid,
     io_dout,
-    io_dout_strobe
+    io_dout_tvalid
 );
 
     input           clk;
@@ -67,10 +67,11 @@ module sdcard_subsystem(
     input           io_rd;
     input           io_wr;
     output          io_ack;
+    output          io_din_tvalid;
     output [7:0]    io_din;
-    output          io_din_strobe;
+    //output          io_din_strobe;
+    output          io_dout_tvalid;
     input [7:0]     io_dout;
-    output          io_dout_strobe;
 
     // local signals
     wire [119:0]    response;
@@ -79,8 +80,9 @@ module sdcard_subsystem(
 
     wire            fifo_wr;
     wire            fifo_rd;
+    wire            io_din_tvalid;
     reg             io_din_strobe;
-    reg             io_dout_strobe;
+    reg             d_io_din_strobe;
 
     wire [3:0]      sd_dat_out;
     wire [3:0]      sd_dat_in;
@@ -181,10 +183,17 @@ module sdcard_subsystem(
     assign sd_dat    = sd_dat_oe ? 4'bZZZZ : sd_dat_out;
     assign sd_dat_in = sd_dat;
 
-    always @ (posedge clk)
-        io_din_strobe <= fifo_wr;
+    assign io_din_tvalid = (d_io_din_strobe == 1'b0 && io_din_strobe == 1'b1) ? 1'b1 : 1'b0;
+    assign io_dout_tvalid = fifo_rd;
 
-    always @ (posedge clk)
-        io_dout_strobe <= fifo_rd;
+    always @ (posedge clk) begin
+        if (resetn == 1'b0) begin
+            io_din_strobe <= 1'b0;
+            d_io_din_strobe <= 1'b0;
+        end else begin
+            io_din_strobe <= fifo_wr;
+            d_io_din_strobe <= io_din_strobe;
+        end
+    end
 
 endmodule

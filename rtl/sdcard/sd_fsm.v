@@ -65,11 +65,11 @@ module sd_fsm(
     input                 switch_pending;
     input                 clk_stopped;
     output                command_valid;
-    output[39:0]          command;
+    output [39:0]         command;
     input                 command_busy;
     input                 cmd_crc_ok;
     input                 timeout;
-    input[119:0]          response;
+    input [119:0]         response;
     input                 resp_valid;
     output                sd_write_enable;
     output                sd_read_enable;
@@ -119,27 +119,27 @@ module sd_fsm(
         DONE_2   = 26'b01000000000000000000000000,
         ERROR    = 26'b10000000000000000000000000;
 
-    reg [SIZE-1:0] state, next_state;
-    reg [15:0] rca, next_rca;
-    reg [1:0] ver, next_ver;
-    reg hcs, next_hcs;
-    reg [39:0] command, next_command;
-    reg command_valid, next_command_valid;
-    reg error, next_error;
-    reg disk_mounted, next_disk_mounted;
-    reg io_ack, next_io_ack;
-    reg sd_active, next_sd_active;
-    reg sd_read, next_sd_read;
-    reg sd_write, next_sd_write;
-    reg [8:0] counter, next_counter;
-    reg [8:0] control, next_control;
-    reg sd_write_enable, next_sd_write_enable;
-    reg sd_read_enable, next_sd_read_enable;
-    reg [21:0] size, next_size; // last block on the card / 1024
-    reg wide_width_data, next_wide_width_data;
-    reg erase_error, next_erase_error;
+    reg [SIZE-1:0]  state, next_state;
+    reg [15:0]      rca, next_rca;
+    reg [1:0]       ver, next_ver;
+    reg             hcs, next_hcs;
+    reg [39:0]      command, next_command;
+    reg             command_valid, next_command_valid;
+    reg             error, next_error;
+    reg             disk_mounted, next_disk_mounted;
+    reg             io_ack, next_io_ack;
+    reg             sd_active, next_sd_active;
+    reg             sd_read, next_sd_read;
+    reg             sd_write, next_sd_write;
+    reg [8:0]       counter, next_counter;
+    reg [8:0]       control, next_control;
+    reg             sd_write_enable, next_sd_write_enable;
+    reg             sd_read_enable, next_sd_read_enable;
+    reg [21:0]      size, next_size; // last block on the card / 1024
+    reg             wide_width_data, next_wide_width_data;
+    reg             erase_error, next_erase_error;
 
-    wire [21:0] blocks;
+    wire [21:0]     blocks;
 
     assign blocks = ((ver == 2'b11) ? (size + 1'b1) : 22'h768); // assume 1GB SDSC card
 
@@ -185,7 +185,7 @@ module sd_fsm(
         end
     end
 
-    always @ * begin
+    always @(*) begin
         next_state = state;
         next_command = command;
         next_command_valid = command_valid;
@@ -204,7 +204,7 @@ module sd_fsm(
         next_sd_read_enable = sd_read_enable;
         next_size = size;
         next_wide_width_data = wide_width_data;
-        case(state)
+        case (state)
             INIT_0: begin
                 next_disk_mounted = 1'b0;
                 next_sd_active = 1'b0;
@@ -265,8 +265,9 @@ module sd_fsm(
                 end
             end
             INIT_5: begin
-                if (command_busy)
+                if (command_busy) begin
                     next_command_valid = 1'b0;
+                end
                 if (timeout && !command_valid) begin
                     next_state = ERROR;
                 end else if (resp_valid && !command_valid) begin
@@ -282,8 +283,9 @@ module sd_fsm(
                 end
             end
             INIT_6: begin
-                if (command_busy)
+                if (command_busy) begin
                     next_command_valid = 1'b0;
+                end
                 if (timeout && !command_valid) begin
                     next_state = ERROR;
                 end else if (resp_valid && !command_valid) begin
@@ -304,8 +306,9 @@ module sd_fsm(
                 end
             end
             INIT_7: begin
-                if (command_busy)
+                if (command_busy) begin
                     next_command_valid = 1'b0;
+                end
                 if (timeout && !command_valid) begin
                     next_state = ERROR;
                 end else if (resp_valid && !command_valid) begin
@@ -316,8 +319,9 @@ module sd_fsm(
                 end
             end
             INIT_8: begin
-                if (command_busy)
+                if (command_busy) begin
                     next_command_valid = 1'b0;
+                end
                 if (timeout && !command_valid) begin
                     next_state = ERROR;
                 end else if (resp_valid && !command_valid) begin
@@ -330,8 +334,9 @@ module sd_fsm(
                 end
             end
             INIT_9: begin
-                if (command_busy)
+                if (command_busy) begin
                     next_command_valid = 1'b0;
+                end
                 if (timeout && !command_valid) begin
                     next_state = ERROR;
                 end else if (resp_valid && !command_valid) begin
@@ -344,8 +349,9 @@ module sd_fsm(
                 end
             end
             INIT_10: begin
-                if (command_busy)
+                if (command_busy) begin
                     next_command_valid = 1'b0;
+                end
                 if (timeout && !command_valid) begin
                     next_state = ERROR;
                 end else if (resp_valid && !command_valid) begin
@@ -356,8 +362,9 @@ module sd_fsm(
                 end
             end
             INIT_11: begin
-                if (command_busy)
+                if (command_busy) begin
                     next_command_valid = 1'b0;
+                end
                 if (timeout && !command_valid) begin
                     next_state = ERROR;
                 end else if (resp_valid && !command_valid) begin
@@ -368,8 +375,9 @@ module sd_fsm(
                 end
             end
             INIT_12: begin
-                if (command_busy)
+                if (command_busy) begin
                     next_command_valid = 1'b0;
+                end
                 if (timeout && !command_valid) begin
                     next_state = ERROR;
                 end else if (resp_valid && !command_valid) begin
@@ -380,14 +388,15 @@ module sd_fsm(
                 end
             end
             INIT_13: begin
-                if (command_busy)
+                if (command_busy) begin
                     next_command_valid = 1'b0;
+                end
                 if (timeout && !command_valid) begin
                     next_state = ERROR;
                 end else if (resp_valid && !command_valid) begin
-                    //next_control = 9'h00; // change to fastest clock speed
+                    // next_control = 9'h00; // change to fastest clock speed
                     next_control[8]   = 1'b0;
-                    next_control[7:1] = 7'd1;
+                    next_control[7:1] = 7'd000_001;
                     next_control[0]   = 1'b0;
                     next_state = IDLE;
                 end
@@ -398,17 +407,18 @@ module sd_fsm(
                     next_sd_active = 1'b0;
                     next_sd_read = 1'b0;
                     next_sd_write = 1'b0;
-                    if (io_rd)
+                    if (io_rd) begin
                         next_state = READ_1;
-                    else if (io_wr)
+                    end else if (io_wr) begin
                         next_state = WRITE_1;
+                    end
                 end
             end
             READ_1: begin
                 if (ver == 2'b11)
                     next_command = {8'h51, io_lba};
                 else
-                    next_command = {8'h51, io_lba[22:0],9'h0};
+                    next_command = {8'h51, io_lba[22:0], 9'h0};
                 next_command_valid = 1'b1;
                 next_sd_active = 1'b1;
                 next_sd_read = 1'b1;
@@ -445,7 +455,7 @@ module sd_fsm(
                 if (ver == 2'b11)
                     next_command = {8'h58, io_lba};
                 else
-                    next_command = {8'h58, io_lba[22:0],9'h0};
+                    next_command = {8'h58, io_lba[22:0], 9'h0};
                 next_command_valid = 1'b1;
                 next_sd_active = 1'b1;
                 next_sd_write = 1'b1;

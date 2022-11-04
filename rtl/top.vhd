@@ -60,6 +60,15 @@ end entity top;
 
 architecture rtl of top is
 
+	-- component signal_tap is
+	-- 	port (
+	-- 		acq_clk        : in std_logic                    := 'X';             -- clk
+	-- 		storage_enable : in std_logic                    := 'X';             -- storage_enable
+	-- 		acq_data_in    : in std_logic_vector(8 downto 0) := (others => 'X'); -- acq_data_in
+	-- 		acq_trigger_in : in std_logic_vector(0 downto 0) := (others => 'X')  -- acq_trigger_in
+	-- 	);
+	-- end component signal_tap;
+
     component clock_manager is
         port (
             inclk0                  : in std_logic := '0';
@@ -129,10 +138,10 @@ architecture rtl of top is
             io_rd                   : in std_logic;
             io_wr                   : in std_logic;
             io_ack                  : out std_logic;
+            io_din_tvalid           : out std_logic;
             io_din                  : out std_logic_vector(7 downto 0);
-            io_din_strobe           : out std_logic;
-            io_dout                 : in std_logic_vector(7 downto 0);
-            io_dout_strobe          : out std_logic
+            io_dout_tvalid          : out std_logic;
+            io_dout                 : in std_logic_vector(7 downto 0)
         );
     end component;
 
@@ -216,38 +225,6 @@ architecture rtl of top is
         );
     end component debouncer;
 
-    component soc is
-        port (
-            clk                     : in std_logic;
-            resetn                  : in std_logic;
-
-            m_axis_sdram_req_tvalid : out std_logic;
-            m_axis_sdram_req_tready : in std_logic;
-            m_axis_sdram_req_tdata  : out std_logic_vector(63 downto 0);
-
-            s_axis_sdram_res_tvalid : in std_logic;
-            s_axis_sdram_res_tdata  : in std_logic_vector(31 downto 0);
-
-            SW                      : in std_logic_vector(17 downto 0);
-            LEDG                    : out std_logic_vector(8 downto 0);
-
-            HEX0                    : out std_logic_vector(6 downto 0);
-            HEX1                    : out std_logic_vector(6 downto 0);
-            HEX2                    : out std_logic_vector(6 downto 0);
-            HEX3                    : out std_logic_vector(6 downto 0);
-            HEX4                    : out std_logic_vector(6 downto 0);
-            HEX5                    : out std_logic_vector(6 downto 0);
-            HEX6                    : out std_logic_vector(6 downto 0);
-            HEX7                    : out std_logic_vector(6 downto 0);
-
-            BT_UART_RX              : in std_logic;
-            BT_UART_TX              : out std_logic;
-
-            PS2_CLK                 : inout std_logic;
-            PS2_DAT                 : inout std_logic
-        );
-    end component soc;
-
     constant SDRAM_PORT_QTY     : natural := 2;
 
     signal clk_100                  : std_logic;
@@ -285,18 +262,20 @@ architecture rtl of top is
     signal sdram_port_res_tdata     : std_logic_vector(32*SDRAM_PORT_QTY-1 downto 0);
 
     signal sd_event_error           : std_logic;
+    signal sd_active                : std_logic;
+    signal sd_read                  : std_logic;
+    signal sd_write                 : std_logic;
     signal sd_disk_mounted          : std_logic;
     signal sd_blocks                : std_logic_vector(21 downto 0);
 
-    signal io_lba                   : std_logic_vector(31 downto 0);
-    signal io_rd                    : std_logic;
-    signal io_wr                    : std_logic;
-    signal io_ack                   : std_logic;
-    signal io_din                   : std_logic_vector(7 downto 0);
-    signal d_io_din_strobe          : std_logic;
-    signal io_din_strobe            : std_logic;
-    signal io_dout                  : std_logic_vector(7 downto 0);
-    signal io_dout_strobe           : std_logic;
+    signal sd_io_lba                : std_logic_vector(31 downto 0);
+    signal sd_io_rd                 : std_logic;
+    signal sd_io_wr                 : std_logic;
+    signal sd_io_ack                : std_logic;
+    signal sd_io_din                : std_logic_vector(7 downto 0);
+    signal sd_io_din_tvalid         : std_logic;
+    signal sd_io_dout               : std_logic_vector(7 downto 0);
+    signal sd_io_dout_tvalid        : std_logic;
 
     signal timer_tvalid             : std_logic;
 
@@ -425,56 +404,44 @@ begin
 
     VGA_CLK <= oddr_dout(0);
 
-    io_wr <= '0';
-    io_lba <= (others => '0');
-
     sdcard_subsystem_inst : sdcard_subsystem port map (
         clk                     => clk_100,
         resetn                  => clk_100_resetn,
         sd_clk                  => SD_CLK,
         sd_cmd                  => SD_CMD,
         sd_dat                  => SD_DAT,
-        sd_active               => open,
-        sd_read                 => open,
-        sd_write                => open,
+        sd_active               => sd_active,
+        sd_read                 => sd_read,
+        sd_write                => sd_write,
         event_error             => sd_event_error,
         disk_mounted            => sd_disk_mounted,
         blocks                  => sd_blocks,
-        io_lba                  => io_lba,
-        io_rd                   => io_rd,
-        io_wr                   => io_wr,
-        io_ack                  => io_ack,
-        io_din                  => io_din,
-        io_din_strobe           => io_din_strobe,
-        io_dout                 => io_dout,
-        io_dout_strobe          => io_dout_strobe
+        io_lba                  => sd_io_lba,
+        io_rd                   => sd_io_rd,
+        io_wr                   => sd_io_wr,
+        io_ack                  => sd_io_ack,
+        io_din_tvalid           => sd_io_din_tvalid,
+        io_din                  => sd_io_din,
+        io_dout_tvalid          => sd_io_dout_tvalid,
+        io_dout                 => sd_io_dout
     );
 
     LEDR(15)          <= sd_event_error;
     LEDR(14)          <= sd_disk_mounted;
-    LEDR(13 downto 9) <= (others => '0');
+    LEDR(13)          <= sd_active;
+    LEDR(12)          <= sd_read;
+    LEDR(11)          <= sd_write;
+    LEDR(10 downto 0) <= (others => '0');
 
-    LEDR(8)           <= '1' when io_din_strobe = '1' and d_io_din_strobe = '0' else '0';
-    LEDR(7 downto 0)  <= io_din;
+    -- u0 : component signal_tap
+    -- 	port map (
+    -- 		acq_clk             => clk_100,
+    -- 		storage_enable      => sd_io_din_tvalid,
+    -- 		acq_data_in         => '0' & sd_io_din,
+    -- 		acq_trigger_in(0)   => sd_read
+    -- 	);
 
-    process (clk_100) begin
-        if rising_edge(clk_100) then
-            if clk_100_resetn = '0' then
-                io_rd <= '0';
-                d_io_din_strobe <= '0';
-            else
-                if (btn0_tvalid = '1') then
-                    io_rd <= '1';
-                elsif (io_rd = '1' and io_ack = '1') then
-                    io_rd <= '0';
-                end if;
-
-                d_io_din_strobe <= io_din_strobe;
-            end if;
-        end if;
-    end process;
-
-    soc_inst : soc port map (
+    soc_inst : entity work.soc port map (
         clk                     => clk_100,
         resetn                  => clk_100_resetn,
 
@@ -484,6 +451,18 @@ begin
 
         s_axis_sdram_res_tvalid => ps_sdram_res_tvalid,
         s_axis_sdram_res_tdata  => ps_sdram_res_tdata,
+
+        sd_error                => sd_event_error,
+        sd_disk_mounted         => sd_disk_mounted,
+        sd_blocks               => sd_blocks,
+        sd_io_lba               => sd_io_lba,
+        sd_io_rd                => sd_io_rd,
+        sd_io_wr                => sd_io_wr,
+        sd_io_ack               => sd_io_ack,
+        sd_io_din_strobe        => sd_io_din_tvalid,
+        sd_io_din               => sd_io_din,
+        sd_io_dout_strobe       => sd_io_dout_tvalid,
+        sd_io_dout              => sd_io_dout,
 
         LEDG                    => LEDG,
         SW                      => SW,
@@ -535,17 +514,6 @@ begin
 
     ps_sdram_res_tvalid                <= sdram_port_res_tvalid(1);
     ps_sdram_res_tdata                 <= sdram_port_res_tdata(63 downto 32);
-
-
-    -- process (clk_100) begin
-    --     if rising_edge(clk_100) then
-
-    --         if (sdram_req_tvalid = '1') then
-    --             led_ff <= sdram_req_tdata(17 downto 0) or sdram_req_tdata(31 downto 14);
-    --         end if;
-
-    --     end if;
-    -- end process;
 
     process (clk_100) begin
 

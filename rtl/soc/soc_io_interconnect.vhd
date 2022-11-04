@@ -131,7 +131,15 @@ entity soc_io_interconnect is
         m_axis_mmu_req_tdata        : out std_logic_vector(39 downto 0);
         s_axis_mmu_res_tvalid       : in std_logic;
         s_axis_mmu_res_tready       : out std_logic;
-        s_axis_mmu_res_tdata        : in std_logic_vector(15 downto 0)
+        s_axis_mmu_res_tdata        : in std_logic_vector(15 downto 0);
+
+        -- sdcard
+        m_axis_sdcard_req_tvalid    : out std_logic;
+        m_axis_sdcard_req_tready    : in std_logic;
+        m_axis_sdcard_req_tdata     : out std_logic_vector(39 downto 0);
+        s_axis_sdcard_res_tvalid    : in std_logic;
+        s_axis_sdcard_res_tready    : out std_logic;
+        s_axis_sdcard_res_tdata     : in std_logic_vector(15 downto 0)
     );
 end entity soc_io_interconnect;
 
@@ -162,97 +170,104 @@ architecture rtl of soc_io_interconnect is
     signal io_rd_m_tvalid       : std_logic;
     signal io_rd_m_tready       : std_logic;
     signal io_rd_m_tdata        : std_logic_vector(15 downto 0);
-        -- pit
+    -- pit
     signal pit_req_m_tvalid     : std_logic;
     signal pit_req_m_tready     : std_logic;
     signal pit_req_m_tdata      : std_logic_vector(39 downto 0);
     signal pit_rd_s_tvalid      : std_logic;
     signal pit_rd_s_tready      : std_logic;
     signal pit_rd_s_tdata       : std_logic_vector(15 downto 0);
-        -- pic
+    -- pic
     signal pic_req_m_tvalid     : std_logic;
     signal pic_req_m_tready     : std_logic;
     signal pic_req_m_tdata      : std_logic_vector(39 downto 0);
     signal pic_rd_s_tvalid      : std_logic;
     signal pic_rd_s_tready      : std_logic;
     signal pic_rd_s_tdata       : std_logic_vector(15 downto 0);
-        -- led green
+    -- led green
     signal led_0_req_m_tvalid   : std_logic;
     signal led_0_req_m_tready   : std_logic;
     signal led_0_req_m_tdata    : std_logic_vector(39 downto 0);
     signal led_0_rd_s_tvalid    : std_logic;
     signal led_0_rd_s_tready    : std_logic;
     signal led_0_rd_s_tdata     : std_logic_vector(15 downto 0);
-        -- led red (15 downto 0)
+    -- led red (15 downto 0)
     signal led_1_req_m_tvalid   : std_logic;
     signal led_1_req_m_tready   : std_logic;
     signal led_1_req_m_tdata    : std_logic_vector(39 downto 0);
     signal led_1_rd_s_tvalid    : std_logic;
     signal led_1_rd_s_tready    : std_logic;
     signal led_1_rd_s_tdata     : std_logic_vector(15 downto 0);
-        -- led red (17 downto 16)
+    -- led red (17 downto 16)
     signal led_2_req_m_tvalid   : std_logic;
     signal led_2_req_m_tready   : std_logic;
     signal led_2_req_m_tdata    : std_logic_vector(39 downto 0);
     signal led_2_rd_s_tvalid    : std_logic;
     signal led_2_rd_s_tready    : std_logic;
     signal led_2_rd_s_tdata     : std_logic_vector(15 downto 0);
-        -- sw (17 downto 16)
+    -- sw (17 downto 16)
     signal sw_0_req_m_tvalid    : std_logic;
     signal sw_0_req_m_tready    : std_logic;
     signal sw_0_req_m_tdata     : std_logic_vector(39 downto 0);
     signal sw_0_rd_s_tvalid     : std_logic;
     signal sw_0_rd_s_tready     : std_logic;
     signal sw_0_rd_s_tdata      : std_logic_vector(15 downto 0);
-        -- sw (15 downto 0)
+    -- sw (15 downto 0)
     signal sw_1_req_m_tvalid    : std_logic;
     signal sw_1_req_m_tready    : std_logic;
     signal sw_1_req_m_tdata     : std_logic_vector(39 downto 0);
     signal sw_1_rd_s_tvalid     : std_logic;
     signal sw_1_rd_s_tready     : std_logic;
     signal sw_1_rd_s_tdata      : std_logic_vector(15 downto 0);
-        -- hex_group_0
+    -- hex_group_0
     signal hex_0_req_m_tvalid   : std_logic;
     signal hex_0_req_m_tready   : std_logic;
     signal hex_0_req_m_tdata    : std_logic_vector(39 downto 0);
     signal hex_0_rd_s_tvalid    : std_logic;
     signal hex_0_rd_s_tready    : std_logic;
     signal hex_0_rd_s_tdata     : std_logic_vector(15 downto 0);
-        -- hex_group_1
+    -- hex_group_1
     signal hex_1_req_m_tvalid   : std_logic;
     signal hex_1_req_m_tready   : std_logic;
     signal hex_1_req_m_tdata    : std_logic_vector(39 downto 0);
     signal hex_1_rd_s_tvalid    : std_logic;
     signal hex_1_rd_s_tready    : std_logic;
     signal hex_1_rd_s_tdata     : std_logic_vector(15 downto 0);
-        -- uart
+    -- uart
     signal uart_req_m_tvalid    : std_logic;
     signal uart_req_m_tready    : std_logic;
     signal uart_req_m_tdata     : std_logic_vector(39 downto 0);
     signal uart_rd_s_tvalid     : std_logic;
     signal uart_rd_s_tready     : std_logic;
     signal uart_rd_s_tdata      : std_logic_vector(15 downto 0);
-        -- kbd (port 60)
+    -- kbd (port 60)
     signal kbd_req_m_tvalid     : std_logic;
     signal kbd_req_m_tready     : std_logic;
     signal kbd_req_m_tdata      : std_logic_vector(39 downto 0);
     signal kbd_rd_s_tvalid      : std_logic;
     signal kbd_rd_s_tready      : std_logic;
     signal kbd_rd_s_tdata       : std_logic_vector(15 downto 0);
-        -- port 61
+    -- port 61
     signal port_61_req_m_tvalid : std_logic;
     signal port_61_req_m_tready : std_logic;
     signal port_61_req_m_tdata  : std_logic_vector(39 downto 0);
     signal port_61_rd_s_tvalid  : std_logic;
     signal port_61_rd_s_tready  : std_logic;
     signal port_61_rd_s_tdata   : std_logic_vector(15 downto 0);
-        -- mmu
+    -- mmu
     signal mmu_req_m_tvalid     : std_logic;
     signal mmu_req_m_tready     : std_logic;
     signal mmu_req_m_tdata      : std_logic_vector(39 downto 0);
     signal mmu_rd_s_tvalid      : std_logic;
     signal mmu_rd_s_tready      : std_logic;
     signal mmu_rd_s_tdata       : std_logic_vector(15 downto 0);
+    -- sdcard
+    signal sdcard_req_m_tvalid  : std_logic;
+    signal sdcard_req_m_tready  : std_logic;
+    signal sdcard_req_m_tdata   : std_logic_vector(39 downto 0);
+    signal sdcard_rd_s_tvalid   : std_logic;
+    signal sdcard_rd_s_tready   : std_logic;
+    signal sdcard_rd_s_tdata    : std_logic_vector(15 downto 0);
 
     signal pit_req_cs           : std_logic;
     signal pic_req_cs           : std_logic;
@@ -267,16 +282,17 @@ architecture rtl of soc_io_interconnect is
     signal uart_req_cs          : std_logic;
     signal mmu_req_cs           : std_logic;
     signal kbd_req_cs           : std_logic;
+    signal sdcard_req_cs        : std_logic;
 
     signal fifo_io_s_tvalid     : std_logic;
     signal fifo_io_s_tready     : std_logic;
     signal fifo_io_s_tdata      : std_logic_vector(3 downto 0);
-    signal fifo_io_s_selector   : std_logic_vector(12 downto 0);
+    signal fifo_io_s_selector   : std_logic_vector(13 downto 0);
     signal fifo_io_m_tvalid     : std_logic;
     signal fifo_io_m_tready     : std_logic;
     signal fifo_io_m_tdata      : std_logic_vector(3 downto 0);
 
-    signal rd_selector          : std_logic_vector(12 downto 0);
+    signal rd_selector          : std_logic_vector(13 downto 0);
 
 begin
     -- i/o assigns
@@ -378,7 +394,13 @@ begin
     mmu_rd_s_tvalid             <= s_axis_mmu_res_tvalid;
     s_axis_mmu_res_tready       <= mmu_rd_s_tready;
     mmu_rd_s_tdata              <= s_axis_mmu_res_tdata;
-
+    -- sdcard
+    m_axis_sdcard_req_tvalid    <= sdcard_req_m_tvalid;
+    sdcard_req_m_tready         <= m_axis_sdcard_req_tready;
+    m_axis_sdcard_req_tdata     <= sdcard_req_m_tdata;
+    sdcard_rd_s_tvalid          <= s_axis_sdcard_res_tvalid;
+    s_axis_sdcard_res_tready    <= sdcard_rd_s_tready;
+    sdcard_rd_s_tdata           <= s_axis_sdcard_res_tdata;
 
     -- Module axis_fifo instantiation
     axis_fifo_inst : axis_fifo generic map (
@@ -397,20 +419,21 @@ begin
 
     -- Assigns
     io_req_s_tready <= '1' when (
-        (pit_req_m_tvalid = '0' or (pit_req_m_tvalid = '1' and pit_req_m_tready = '1')) and
-        (pic_req_m_tvalid = '0' or (pic_req_m_tvalid = '1' and pic_req_m_tready = '1')) and
-        (led_0_req_m_tvalid = '0' or (led_0_req_m_tvalid = '1' and led_0_req_m_tready = '1')) and
-        (led_1_req_m_tvalid = '0' or (led_1_req_m_tvalid = '1' and led_1_req_m_tready = '1')) and
-        (led_2_req_m_tvalid = '0' or (led_2_req_m_tvalid = '1' and led_2_req_m_tready = '1')) and
-        (sw_0_req_m_tvalid = '0' or (sw_0_req_m_tvalid = '1' and sw_0_req_m_tready = '1')) and
-        (sw_1_req_m_tvalid = '0' or (sw_1_req_m_tvalid = '1' and sw_1_req_m_tready = '1')) and
-        (hex_0_req_m_tvalid = '0' or (hex_0_req_m_tvalid = '1' and hex_0_req_m_tready = '1')) and
-        (hex_1_req_m_tvalid = '0' or (hex_1_req_m_tvalid = '1' and hex_1_req_m_tready = '1')) and
-        (kbd_req_m_tvalid = '0' or (kbd_req_m_tvalid = '1' and kbd_req_m_tready = '1')) and
-        (port_61_req_m_tvalid = '0' or (port_61_req_m_tvalid = '1' and port_61_req_m_tready = '1')) and
-        (uart_req_m_tvalid = '0' or (uart_req_m_tvalid = '1' and uart_req_m_tready = '1')) and
-        (mmu_req_m_tvalid = '0' or (mmu_req_m_tvalid = '1' and mmu_req_m_tready = '1')) and
-        (fifo_io_s_tready = '1')
+            (pit_req_m_tvalid = '0' or (pit_req_m_tvalid = '1' and pit_req_m_tready = '1'))
+        and (pic_req_m_tvalid = '0' or (pic_req_m_tvalid = '1' and pic_req_m_tready = '1'))
+        and (led_0_req_m_tvalid = '0' or (led_0_req_m_tvalid = '1' and led_0_req_m_tready = '1'))
+        and (led_1_req_m_tvalid = '0' or (led_1_req_m_tvalid = '1' and led_1_req_m_tready = '1'))
+        and (led_2_req_m_tvalid = '0' or (led_2_req_m_tvalid = '1' and led_2_req_m_tready = '1'))
+        and (sw_0_req_m_tvalid = '0' or (sw_0_req_m_tvalid = '1' and sw_0_req_m_tready = '1'))
+        and (sw_1_req_m_tvalid = '0' or (sw_1_req_m_tvalid = '1' and sw_1_req_m_tready = '1'))
+        and (hex_0_req_m_tvalid = '0' or (hex_0_req_m_tvalid = '1' and hex_0_req_m_tready = '1'))
+        and (hex_1_req_m_tvalid = '0' or (hex_1_req_m_tvalid = '1' and hex_1_req_m_tready = '1'))
+        and (kbd_req_m_tvalid = '0' or (kbd_req_m_tvalid = '1' and kbd_req_m_tready = '1'))
+        and (port_61_req_m_tvalid = '0' or (port_61_req_m_tvalid = '1' and port_61_req_m_tready = '1'))
+        and (uart_req_m_tvalid = '0' or (uart_req_m_tvalid = '1' and uart_req_m_tready = '1'))
+        and (mmu_req_m_tvalid = '0' or (mmu_req_m_tvalid = '1' and mmu_req_m_tready = '1'))
+        and (sdcard_req_m_tvalid = '0' or (sdcard_req_m_tvalid = '1' and sdcard_req_m_tready = '1'))
+        and (fifo_io_s_tready = '1')
     ) else '0';
 
     pit_rd_s_tready     <= '1' when (io_rd_m_tvalid = '0' or (io_rd_m_tvalid = '1' and io_rd_m_tready = '1')) and fifo_io_m_tvalid = '1' and fifo_io_m_tdata = x"0" else '0';
@@ -426,6 +449,7 @@ begin
     uart_rd_s_tready    <= '1' when (io_rd_m_tvalid = '0' or (io_rd_m_tvalid = '1' and io_rd_m_tready = '1')) and fifo_io_m_tvalid = '1' and fifo_io_m_tdata = x"A" else '0';
     mmu_rd_s_tready     <= '1' when (io_rd_m_tvalid = '0' or (io_rd_m_tvalid = '1' and io_rd_m_tready = '1')) and fifo_io_m_tvalid = '1' and fifo_io_m_tdata = x"B" else '0';
     kbd_rd_s_tready     <= '1' when (io_rd_m_tvalid = '0' or (io_rd_m_tvalid = '1' and io_rd_m_tready = '1')) and fifo_io_m_tvalid = '1' and fifo_io_m_tdata = x"C" else '0';
+    sdcard_rd_s_tready  <= '1' when (io_rd_m_tvalid = '0' or (io_rd_m_tvalid = '1' and io_rd_m_tready = '1')) and fifo_io_m_tvalid = '1' and fifo_io_m_tdata = x"D" else '0';
 
     fifo_io_s_tvalid    <= '1' when io_req_s_tvalid = '1' and io_req_s_tready = '1' and io_req_s_tdata(32) = '0' else '0';
     fifo_io_m_tready    <= '1' when io_rd_m_tvalid = '1' and io_rd_m_tready = '1' else '0';
@@ -443,6 +467,7 @@ begin
     fifo_io_s_selector(10) <= uart_req_cs;
     fifo_io_s_selector(11) <= mmu_req_cs;
     fifo_io_s_selector(12) <= kbd_req_cs;
+    fifo_io_s_selector(13) <= sdcard_req_cs;
 
     process (all) begin
         fifo_io_s_tdata <= (others => '0');
@@ -499,6 +524,10 @@ begin
 
     mmu_req_cs <= '1' when (
         io_req_s_tdata(31 downto 16) = x"0320"
+    ) else '0';
+
+    sdcard_req_cs <= '1' when (
+        io_req_s_tdata(31 downto 20) = x"33"
     ) else '0';
 
     port_61_req_cs <= '1' when (
@@ -771,6 +800,26 @@ begin
         end if;
     end process;
 
+    -- latching sdcard request
+    latch_sdcard_req_proc: process (clk) begin
+        if rising_edge(clk) then
+            -- Resettable
+            if resetn = '0' then
+                sdcard_req_m_tvalid <= '0';
+            else
+                if (io_req_s_tvalid = '1' and io_req_s_tready = '1' and sdcard_req_cs = '1') then
+                    sdcard_req_m_tvalid <= '1';
+                elsif (sdcard_req_m_tready = '1') then
+                    sdcard_req_m_tvalid <= '0';
+                end if;
+            end if;
+            -- Without reset
+            if (io_req_s_tvalid = '1' and io_req_s_tready = '1') then
+                sdcard_req_m_tdata <= io_req_s_tdata;
+            end if;
+        end if;
+    end process;
+
     rd_selector(0)  <= '1' when (pit_rd_s_tvalid = '1' and pit_rd_s_tready = '1')  else '0';
     rd_selector(1)  <= '1' when (pic_rd_s_tvalid = '1' and pic_rd_s_tready = '1')  else '0';
     rd_selector(2)  <= '1' when (led_0_rd_s_tvalid = '1' and led_0_rd_s_tready = '1')  else '0';
@@ -784,6 +833,7 @@ begin
     rd_selector(10) <= '1' when (uart_rd_s_tvalid = '1' and uart_rd_s_tready = '1')  else '0';
     rd_selector(11) <= '1' when (mmu_rd_s_tvalid = '1' and mmu_rd_s_tready = '1')  else '0';
     rd_selector(12) <= '1' when (kbd_rd_s_tvalid = '1' and kbd_rd_s_tready = '1')  else '0';
+    rd_selector(13) <= '1' when (sdcard_rd_s_tvalid = '1' and sdcard_rd_s_tready = '1')  else '0';
 
     latch_resp_proc : process (clk) begin
         if rising_edge(clk) then
@@ -791,7 +841,7 @@ begin
             if resetn = '0' then
                 io_rd_m_tvalid <= '0';
             else
-                if (rd_selector /= "0000000000000") then
+                if (rd_selector /= "00000000000000") then
                     io_rd_m_tvalid <= '1';
                 elsif (io_rd_m_tready = '1') then
                     io_rd_m_tvalid <= '0';
@@ -799,20 +849,21 @@ begin
             end if;
             -- Without reset
             case rd_selector is
-                when "0000000000001" => io_rd_m_tdata <= pit_rd_s_tdata;
-                when "0000000000010" => io_rd_m_tdata <= pic_rd_s_tdata;
-                when "0000000000100" => io_rd_m_tdata <= led_0_rd_s_tdata;
-                when "0000000001000" => io_rd_m_tdata <= led_1_rd_s_tdata;
-                when "0000000010000" => io_rd_m_tdata <= led_2_rd_s_tdata;
-                when "0000000100000" => io_rd_m_tdata <= sw_0_rd_s_tdata;
-                when "0000001000000" => io_rd_m_tdata <= sw_0_rd_s_tdata;
-                when "0000010000000" => io_rd_m_tdata <= port_61_rd_s_tdata;
-                when "0000100000000" => io_rd_m_tdata <= hex_0_rd_s_tdata;
-                when "0001000000000" => io_rd_m_tdata <= hex_1_rd_s_tdata;
-                when "0010000000000" => io_rd_m_tdata <= uart_rd_s_tdata;
-                when "0100000000000" => io_rd_m_tdata <= mmu_rd_s_tdata;
-                when "1000000000000" => io_rd_m_tdata <= kbd_rd_s_tdata;
-                when others         => io_rd_m_tdata <= led_0_rd_s_tdata;
+                when "00000000000001" => io_rd_m_tdata <= pit_rd_s_tdata;
+                when "00000000000010" => io_rd_m_tdata <= pic_rd_s_tdata;
+                when "00000000000100" => io_rd_m_tdata <= led_0_rd_s_tdata;
+                when "00000000001000" => io_rd_m_tdata <= led_1_rd_s_tdata;
+                when "00000000010000" => io_rd_m_tdata <= led_2_rd_s_tdata;
+                when "00000000100000" => io_rd_m_tdata <= sw_0_rd_s_tdata;
+                when "00000001000000" => io_rd_m_tdata <= sw_0_rd_s_tdata;
+                when "00000010000000" => io_rd_m_tdata <= port_61_rd_s_tdata;
+                when "00000100000000" => io_rd_m_tdata <= hex_0_rd_s_tdata;
+                when "00001000000000" => io_rd_m_tdata <= hex_1_rd_s_tdata;
+                when "00010000000000" => io_rd_m_tdata <= uart_rd_s_tdata;
+                when "00100000000000" => io_rd_m_tdata <= mmu_rd_s_tdata;
+                when "01000000000000" => io_rd_m_tdata <= kbd_rd_s_tdata;
+                when "10000000000000" => io_rd_m_tdata <= sdcard_rd_s_tdata;
+                when others              => io_rd_m_tdata <= led_0_rd_s_tdata;
             end case;
         end if;
     end process;
