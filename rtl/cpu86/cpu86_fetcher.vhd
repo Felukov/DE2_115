@@ -144,7 +144,7 @@ begin
     axis_fifo_inst_1 : entity work.axis_fifo_fwft generic map (
         FIFO_DEPTH          => 32,
         FIFO_WIDTH          => 64,
-        REGISTER_OUTPUT     => '1'
+        REGISTER_OUTPUT     => '0'
     ) port map (
         clk                 => clk,
         resetn              => fifo_resetn,

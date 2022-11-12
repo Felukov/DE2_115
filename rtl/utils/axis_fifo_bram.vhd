@@ -136,7 +136,6 @@ begin
 
 
     rd_tready <= '1' when bram_tvalid = '0' or (bram_tvalid = '1' and bram_tready = '1') else '0';
-    bram_tready <= '1' when res_tvalid = '0' or (res_tvalid = '1' and res_tready = '1') else '0';
 
     process (clk) begin
         if rising_edge(clk) then
@@ -163,6 +162,7 @@ begin
     end process;
 
     register_output_gen : if (REGISTER_OUTPUT = '1') generate
+        bram_tready <= '1' when res_tvalid = '0' or (res_tvalid = '1' and res_tready = '1') else '0';
 
         process (clk) begin
             if rising_edge(clk) then
