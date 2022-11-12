@@ -464,6 +464,8 @@ package cpu86_types is
         mem_addr        : std_logic_vector(15 downto 0);
         mem_data_src    : mem_data_src_t;
         mem_data        : std_logic_vector(15 downto 0);
+        mem_dreg        : reg_t;
+        mem_dmask       : std_logic_vector(1 downto 0);
 
         flg_no          : std_logic_vector(3 downto 0);
         fl              : fl_action_t;
