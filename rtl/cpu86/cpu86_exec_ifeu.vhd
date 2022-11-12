@@ -1243,22 +1243,12 @@ begin
                     update_sp(sp_val, sp_offset);
 
                 when 2 =>
-                    --set_cmd_1(MICRO_MRD_OP or MICRO_ALU_OP);
                     set_cmd_1(MICRO_MRD_OP);
 
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '0';
 
                     -- write FLAGS
-                    --micro_tdata.alu_code <= ALU_OP_ADD;
-                    --micro_tdata.alu_upd_fl <= '0';
-                    --micro_tdata.alu_wb <= '1';
-
-                    --micro_tdata.alu_a_val <= x"0000";
-                    --micro_tdata.alu_b_mem <= '1';
-                    --micro_tdata.alu_dreg <= FL;
-                    --micro_tdata.alu_dmask <= "11";
-
                     micro_tdata.mem_dreg  <= FL;
                     micro_tdata.mem_dmask <= "11";
 
@@ -1327,33 +1317,12 @@ begin
 
         procedure do_stack_popr_1 is begin
             set_cmd_1(MICRO_MRD_OP);
-            --set_cmd_1(MICRO_ALU_OP or MICRO_MRD_OP);
             micro_tdata.mem_dreg  <= rr_tdata_buf.dreg;
             micro_tdata.mem_dmask <= rr_tdata_buf.dmask;
-
-            --micro_tdata.alu_code <= ALU_OP_ADD;
-            --micro_tdata.alu_wb <= '1';
-            --micro_tdata.alu_upd_fl <= '0';
-            --micro_tdata.alu_a_val <= x"0000";
-            --micro_tdata.alu_b_mem <= '1';
-            --micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
-            --micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
         end procedure;
 
         procedure do_stack_cmd_0 is begin
             case rr_tdata.code is
-                -- when STACKU_POPR =>
-                --     set_cmd_0(MICRO_MEM_OP or MICRO_ALU_OP);
-
-                --     -- memory cmd
-                --     mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val);
-
-                --     -- alu cmd
-                --     update_sp(upd_when => rr_tdata.dreg /= SP,
-                --         sp_val => rr_tdata.sp_val,
-                --         offset => rr_tdata.sp_offset
-                --     );
-
                 when STACKU_POPM =>
                     set_cmd_0(MICRO_MEM_OP or MICRO_ALU_OP);
 
@@ -1448,17 +1417,6 @@ begin
                         when others => null;
                     end case;
 
-                -- when STACKU_POPR =>
-                --     set_cmd_1(MICRO_ALU_OP or MICRO_MRD_OP);
-
-                --     micro_tdata.alu_code <= ALU_OP_ADD;
-                --     micro_tdata.alu_wb <= '1';
-                --     micro_tdata.alu_upd_fl <= '0';
-                --     micro_tdata.alu_a_val <= x"0000";
-                --     micro_tdata.alu_b_mem <= '1';
-                --     micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
-                --     micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
-
                 when STACKU_POPM =>
                     set_cmd_1(MICRO_MRD_OP or MICRO_MEM_OP);
 
@@ -1484,42 +1442,24 @@ begin
                             update_sp(sp_val => sp_val, sp_offset => sp_offset);
 
                         when 8 =>
-                            --set_cmd_1(MICRO_ALU_OP or MICRO_MRD_OP);
-
-                            --micro_tdata.alu_code <= ALU_OP_ADD;
-                            --micro_tdata.alu_upd_fl <= '0';
-                            --micro_tdata.alu_wb <= '1';
-                            --micro_tdata.alu_a_val <= x"0000";
-                            --micro_tdata.alu_b_mem <= '1';
-                            --micro_tdata.alu_dreg <= DI;
-                            --micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
-
                             set_cmd_1(MICRO_MRD_OP);                            
                             micro_tdata.mem_dreg  <= DI;
                             micro_tdata.mem_dmask <= rr_tdata_buf.dmask;
                         when 7 =>
                             micro_tdata.mem_dreg  <= SI;
-                            --micro_tdata.alu_dreg <= SI;
                         when 6 =>
                             micro_tdata.mem_dreg  <= BP;
-                            --micro_tdata.alu_dreg <= BP;
                         when 5 =>
-                            micro_tdata.mem_dreg  <= ZERO;
-                            --micro_tdata.alu_wb <= '0';
                             --skip SP;
+                            micro_tdata.mem_dreg  <= ZERO;
                         when 4 =>
                             micro_tdata.mem_dreg  <= BX;
-                            --micro_tdata.alu_wb <= '1';
-                            --micro_tdata.alu_dreg <= BX;
                         when 3 =>
                             micro_tdata.mem_dreg  <= DX;
-                            --micro_tdata.alu_dreg <= DX;
                         when 2 =>
                             micro_tdata.mem_dreg  <= CX;
-                            --micro_tdata.alu_dreg <= CX;
                         when 1 =>
                             micro_tdata.mem_dreg  <= AX;
-                            --micro_tdata.alu_dreg <= AX;
                         when others => null;
                     end case;
 
@@ -1602,16 +1542,6 @@ begin
         end procedure;
 
         procedure do_stack_leave_1 is begin
-            --set_cmd_1(MICRO_ALU_OP or MICRO_MRD_OP);
-
-            --micro_tdata.alu_code <= ALU_OP_ADD;
-            --micro_tdata.alu_wb <= '1';
-            --micro_tdata.alu_upd_fl <= '0';
-            --micro_tdata.alu_a_val <= x"0000";
-            --micro_tdata.alu_b_mem <= '1';
-            --micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
-            --micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
-
             set_cmd_1(MICRO_MRD_OP);
             micro_tdata.mem_dreg  <= rr_tdata_buf.dreg;
             micro_tdata.mem_dmask <= rr_tdata_buf.dmask;            
@@ -1667,17 +1597,6 @@ begin
         end procedure;
 
         procedure do_movu_cmd_1 is begin
-            --set_cmd_1(MICRO_ALU_OP or MICRO_MRD_OP);
-
-            --micro_tdata.alu_code <= ALU_OP_ADD;
-            --micro_tdata.alu_upd_fl <= '0';
-            --micro_tdata.alu_wb <= '1';
-
-            --micro_tdata.alu_a_val <= x"0000";
-            --micro_tdata.alu_b_mem <= '1';
-            --micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
-            --micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
-
             set_cmd_1(MICRO_MRD_OP);
             micro_tdata.mem_dreg  <= rr_tdata_buf.dreg;
             micro_tdata.mem_dmask <= rr_tdata_buf.dmask;
@@ -2104,16 +2023,6 @@ begin
         end procedure;
 
         procedure do_xlat_1 is begin
-            --set_cmd_0(MICRO_MRD_OP or MICRO_ALU_OP);
-
-            --micro_tdata.alu_code <= ALU_OP_ADD;
-            --micro_tdata.alu_wb <= '1';
-            --micro_tdata.alu_upd_fl <= '0';
-            --micro_tdata.alu_a_val <= x"0000";
-            --micro_tdata.alu_b_mem <= '1';
-            --micro_tdata.alu_dreg <= rr_tdata_buf.dreg;
-            --micro_tdata.alu_dmask <= rr_tdata_buf.dmask;
-
             set_cmd_1(MICRO_MRD_OP);
             micro_tdata.mem_dreg  <= rr_tdata_buf.dreg;
             micro_tdata.mem_dmask <= rr_tdata_buf.dmask;            
