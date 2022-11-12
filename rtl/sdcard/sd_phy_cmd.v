@@ -72,6 +72,7 @@ module sd_phy_cmd (
 
     reg               command_valid_d;
     reg               cmd_in;
+    reg               sd_cmd_in_d;
 
     reg               sd_cmd_out;
     reg               sd_cmd_oe;
@@ -118,6 +119,9 @@ module sd_phy_cmd (
         .crc      (crc_read)
     );
 
+    always @ (posedge clk) begin
+        sd_cmd_in_d <= sd_cmd_in;
+    end
 
     // input synchronizers
     always @ (posedge clk) begin
@@ -127,7 +131,7 @@ module sd_phy_cmd (
         end else begin
             if (sd_clk_pos_edge == 1'b1) begin
                 command_valid_d <= command_valid;
-                cmd_in <= sd_cmd_in;
+                cmd_in <= sd_cmd_in_d;
             end
         end
     end

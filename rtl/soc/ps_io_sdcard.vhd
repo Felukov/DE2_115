@@ -51,10 +51,13 @@ entity ps_io_sdcard is
         sd_io_rd                : out std_logic;
         sd_io_wr                : out std_logic;
         sd_io_ack               : in std_logic;
-        sd_io_din               : in std_logic_vector(7 downto 0);
-        sd_io_din_strobe        : in std_logic;
-        sd_io_dout              : out std_logic_vector(7 downto 0);
-        sd_io_dout_strobe       : in std_logic
+
+        sd_io_din_tvalid        : in std_logic;
+        sd_io_din_tdata         : in std_logic_vector(7 downto 0);
+
+        sd_io_dout_tvalid       : out std_logic;
+        sd_io_dout_tready       : in std_logic;
+        sd_io_dout_tdata        : out std_logic_vector(7 downto 0)
     );
 end entity ps_io_sdcard;
 
@@ -118,6 +121,8 @@ begin
 
     sd_io_rd                <= sd_rd_cmd;
 
+    sd_io_dout_tvalid       <= wr_fifo_m_tvalid;
+
     -- u0 : component signal_tap
     --     port map (
     --         acq_clk             => clk,
@@ -133,14 +138,15 @@ begin
         clk                 => clk,
         resetn              => resetn,
 
-        s_axis_fifo_tvalid  => sd_io_din_strobe,
+        s_axis_fifo_tvalid  => sd_io_din_tvalid,
         s_axis_fifo_tready  => open,
-        s_axis_fifo_tdata   => sd_io_din,
+        s_axis_fifo_tdata   => sd_io_din_tdata,
 
         m_axis_fifo_tvalid  => rd_fifo_m_tvalid,
         m_axis_fifo_tready  => rd_fifo_m_tready,
         m_axis_fifo_tdata   => rd_fifo_m_tdata
     );
+
 
     axis_fifo_inst_wr : entity work.axis_fifo_er generic map (
         FIFO_DEPTH          => 512,
@@ -154,8 +160,8 @@ begin
         s_axis_fifo_tdata   => wr_fifo_s_tdata,
 
         m_axis_fifo_tvalid  => wr_fifo_m_tvalid,
-        m_axis_fifo_tready  => sd_io_dout_strobe,
-        m_axis_fifo_tdata   => sd_io_dout
+        m_axis_fifo_tready  => sd_io_dout_tready,
+        m_axis_fifo_tdata   => sd_io_dout_tdata
     );
 
     io_read          <= '1' when io_req_tvalid = '1' and io_req_tready = '1' and io_req_tdata(32) = '0' else '0';

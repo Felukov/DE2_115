@@ -43,10 +43,11 @@ module sdcard_subsystem(
     io_rd,
     io_wr,
     io_ack,
-    io_din,
     io_din_tvalid,
-    io_dout,
-    io_dout_tvalid
+    io_din_tdata,
+    io_dout_tvalid,
+    io_dout_tready,
+    io_dout_tdata
 );
 
     input           clk;
@@ -67,22 +68,19 @@ module sdcard_subsystem(
     input           io_rd;
     input           io_wr;
     output          io_ack;
+
     output          io_din_tvalid;
-    output [7:0]    io_din;
-    //output          io_din_strobe;
-    output          io_dout_tvalid;
-    input [7:0]     io_dout;
+    output [7:0]    io_din_tdata;
+
+    input           io_dout_tvalid;
+    output          io_dout_tready;
+    input [7:0]     io_dout_tdata;
+
 
     // local signals
     wire [119:0]    response;
     wire [39:0]     command;
     wire [8:0]      control;
-
-    wire            fifo_wr;
-    wire            fifo_rd;
-    wire            io_din_tvalid;
-    reg             io_din_strobe;
-    reg             d_io_din_strobe;
 
     wire [3:0]      sd_dat_out;
     wire [3:0]      sd_dat_in;
@@ -122,10 +120,10 @@ module sdcard_subsystem(
         .sd_dat_in          (sd_dat_in),
         .sd_dat_out         (sd_dat_out),
         .sd_dat_oe          (sd_dat_oe),
-        .fifo_din           (io_dout),
-        .fifo_rd            (fifo_rd),
-        .fifo_dout          (io_din),
-        .fifo_wr            (fifo_wr),
+        .fifo_rd            (io_dout_tready),
+        .fifo_din           (io_dout_tdata),
+        .fifo_wr            (io_din_tvalid),
+        .fifo_dout          (io_din_tdata),
         .timeout            (timeout),
         .command_valid      (command_valid),
         .command            (command),
@@ -182,18 +180,5 @@ module sdcard_subsystem(
     assign sd_cmd_in = sd_cmd;
     assign sd_dat    = sd_dat_oe ? 4'bZZZZ : sd_dat_out;
     assign sd_dat_in = sd_dat;
-
-    assign io_din_tvalid = (d_io_din_strobe == 1'b0 && io_din_strobe == 1'b1) ? 1'b1 : 1'b0;
-    assign io_dout_tvalid = fifo_rd;
-
-    always @ (posedge clk) begin
-        if (resetn == 1'b0) begin
-            io_din_strobe <= 1'b0;
-            d_io_din_strobe <= 1'b0;
-        end else begin
-            io_din_strobe <= fifo_wr;
-            d_io_din_strobe <= io_din_strobe;
-        end
-    end
 
 endmodule

@@ -117,6 +117,7 @@ module sd_phy_dat(
     wire [3:0]      din;
 
     reg [7:0]       fifo_din_d;
+    reg [3:0]       sd_dat_in_d;
 
     // Assigns
     assign fifo_dout = {dat_in_dly, dat_in};
@@ -135,15 +136,18 @@ module sd_phy_dat(
     sd_phy_dat_crc_16 crc_16_rd2_inst (dat_in[2], (sd_clk_pos_edge & crc_read_en), clk, ~rec_busy, crc_read2);
     sd_phy_dat_crc_16 crc_16_rd3_inst (dat_in[3], (sd_clk_pos_edge & crc_read_en), clk, ~rec_busy, crc_read3);
 
+    // latching sd_dat_in in fast input register
+    always @(posedge clk) begin
+        sd_dat_in_d <= sd_dat_in;
+    end
 
     // sd input synchronizers
-    // todo: this construction does not allow to put sd_dat_in in fast input register
     always @(posedge clk) begin
         if (resetn == 1'b0) begin
             dat_in <= 4'hf;
         end else begin
             if (sd_clk_pos_edge == 1'b1) begin
-                dat_in <= sd_dat_in;
+                dat_in <= sd_dat_in_d;
             end
         end
     end
@@ -218,7 +222,7 @@ module sd_phy_dat(
         end
     end
 
-    always @ * begin
+    always @(*) begin
         next_state       = state;
         next_crc_status  = crc_status;
         next_send_busy   = send_busy;
@@ -309,7 +313,7 @@ module sd_phy_dat(
                             (crc_read2[count] == dat_in[2]) &&
                             (crc_read3[count] == dat_in[3]);
                     end else begin
-                        fifo_wr = count[0];
+                        fifo_wr = count[0] & sd_clk_neg_edge;
                     end
                     if (count == 11'd17) begin
                         next_crc_ok = 1'b1;

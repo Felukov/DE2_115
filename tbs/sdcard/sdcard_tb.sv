@@ -72,11 +72,11 @@ module sdcard_tb ();
             io_wr <= 1'b0;
         end else begin
             if (d_sd_mounted == 1'b0 && sd_mounted == 1'b1) begin
-                //io_rd <= 1'b1;
-                io_wr <= 1'b1;
-            end else if (io_wr == 1'b1 && io_ack == 1'b1) begin
-                //io_rd <= 1'b0;
-                io_wr <= 1'b0;
+                io_rd <= 1'b1;
+                //io_wr <= 1'b1;
+            end else if (io_rd == 1'b1 && io_ack == 1'b1) begin
+                io_rd <= 1'b0;
+                //io_wr <= 1'b0;
             end
         end
     end

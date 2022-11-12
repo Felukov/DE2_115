@@ -139,9 +139,10 @@ architecture rtl of top is
             io_wr                   : in std_logic;
             io_ack                  : out std_logic;
             io_din_tvalid           : out std_logic;
-            io_din                  : out std_logic_vector(7 downto 0);
-            io_dout_tvalid          : out std_logic;
-            io_dout                 : in std_logic_vector(7 downto 0)
+            io_din_tdata            : out std_logic_vector(7 downto 0);
+            io_dout_tvalid          : in std_logic;
+            io_dout_tready          : out std_logic;
+            io_dout_tdata           : in std_logic_vector(7 downto 0)
         );
     end component;
 
@@ -272,10 +273,13 @@ architecture rtl of top is
     signal sd_io_rd                 : std_logic;
     signal sd_io_wr                 : std_logic;
     signal sd_io_ack                : std_logic;
-    signal sd_io_din                : std_logic_vector(7 downto 0);
+
     signal sd_io_din_tvalid         : std_logic;
-    signal sd_io_dout               : std_logic_vector(7 downto 0);
+    signal sd_io_din_tdata          : std_logic_vector(7 downto 0);
+
     signal sd_io_dout_tvalid        : std_logic;
+    signal sd_io_dout_tready        : std_logic;
+    signal sd_io_dout_tdata         : std_logic_vector(7 downto 0);
 
     signal timer_tvalid             : std_logic;
 
@@ -420,10 +424,13 @@ begin
         io_rd                   => sd_io_rd,
         io_wr                   => sd_io_wr,
         io_ack                  => sd_io_ack,
+
         io_din_tvalid           => sd_io_din_tvalid,
-        io_din                  => sd_io_din,
+        io_din_tdata            => sd_io_din_tdata,
+
         io_dout_tvalid          => sd_io_dout_tvalid,
-        io_dout                 => sd_io_dout
+        io_dout_tready          => sd_io_dout_tready,
+        io_dout_tdata           => sd_io_dout_tdata
     );
 
     LEDR(15)          <= sd_event_error;
@@ -459,10 +466,13 @@ begin
         sd_io_rd                => sd_io_rd,
         sd_io_wr                => sd_io_wr,
         sd_io_ack               => sd_io_ack,
-        sd_io_din_strobe        => sd_io_din_tvalid,
-        sd_io_din               => sd_io_din,
-        sd_io_dout_strobe       => sd_io_dout_tvalid,
-        sd_io_dout              => sd_io_dout,
+
+        sd_io_din_tvalid        => sd_io_din_tvalid,
+        sd_io_din_tdata         => sd_io_din_tdata,
+
+        sd_io_dout_tvalid       => sd_io_dout_tvalid,
+        sd_io_dout_tready       => sd_io_dout_tready,
+        sd_io_dout_tdata        => sd_io_dout_tdata,
 
         LEDG                    => LEDG,
         SW                      => SW,

@@ -55,10 +55,13 @@ entity soc is
         sd_io_rd                    : out std_logic;
         sd_io_wr                    : out std_logic;
         sd_io_ack                   : in std_logic;
-        sd_io_din                   : in std_logic_vector(7 downto 0);
-        sd_io_din_strobe            : in std_logic;
-        sd_io_dout                  : out std_logic_vector(7 downto 0);
-        sd_io_dout_strobe           : in std_logic;
+
+        sd_io_din_tvalid            : in std_logic;
+        sd_io_din_tdata             : in std_logic_vector(7 downto 0);
+
+        sd_io_dout_tvalid           : out std_logic;
+        sd_io_dout_tready           : in std_logic;
+        sd_io_dout_tdata            : out std_logic_vector(7 downto 0);
 
         LEDG                        : out std_logic_vector(8 downto 0);
         SW                          : in std_logic_vector(17 downto 0);
@@ -990,10 +993,13 @@ begin
         sd_io_rd                => sd_io_rd,
         sd_io_wr                => sd_io_wr,
         sd_io_ack               => sd_io_ack,
-        sd_io_din               => sd_io_din,
-        sd_io_din_strobe        => sd_io_din_strobe,
-        sd_io_dout              => sd_io_dout,
-        sd_io_dout_strobe       => sd_io_dout_strobe
+
+        sd_io_din_tvalid        => sd_io_din_tvalid,
+        sd_io_din_tdata         => sd_io_din_tdata,
+
+        sd_io_dout_tvalid       => sd_io_dout_tvalid,
+        sd_io_dout_tready       => sd_io_dout_tready,
+        sd_io_dout_tdata        => sd_io_dout_tdata
     );
 
     -- Assigns
