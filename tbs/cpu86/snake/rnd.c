@@ -6,11 +6,10 @@ uint8_t rnd_cnt = 0x0;
 
 void rnd_init(){
     // Request the reading of the status and the value of the 0 counter
-    _inline_outp(PIT_CONTROL, 0xC2);
-    // Read the status low
-    _inline_inp(PIT_TIMER_0);
+    _inline_outp(PIT_SELECT_R, 2);
+
     // Read the status hi
-    rnd_init_val = _inline_inp(PIT_TIMER_0);
+    rnd_init_val = _inline_inp(PIT_CURVAL_R);
     if (rnd_init_val == 0){
         rnd_init_val = 0xFF;
     }

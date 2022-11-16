@@ -60,14 +60,25 @@ void int9_handler(){
 int init_timer(){
     // configure timer 0
     // toggle each 18.2 Hz
-    _inline_outp(PIT_CONTROL, 0x36);
-    _inline_outp(PIT_TIMER_0, 0);
-    _inline_outp(PIT_TIMER_0, 0x00);
+    // _inline_outp(PIT_CONTROL, 0x36);
+    // _inline_outp(PIT_TIMER_0, 0);
+    // _inline_outp(PIT_TIMER_0, 0x00);
+
+    // // configure timer 1
+    // // toggle each 66.278 Hz (15.085 us)
+    // _inline_outp(PIT_CONTROL, 0x54);
+    // _inline_outp(PIT_TIMER_1, 18);
+
+    // configure timer 0
+    _inline_outpw(PIT_SELECT_R, 0);
+    _inline_outpw(PIT_MAXVAL_R, 0);
+    _inline_outpw(PIT_ENABLE_R, 1);
 
     // configure timer 1
     // toggle each 66.278 Hz (15.085 us)
-    _inline_outp(PIT_CONTROL, 0x54);
-    _inline_outp(PIT_TIMER_1, 18);
+    _inline_outpw(PIT_SELECT_R, 2);
+    _inline_outpw(PIT_MAXVAL_R, 18);
+    _inline_outpw(PIT_ENABLE_R, 1);
 
     return 0;
 }

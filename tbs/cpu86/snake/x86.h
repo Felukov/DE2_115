@@ -1,10 +1,15 @@
 #ifndef _X86_H_INCLUDED
 #define _X86_H_INCLUDED
 
-#define PIT_CONTROL         0x43
-#define PIT_TIMER_0         0x40
-#define PIT_TIMER_1         0x41
-#define PIT_TIMER_2         0x42
+// #define PIT_CONTROL         0x43
+// #define PIT_TIMER_0         0x40
+// #define PIT_TIMER_1         0x41
+// #define PIT_TIMER_2         0x42
+
+#define PIT_SELECT_R        0x40
+#define PIT_ENABLE_R        0x41
+#define PIT_MAXVAL_R        0x42
+#define PIT_CURVAL_R        0x43
 
 #define PIC_IMR             0x20        /* IO base address for master PIC */
 #define PIC_IRR             0xA0        /* IO base address for slave PIC */

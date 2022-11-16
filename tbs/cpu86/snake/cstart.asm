@@ -15,10 +15,6 @@ int9_hook           proto far c
 interrupt_handler   proto near c
 
 _cstart_:
-    mov  ax, 01111h
-    mov  dx, 00305h
-    out  dx, ax
-
     mov ax, 0
     mov ds, ax
     mov bx, 0
