@@ -204,10 +204,13 @@ module axis_interconnect_tb;
         int pkt_cnt_ttl = 0;
         int pkt_cnt_ch[PORTS_QTY] = '{default:'0};
         int errcnt = 0;
+
         task reg_and_validate(ref packet_c pkt);
+            // task variables
             int ch_idx = pkt.user;
             int pkt_idx = pkt_cnt_ch[pkt.user];
 
+            // task logic
             if (din_packets[ch_idx][pkt_idx].len != pkt.len) begin
                 $error("Size mismatch ch=%0d, pkt=%0d. Actual: %d, Expected: %d", ch_idx, pkt_idx, pkt.len, din_packets[ch_idx][pkt_idx].len);
                 errcnt++;

@@ -99,9 +99,7 @@ uint32_t checksum_calc(uint8_t* addr){
 
 void bare_main(){
     char        str[3];
-    uint16_t    cnt;
     uint16_t    i;
-    uint8_t     b;
     u32_u8_t    checksum;
 
     init_timer();

@@ -8,6 +8,15 @@ start:
     MOV BP, 0
     MOV BX, 0
 
+    mov dx, 0x333
+L$4:
+    in          al,dx
+    sub         ah,ah
+    inc         bx
+    cmp         bx,0x000a
+    jb          L$4
+
+
     MOV AX, 0x5000
     MOV ES, AX
     MOV word [ES:0x0], 0

@@ -31,7 +31,7 @@ module on_chip_ram_core #(
     end
 
     initial begin
-        $readmemh("C:/Projects/DE2_115/rtl/soc/onchip_ram/altera/bootstrap.vmem", ram, 0, WORDS-1);
+        $readmemh("/home/fila/work/DE2_115/rtl/soc/onchip_ram/altera/bootstrap.vmem", ram, 0, WORDS-1); 
     end
 
 endmodule

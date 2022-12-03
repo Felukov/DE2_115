@@ -214,6 +214,23 @@ architecture rtl of soc is
         );
     end component pit_8254;
 
+    component pit_lite is
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+
+            io_req_s_tvalid         : in std_logic;
+            io_req_s_tready         : out std_logic;
+            io_req_s_tdata          : in std_logic_vector(39 downto 0);
+
+            io_rd_m_tvalid          : out std_logic;
+            io_rd_m_tready          : in std_logic;
+            io_rd_m_tdata           : out std_logic_vector(15 downto 0);
+
+            timer_out               : out std_logic_vector(2 downto 0)
+        );
+    end component pit_lite;
+
     component pic is
         port(
             clk                     : in std_logic;
@@ -511,6 +528,7 @@ architecture rtl of soc is
 
     signal led_reg                  : std_logic_vector(7 downto 0);
 
+    signal timer_out                : std_logic_vector(2 downto 0);
     signal event_timer              : std_logic;
     signal event_irq                : std_logic;
     signal event_kb_int_req         : std_logic;
@@ -782,7 +800,24 @@ begin
     );
 
     -- Module pit_8254 instantiation
-    pit_8254_inst : pit_8254 port map(
+    --pit_8254_inst : pit_8254 port map(
+    --    clk                     => clk,
+    --    resetn                  => dev_resetn,
+
+    --    io_req_s_tvalid         => pit_req_tvalid,
+    --    io_req_s_tready         => pit_req_tready,
+    --    io_req_s_tdata          => pit_req_tdata,
+
+    --    io_rd_m_tvalid          => pit_rd_tvalid,
+    --    io_rd_m_tready          => pit_rd_tready,
+    --    io_rd_m_tdata           => pit_rd_tdata,
+
+    --    event_irq               => event_irq,
+    --    event_timer             => event_timer
+    --);
+
+    -- Module pit_lite instantiation
+    pit_lite_inst : pit_lite port map(
         clk                     => clk,
         resetn                  => dev_resetn,
 
@@ -794,9 +829,11 @@ begin
         io_rd_m_tready          => pit_rd_tready,
         io_rd_m_tdata           => pit_rd_tdata,
 
-        event_irq               => event_irq,
-        event_timer             => event_timer
+        timer_out               => timer_out
     );
+
+    event_irq   <= timer_out(0);
+    event_timer <= timer_out(2);
 
     -- Module pic instantiation
     -- pic_inst : pic port map(

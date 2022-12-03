@@ -11,7 +11,7 @@ terminal_clean proc near stdcall uses es di
     mov     ax, TERMINAL_BASE_ADDR
     mov     es, ax
     mov     di, 0
-
+ 
     .while (di != 80*25*2)
         mov     word ptr es:[di], 3020h
         inc     di
@@ -41,7 +41,7 @@ terminal_shift proc near stdcall uses es ax cx si di
         mov     word ptr es:[di], 3020h
         inc     di
     .endw
-
+    nop 
     ; set position
     pop     ds
     mov     x_pos, 0

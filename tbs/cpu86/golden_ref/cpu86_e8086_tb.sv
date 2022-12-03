@@ -201,7 +201,7 @@ module cpu86_e8086_tb ();
         @(posedge clk);
         resetn = 0;
         repeat (40) @(posedge clk);
-        resetn = 1;
+        resetn <= 1;
     endtask;
 
     export "DPI-C" function dpi_print;

@@ -54,11 +54,9 @@ parm [ax] [bx] [dl];
 void write_byte(uint16_t ax, uint16_t bx, uint8_t dx);
 
 #pragma aux write_word = \
-"       push ds          " \
-"       mov  ds, ax      " \
-"       mov  ds:[bx], dx " \
-"       pop  ds          " \
-parm [ax] [bx] [dx];
+"       mov es, ax      " \
+"       mov es:[bx], dx " \
+parm [ax] [bx] [dx] modify [es];
 
 void write_word(uint16_t ax, uint16_t bx, uint16_t dx);
 

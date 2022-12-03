@@ -45,7 +45,7 @@ module video_mda_fb_font_rom #(
     end
 
     initial begin
-        $readmemh("C:/Projects/DE2_115/rtl/video/vgafont.vmem", mem, 0, WORDS-1);
+        $readmemh("/home/fila/work/DE2_115/rtl/video/vgafont.vmem", mem, 0, WORDS-1);
     end
 
 endmodule

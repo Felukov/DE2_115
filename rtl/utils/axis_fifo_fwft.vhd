@@ -60,6 +60,7 @@ begin
     axis_fifo_bram_inst : entity work.axis_fifo_bram generic map (
         ADDR_WIDTH          => BRAM_AW,
         DATA_WIDTH          => FIFO_WIDTH,
+        USER_WIDTH          => FIFO_WIDTH+1,
         REGISTER_OUTPUT     => REGISTER_OUTPUT
     ) port map (
         clk                 => clk,

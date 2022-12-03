@@ -30,6 +30,7 @@ uart_transmit proc near stdcall uses dx cx
     in      al, dx
     mov     dx, ax
 
+
     mov     dx, IO_UART_TX_IS_EMPTY
     in      al, dx
     and     dx, ax
@@ -37,7 +38,7 @@ uart_transmit proc near stdcall uses dx cx
     and     ax, 1
     ret
 uart_transmit endp
-
+ 
 uart_log proc near stdcall uses dx si, str_ptr : word
     mov     si, [str_ptr]
 
