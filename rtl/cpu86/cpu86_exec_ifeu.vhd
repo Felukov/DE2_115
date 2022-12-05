@@ -241,7 +241,7 @@ begin
 
     ip_val_plus_disp_next <= std_logic_vector(unsigned(rr_tuser(15 downto 0)) + unsigned(rr_tdata.disp));
 
-    cmd_mask <= (others => '0') when rr_tdata.fast_instr else (others => '1');
+    cmd_mask <= (others => '0') when rr_tdata.fast_instr = '1' else (others => '1');
 
     update_regs_proc : process (all) begin
 
