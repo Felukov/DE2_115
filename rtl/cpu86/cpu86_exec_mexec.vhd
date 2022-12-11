@@ -109,7 +109,7 @@ end entity cpu86_exec_mexec;
 architecture rtl of cpu86_exec_mexec is
     attribute enum_encoding : string;
 
-    type flag_src_t is (RES_USER, RES_DATA, CMD_FLG);
+    type flag_src_t is (RES_USER, RES_DATA, RES_MEM, CMD_FLG);
     attribute enum_encoding of flag_src_t : type is "sequential";
 
     type res_t is record
@@ -648,7 +648,14 @@ begin
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1') then
-                    mexec_wait_jmp <= '1';
+                    if ((micro_tdata.jump_cond = j_always and (micro_tdata.jump_cs_mem = '1' or micro_tdata.jump_ip_mem = '1')) or
+                        (micro_tdata.jump_cond = cx_ne_0 or micro_tdata.jump_cond = cx_ne_0_and_zf or micro_tdata.jump_cond = cx_ne_0_and_nzf) or
+                        (op_cnt /= 0 or op_inc_hs = '1'))
+                    then
+                        mexec_wait_jmp <= '1';
+                    else
+                        mexec_wait_jmp <= '0';
+                    end if;
                 elsif (jmp_tvalid = '1') then
                     mexec_wait_jmp <= '0';
                 end if;
@@ -1041,7 +1048,7 @@ begin
                 es_m_wr_tvalid <= '0';
                 ss_m_wr_tvalid <= '0';
             else
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = AX) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = AX) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = AX) or
                     (mul_res_tvalid = '1' and (mul_res_tdata.dreg = AX or
                         ((mul_res_tdata.code = IMUL_AXDX or mul_res_tdata.code = MUL_AXDX) and mul_res_tdata.w = '1' and mul_res_tdata.dreg = DX))) or
@@ -1055,7 +1062,7 @@ begin
                     ax_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = BX) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = BX) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = BX) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = BX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = BX) or
@@ -1065,7 +1072,7 @@ begin
                     bx_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = CX) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = CX) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = CX) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = CX) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = CX) or
@@ -1076,7 +1083,7 @@ begin
                     cx_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = DX) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = DX) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = DX) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = DX) or
                     (div_res_tvalid = '1' and (div_res_tdata.code = DIVU_DIV or div_res_tdata.code = DIVU_IDIV) and
@@ -1088,7 +1095,7 @@ begin
                     dx_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = BP) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = BP) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = BP) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = BP) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = BP) or
@@ -1098,7 +1105,7 @@ begin
                     bp_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = SP) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = SP) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = SP) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = SP) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = SP) or
@@ -1108,7 +1115,7 @@ begin
                     sp_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = DI) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = DI) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = DI) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = DI) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = DI) or
@@ -1119,7 +1126,7 @@ begin
                     di_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = SI) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = SI) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = SI) or
                     (mul_res_tvalid = '1' and mul_res_tdata.dreg = SI) or
                     (shf8_res_tvalid = '1' and shf8_res_tdata.wb = '1' and shf8_res_tdata.dreg = SI) or
@@ -1130,21 +1137,21 @@ begin
                     si_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = DS) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = DS) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = DS)) then
                     ds_m_wr_tvalid <= '1';
                 else
                     ds_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = ES) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = ES) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = ES)) then
                     es_m_wr_tvalid <= '1';
                 else
                     es_m_wr_tvalid <= '0';
                 end if;
 
-                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = SS) or 
+                if ((lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = SS) or
                     (alu_res_tvalid = '1' and alu_res_tdata.wb = '1' and alu_res_tdata.dreg = SS)) then
                     ss_m_wr_tvalid <= '1';
                 else
@@ -1251,7 +1258,7 @@ begin
     flags_wr_selector(5) <= shf16_res_tvalid;
     flags_wr_selector(6) <= mul_res_tvalid;
     flags_wr_selector(7) <= str_res_tvalid;
-    flags_wr_selector(8) <= '1' when lsu_rd_s_tvalid = '1' and lsu_rd_s_tready = '1' and mem_dreg = FL else '0';
+    flags_wr_selector(8) <= '1' when micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MRD) = '1' and micro_tdata.mem_dreg = FL else '0';
 
     flags_upd_proc : process (clk)
         constant UPD_OF : std_logic_vector(11 downto 0) := "1000" & "0000" & "0000";
@@ -1270,7 +1277,7 @@ begin
                 flags_wr_be <= (others => '0');
             else
 
-                if (lsu_rd_s_tvalid = '1' and mem_dreg = FL) then
+                if (lsu_rd_s_tvalid = '1' and mexec_wait_fifo = '1'and  mem_dreg = FL) then
                     flags_wr_tvalid <= '1';
                 elsif (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_FLG) = '1') then
                     flags_wr_tvalid <= '1';
@@ -1365,16 +1372,16 @@ begin
                         end case;
                     when "100000000" =>
                         for i in 11 downto 8 loop
-                            flags_wr_be(i) <= mem_dmask(1);
+                            flags_wr_be(i) <= micro_tdata.mem_dmask(1);
                         end loop;
-                        flags_wr_be(FLAG_SF) <= mem_dmask(0);
-                        flags_wr_be(FLAG_ZF) <= mem_dmask(0);
+                        flags_wr_be(FLAG_SF) <= micro_tdata.mem_dmask(0);
+                        flags_wr_be(FLAG_ZF) <= micro_tdata.mem_dmask(0);
                         flags_wr_be(FLAG_05) <= '0';
-                        flags_wr_be(FLAG_AF) <= mem_dmask(0);
+                        flags_wr_be(FLAG_AF) <= micro_tdata.mem_dmask(0);
                         flags_wr_be(FLAG_03) <= '0';
-                        flags_wr_be(FLAG_PF) <= mem_dmask(0);
+                        flags_wr_be(FLAG_PF) <= micro_tdata.mem_dmask(0);
                         flags_wr_be(FLAG_01) <= '0';
-                        flags_wr_be(FLAG_CF) <= mem_dmask(0);                    
+                        flags_wr_be(FLAG_CF) <= micro_tdata.mem_dmask(0);
                     when others =>
                         null;
                 end case;
@@ -1383,14 +1390,14 @@ begin
 
             if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_FLG) = '1') then
                 flags_src <= CMD_FLG;
+            elsif (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_MRD) = '1' and micro_tdata.mem_dreg = FL) then
+                flags_src <= RES_MEM;
             elsif (alu_res_tvalid = '1' and alu_res_tdata.upd_fl = '1') then
                 if (alu_res_tdata.dreg = FL) then
                     flags_src <= RES_DATA;
                 else
                     flags_src <= RES_USER;
                 end if;
-            elsif (lsu_rd_s_tvalid = '1' and mem_dreg = FL) then
-                flags_src <= RES_DATA;
             elsif (mul_res_tvalid = '1' or str_res_tvalid = '1' or
                    bcd_res_tvalid = '1' or shf8_res_tvalid = '1' or
                    div_req_tvalid = '1' or shf16_res_tvalid = '1')
@@ -1417,15 +1424,25 @@ begin
 
     flag_calc_proc : process (all) begin
 
-        if (flags_src = RES_DATA) then
-            flags_wr_vector(FLAG_OF) <= res_tdata.dval_lo(FLAG_OF);
-            flags_wr_vector(8 downto 1) <= res_tdata.dval_lo(8 downto 1);
-        else
-            flags_wr_vector(FLAG_OF) <= res_tuser(FLAG_OF);
-            flags_wr_vector(8 downto 1) <= res_tuser(8 downto 1);
-        end if;
+        case flags_src is
+            when RES_MEM =>
+                flags_wr_vector(FLAG_OF)    <= mem_buf_0_tdata(FLAG_OF);
+                flags_wr_vector(8 downto 1) <= mem_buf_0_tdata(8 downto 1);
+            when RES_DATA =>
+                flags_wr_vector(FLAG_OF)    <= res_tdata.dval_lo(FLAG_OF);
+                flags_wr_vector(8 downto 1) <= res_tdata.dval_lo(8 downto 1);
+            when others =>
+                flags_wr_vector(FLAG_OF)    <= res_tuser(FLAG_OF);
+                flags_wr_vector(8 downto 1) <= res_tuser(8 downto 1);
+        end case;
 
         case flags_src is
+            when RES_MEM =>
+                flags_wr_vector(FLAG_CF) <= mem_buf_0_tdata(FLAG_CF);
+                flags_wr_vector(FLAG_DF) <= mem_buf_0_tdata(FLAG_DF);
+                flags_wr_vector(FLAG_IF) <= mem_buf_0_tdata(FLAG_IF);
+                flags_wr_vector(FLAG_AF) <= mem_buf_0_tdata(FLAG_AF);
+                flags_wr_vector(FLAG_SF) <= mem_buf_0_tdata(FLAG_SF);
             when RES_DATA =>
                 flags_wr_vector(FLAG_CF) <= res_tdata.dval_lo(FLAG_CF);
                 flags_wr_vector(FLAG_DF) <= res_tdata.dval_lo(FLAG_DF);
@@ -1564,9 +1581,9 @@ begin
                 end if;
 
                 if (micro_tvalid = '1' and micro_tready = '1' and micro_tdata.cmd(MICRO_OP_CMD_JMP) = '1' and
-                    (micro_tdata.jump_cs_mem = '1' or micro_tdata.jump_ip_mem = '1' or
-                     micro_tdata.jump_cond = cx_ne_0 or micro_tdata.jump_cond = cx_ne_0_and_zf or
-                     micro_tdata.jump_cond = cx_ne_0_and_nzf or op_cnt /= 0 or op_inc_hs = '1'))
+                    ((micro_tdata.jump_cond = j_always and (micro_tdata.jump_cs_mem = '1' or micro_tdata.jump_ip_mem = '1')) or
+                     (micro_tdata.jump_cond = cx_ne_0 or micro_tdata.jump_cond = cx_ne_0_and_zf or micro_tdata.jump_cond = cx_ne_0_and_nzf) or
+                     (op_cnt /= 0 or op_inc_hs = '1')))
                 then
                     jmp_busy <= '1';
                 elsif (jmp_busy = '1') then

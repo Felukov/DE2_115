@@ -1442,7 +1442,7 @@ begin
                             update_sp(sp_val => sp_val, sp_offset => sp_offset);
 
                         when 8 =>
-                            set_cmd_1(MICRO_MRD_OP);                            
+                            set_cmd_1(MICRO_MRD_OP);
                             micro_tdata.mem_dreg  <= DI;
                             micro_tdata.mem_dmask <= rr_tdata_buf.dmask;
                         when 7 =>
@@ -1544,7 +1544,7 @@ begin
         procedure do_stack_leave_1 is begin
             set_cmd_1(MICRO_MRD_OP);
             micro_tdata.mem_dreg  <= rr_tdata_buf.dreg;
-            micro_tdata.mem_dmask <= rr_tdata_buf.dmask;            
+            micro_tdata.mem_dmask <= rr_tdata_buf.dmask;
         end procedure;
 
         procedure do_movu_cmd_0 is begin
@@ -2025,7 +2025,7 @@ begin
         procedure do_xlat_1 is begin
             set_cmd_1(MICRO_MRD_OP);
             micro_tdata.mem_dreg  <= rr_tdata_buf.dreg;
-            micro_tdata.mem_dmask <= rr_tdata_buf.dmask;            
+            micro_tdata.mem_dmask <= rr_tdata_buf.dmask;
         end procedure;
 
         procedure initialize_signals is begin
