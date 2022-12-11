@@ -262,7 +262,7 @@ begin
                                      x"92" | x"93" | x"94" | x"95" | x"96" | x"97" | x"98" | x"99" | x"9B" | x"9C" | x"9D" | x"9E" |
                                      x"9F" | x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AC" | x"AD" | x"AE" | x"AF" | x"CB" |
                                      x"C9" | x"CC" | x"CE" | x"CF" | x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" | x"F5" | x"F4" |
-                                     x"40" | x"27" | x"D7" | x"EC" | x"ED" | x"D6" | x"F1" | x"F0" =>
+                                     x"40" | x"27" | x"D7" | x"EC" | x"ED" | x"D6" | x"F1" | x"F0" | x"EF" | x"EE" =>
                                     byte_pos_chain(0) <= first_byte;
                                     instr_tvalid <= '1';
 
