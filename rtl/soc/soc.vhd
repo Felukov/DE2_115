@@ -398,7 +398,7 @@ architecture rtl of soc is
 
     component signal_tap is
         port (
-            acq_data_in    : in std_logic_vector(63 downto 0) := (others => 'X'); -- acq_data_in
+            acq_data_in    : in std_logic_vector(31 downto 0) := (others => 'X'); -- acq_data_in
             acq_trigger_in : in std_logic_vector( 0 downto 0) := (others => 'X'); -- acq_trigger_in
             acq_clk        : in std_logic                     := 'X';             -- clk
             storage_enable : in std_logic                     := 'X'              -- storage_enable
@@ -541,7 +541,7 @@ architecture rtl of soc is
 
     signal ledg_out                 : std_logic_vector(15 downto 0);
 
-    -- signal acq_data_in              : std_logic_vector(63 downto 0);
+    -- signal acq_data_in              : std_logic_vector(31 downto 0);
     -- signal acq_trigger_in           : std_logic_vector(0 downto 0);
     -- signal storage_enable           : std_logic;
 
@@ -551,7 +551,7 @@ architecture rtl of soc is
     -- signal test_buf                 : std_logic_vector(7 downto 0);
 
 begin
-    -- acq_data_in(63 downto 11) <= (others => '0');
+    -- acq_data_in(31 downto 11) <= (others => '0');
     -- acq_data_in(10) <= event_kb_int_req;
     -- acq_data_in(9) <= interrupt_valid;
     -- acq_data_in(8) <= interrupt_ack;
@@ -799,23 +799,6 @@ begin
         s_axis_sdcard_res_tdata     => sdcard_rd_tdata
     );
 
-    -- Module pit_8254 instantiation
-    --pit_8254_inst : pit_8254 port map(
-    --    clk                     => clk,
-    --    resetn                  => dev_resetn,
-
-    --    io_req_s_tvalid         => pit_req_tvalid,
-    --    io_req_s_tready         => pit_req_tready,
-    --    io_req_s_tdata          => pit_req_tdata,
-
-    --    io_rd_m_tvalid          => pit_rd_tvalid,
-    --    io_rd_m_tready          => pit_rd_tready,
-    --    io_rd_m_tdata           => pit_rd_tdata,
-
-    --    event_irq               => event_irq,
-    --    event_timer             => event_timer
-    --);
-
     -- Module pit_lite instantiation
     pit_lite_inst : pit_lite port map(
         clk                     => clk,
@@ -834,26 +817,6 @@ begin
 
     event_irq   <= timer_out(0);
     event_timer <= timer_out(2);
-
-    -- Module pic instantiation
-    -- pic_inst : pic port map(
-    --     clk                     => clk,
-    --     resetn                  => dev_resetn,
-
-    --     io_req_s_tvalid         => pic_req_tvalid,
-    --     io_req_s_tready         => pic_req_tready,
-    --     io_req_s_tdata          => pic_req_tdata,
-
-    --     io_rd_m_tvalid          => pic_rd_tvalid,
-    --     io_rd_m_tready          => pic_rd_tready,
-    --     io_rd_m_tdata           => pic_rd_tdata,
-
-    --     interrupt_input         => interrupt_vector,
-
-    --     interrupt_valid         => open,
-    --     interrupt_data          => open,
-    --     interrupt_ack           => interrupt_ack
-    -- );
 
     -- Module pic instantiation
     pic_lite_inst : pic_lite port map(
@@ -1065,18 +1028,6 @@ begin
     interrupt_vector(15 downto 2)   <= (others => '0');
     interrupt_vector(1)             <= event_kb_int_req;
     interrupt_vector(0)             <= event_irq;
-
-    process (clk) begin
-        if rising_edge(clk) then
-
-            if (io_req_tvalid = '1' and io_req_tready = '1' and io_req_tdata(32) = '1') then
-                if (io_req_tdata(31 downto 16) = x"0043") then
-                    led_reg  <= io_req_tdata(7 downto 0);
-                end if;
-            end if;
-
-        end if;
-    end process;
 
     process (clk) begin
         if rising_edge(clk) then
