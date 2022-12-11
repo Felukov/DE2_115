@@ -41,8 +41,14 @@ module snake_tb;
     logic                           ps_sdram_res_tvalid;
     logic [31:0]                    ps_sdram_res_tdata;
 
-	wire 							ps2_clk = 1'b0;
-	wire 							ps2_dat = 1'b0;
+    wire                            ps2_clk_io;
+    wire                            ps2_dat_io;
+    reg                             ps2_wr  = 1'b0;
+	reg                             ps2_clk = 1'b0;
+	reg                             ps2_dat = 1'b0;
+
+    assign ps2_clk_io = ps2_wr == 1 ? ps2_clk : 1'bz;
+    assign ps2_dat_io = ps2_wr == 1 ? ps2_dat : 1'bz;
 
     soc_io_uart_tx #(
         .FREQ                       (100_000_000),
@@ -70,6 +76,18 @@ module snake_tb;
         .m_axis_sdram_req_tdata     (ps_sdram_req_tdata),
         .s_axis_sdram_res_tvalid    (ps_sdram_res_tvalid),
         .s_axis_sdram_res_tdata     (ps_sdram_res_tdata),
+        .sd_error                   (),
+        .sd_disk_mounted            (),
+        .sd_blocks                  (),
+        .sd_io_lba                  (),
+        .sd_io_rd                   (),
+        .sd_io_wr                   (),
+        .sd_io_ack                  (),
+        .sd_io_din_tvalid           (),
+        .sd_io_din_tdata            (),
+        .sd_io_dout_tvalid          (),
+        .sd_io_dout_tready          (),
+        .sd_io_dout_tdata           (),
         .LEDG                       (LEDG),
         .SW                         (SW),
         .HEX0                       (HEX0),
@@ -82,8 +100,8 @@ module snake_tb;
         .HEX7                       (HEX7),
         .BT_UART_RX                 (tx_rx),
         .BT_UART_TX                 (),
-		.PS2_CLK					(ps2_clk),
-		.PS2_DAT					(ps2_dat)
+		.PS2_CLK					(ps2_clk_io),
+		.PS2_DAT					(ps2_dat_io)
     );
 
 
@@ -128,7 +146,7 @@ module snake_tb;
     initial begin
         clk = 0;
         forever begin
-            #5 clk = ~clk;
+            #5   clk = ~clk;
         end
     end
 
@@ -142,8 +160,7 @@ module snake_tb;
     initial begin
         integer file, res, f_size;
         byte b8;
-        file = $fopen("C:\\Projects\\DE2_115\\tbs\\cpu86\\snake\\cstart.com", "rb");
-        // file = $fopen("C:\\emu8086\\MyBuild\\mycode.com1", "rb");
+        file = $fopen("/home/fila/work/DE2_115/tbs/cpu86/snake/cstart.com", "rb");
         res = $fseek(file, 0, `SEEK_END);  /* End of file */
         f_size = $ftell(file);
         res = $fseek(file, 0, `SEEK_SET); /* Beginning */
@@ -160,24 +177,23 @@ module snake_tb;
             com_file[w] = b8;
         end
 
-        // com_file = new[f_size];
-        // for(int w = 0; w < f_size; w++) begin
-        //     res = $fread(b8, file);
-        //     com_file[w] = b8;
-        // end
-
         $fclose(file);
     end
 
     // com file tx loader
     initial begin
+		// Initialize Inputs
+		ps2_clk    = 1'bz;
+		ps2_dat    = 1'bz;
+        ps2_wr     = 1'b0;
+
         tx_s_tvalid = 0;
         wait (resetn == 1);
         @(posedge clk);
 
-        // there shoud pass enough time in order to initial bootstrap code
-        // was ready to handle input data without delays
-        // otherwise if we start to send data to UART too early there is
+        // enough time shoud pass for initial bootstrap code
+        // to be ready to handle input data without delays
+        // otherwise, if we start to send data to UART too early, there is
         // a risk to overflow uart rx queue
         repeat (500000) @(posedge clk);
 
@@ -191,6 +207,278 @@ module snake_tb;
         end
         tx_s_tvalid = 0;
         @(posedge clk);
+
+        repeat (1000000) @(posedge clk);
+
+        ps2_wr = 1'b1;
+        #100 ;
+
+        #95  ps2_dat = 0; //START 0
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //1
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //2
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //3
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //4
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //5
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //6
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //7
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //8
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //PARITY 9
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1;// STOP 10
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //START 0
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //1
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //2
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //3
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //4
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //5
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //6
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //7
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //8
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //PARITY 9
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1;// STOP 10
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+        //BRAKE CODE
+        #95  ps2_dat = 0; //START 0
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //1
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //2
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //3
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //4
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //5
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //6
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //7
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //8
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //PARITY 9
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1;// STOP 10
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //START 0
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //1
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //2
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //3
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //4
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //5
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //6
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //7
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //8
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //PARITY 9
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1;// STOP 10
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //START 0
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //1
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //2
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //3
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //4
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //5
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //6
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //7
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //8
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //PARITY 9
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1;// STOP 10
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+        //BRAKE CODE
+        #95  ps2_dat = 0; //START 0
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //1
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //2
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //3
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //4
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //5
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //6
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1; //7
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //8
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 0; //PARITY 9
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        #95  ps2_dat = 1;// STOP 10
+        #5   ps2_clk = 0;
+        #100 ps2_clk = 1;
+
+        ps2_wr = 1'b0;
+
     end
 
 endmodule

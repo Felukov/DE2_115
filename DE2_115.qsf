@@ -6,7 +6,7 @@ set_global_assignment -name FAMILY "Cyclone IV E"
 set_global_assignment -name DEVICE EP4CE115F29C7
 set_global_assignment -name TOP_LEVEL_ENTITY top
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 12.0
-set_global_assignment -name LAST_QUARTUS_VERSION "18.0.0 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Lite Edition"
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "22:42:00 AUGUST 18,2021"
 set_global_assignment -name DEVICE_FILTER_PACKAGE FBGA
 set_global_assignment -name DEVICE_FILTER_PIN_COUNT 780
@@ -276,10 +276,10 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to HEX7[6]
 #============================================================
 # RS232
 #============================================================
-#set_location_assignment PIN_G9 -to UART_TXD
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_TXD
-#set_location_assignment PIN_G12 -to UART_RXD
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_RXD
+set_location_assignment PIN_G9 -to UART_TXD
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_TXD
+set_location_assignment PIN_G12 -to UART_RXD
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_RXD
 #set_location_assignment PIN_G14 -to UART_CTS
 #set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_CTS
 #set_location_assignment PIN_J13 -to UART_RTS
@@ -288,10 +288,10 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to HEX7[6]
 #============================================================
 # PS2 for Keyboard and Mouse
 #============================================================
-#set_location_assignment PIN_G6 -to PS2_CLK
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PS2_CLK
-#set_location_assignment PIN_H5 -to PS2_DAT
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PS2_DAT
+set_location_assignment PIN_G6 -to PS2_CLK
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PS2_CLK
+set_location_assignment PIN_H5 -to PS2_DAT
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PS2_DAT
 #set_location_assignment PIN_G5 -to PS2_CLK2
 #set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PS2_CLK2
 #set_location_assignment PIN_F5 -to PS2_DAT2
@@ -347,6 +347,36 @@ set_location_assignment PIN_A11 -to VGA_B[4]
 set_location_assignment PIN_C12 -to VGA_B[5]
 set_location_assignment PIN_D11 -to VGA_B[6]
 set_location_assignment PIN_D12 -to VGA_B[7]
+
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_HS
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_VS
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_SYNC_N
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_CLK
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_BLANK_N
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_R[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_R[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_R[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_R[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_R[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_R[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_R[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_R[7]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_G[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_G[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_G[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_G[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_G[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_G[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_G[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_G[7]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_B[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_B[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_B[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_B[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_B[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_B[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_B[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to VGA_B[7]
 
 #============================================================
 # Audio
@@ -761,6 +791,28 @@ set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to DRAM_DQ[28]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to DRAM_DQ[29]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to DRAM_DQ[30]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to DRAM_DQ[31]
+
+
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SD_CLK
+
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SD_CMD
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to SD_CMD
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to SD_CMD
+
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SD_DAT[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SD_DAT[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SD_DAT[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SD_DAT[3]
+
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to SD_DAT[0]
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to SD_DAT[1]
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to SD_DAT[2]
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to SD_DAT[3]
+
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to SD_DAT[0]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to SD_DAT[1]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to SD_DAT[2]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to SD_DAT[3]
 
 #============================================================
 # SRAM
@@ -1312,7 +1364,15 @@ set_instance_assignment -name IO_STANDARD "2.5 V" -to LEDG[8]
 
 
 
-set_global_assignment -name QIP_FILE ips/signal_tap/hdl/synthesis/signal_tap.qip
+set_global_assignment -name QIP_FILE ips/signal_tap/signal_tap/synthesis/signal_tap.qip
+set_global_assignment -name SDC_FILE DE2_115.sdc
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/soc/pit/pit_lite.sv
+set_global_assignment -name VHDL_FILE rtl/soc/ps_io_sdcard.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/soc/pic/pic_lite.sv
+set_global_assignment -name VHDL_FILE rtl/utils/axis_fifo_fwft.vhd
+set_global_assignment -name VHDL_FILE rtl/soc/soc_ps2/soc_ps2_tx.vhd
+set_global_assignment -name VHDL_FILE rtl/soc/soc_ps2/soc_ps2_rx.vhd
+set_global_assignment -name VHDL_FILE rtl/soc/soc_ps2/soc_ps2.vhd
 set_global_assignment -name VERILOG_FILE rtl/sdcard/sdcard_subsystem.v
 set_global_assignment -name VERILOG_FILE rtl/sdcard/sd_phy_dat_crc_16.v
 set_global_assignment -name VERILOG_FILE rtl/sdcard/sd_phy_dat.v
@@ -1340,12 +1400,14 @@ set_global_assignment -name VHDL_FILE rtl/video/video_vga_ctrl.vhd
 set_global_assignment -name VHDL_FILE rtl/video/video_system.vhd
 set_global_assignment -name VHDL_FILE rtl/video/video_mda_fb.vhd
 set_global_assignment -name VHDL_FILE rtl/utils/axis_reg.vhd
+set_global_assignment -name VHDL_FILE rtl/utils/axis_fifo_bram.vhd
 set_global_assignment -name VHDL_FILE rtl/utils/axis_fifo.vhd
 set_global_assignment -name VHDL_FILE rtl/utils/axis_fifo_er.vhd
 set_global_assignment -name VHDL_FILE rtl/cpu86/types.vhd
 set_global_assignment -name VHDL_FILE rtl/cpu86/cpu86_mem_interconnect.vhd
 set_global_assignment -name VHDL_FILE rtl/cpu86/cpu86_fetcher_buf.vhd
 set_global_assignment -name VHDL_FILE rtl/cpu86/cpu86_fetcher.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/cpu86/cpu86_bpu_lifo.sv
 set_global_assignment -name VHDL_FILE rtl/cpu86/cpu86_bpu.vhd
 set_global_assignment -name VHDL_FILE rtl/cpu86/cpu86_exec_register_reader.vhd
 set_global_assignment -name VHDL_FILE rtl/cpu86/cpu86_exec_reg.vhd
@@ -1385,9 +1447,10 @@ set_global_assignment -name VHDL_FILE rtl/debouncer.vhd
 set_global_assignment -name VHDL_FILE rtl/utils/axis_div_u.vhd
 set_global_assignment -name VHDL_FILE rtl/top.vhd
 set_global_assignment -name QIP_FILE ips/pll/clock_manager.qip
-set_global_assignment -name SDC_FILE DE2_115.SDC
 set_global_assignment -name SIGNALTAP_FILE stp1.stp
 set_global_assignment -name QIP_FILE ips/altddio/altddio_core.qip
 set_global_assignment -name QIP_FILE ips/afifo/afifo_core.qip
 set_global_assignment -name VHDL_FILE rtl/video/video_mda_sdram_ctrl.vhd
+set_global_assignment -name QIP_FILE ips/ram8x8_sdp/ram8x8_sdp.qip
+set_global_assignment -name QIP_FILE ips/mem/mem.qip
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

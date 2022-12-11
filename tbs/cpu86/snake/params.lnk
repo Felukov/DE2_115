@@ -1,9 +1,9 @@
 format dos com
-file cstart.obj
-file kernel.obj
-file kbd.obj
-file rnd.obj
-file terminal.obj
-file main.obj
+file cstart.o
+file kernel.o
+file kbd.o
+file rnd.o
+file terminal.o
+file main.o
 option verbose
 option nodefaultlibs

@@ -250,8 +250,8 @@ uint8_t decode_kbd(){
             }
             release_code = 0;
         }
-        _inline_outpw(0x306, cmd);
-        _inline_outpw(0x305, ch);
+        // _inline_outpw(0x306, cmd);
+        // _inline_outpw(0x305, ch);
     }
     return cmd;
 }
@@ -306,7 +306,7 @@ void do_game(){
     uint8_t new_cmd = KBD_LEFT;
     clear_food_map();
     terminal_clean();
-    terminal_print_h(0, 0, 20, "Snake Game v 1.03");
+    terminal_print_h(0, 0, 20, "Snake Game v 1.04l");
     print_border();
     snake_body_init();
     snake_body_draw();
@@ -373,7 +373,7 @@ int cmain (){
     unsigned int cnt_1 = 0;
 
     char str[3];
-    //_inline_outpw(0x305, cnt_0);
+    _inline_outpw(0x306, 0);
 
     kernel_init();
     cnt_0++;
@@ -383,7 +383,7 @@ int cmain (){
     cnt_0++;
     //_inline_outpw(0x305, cnt_0);
 
-    _inline_outp(0x60, 0xF2);
+    //_inline_outp(0x60, 0xF2);
     wait_time();
 
     for (;;){
@@ -395,6 +395,7 @@ int cmain (){
         wait_time();
         wait_time();
         wait_time();
+        _inline_outpw(0x306, 0);
     }
 
     return 0;

@@ -88,8 +88,7 @@ create_clock -name {CLOCK_50} -period 20.000 -waveform { 0.000 10.000 } [get_por
 create_clock -name {CLOCK2_50} -period 20.000 -waveform { 0.000 10.000 } [get_ports {CLOCK2_50}]
 #create_clock -name {CLK} -period 10.000 -waveform { 0.000 5.000 } [get_ports {clk}]
 
-set_clock_groups -asynchronous -group [get_clocks {CLOCK_50}]
-set_clock_groups -asynchronous -group [get_clocks {CLOCK2_50}]
+set_clock_groups -group [get_clocks {CLOCK_50}] -group [get_clocks {CLOCK2_50}] -asynchronous
 
 #**************************************************************
 # Create Generated Clock
@@ -98,7 +97,7 @@ derive_pll_clocks
 
 
 create_generated_clock -name sdram_clk -source [get_nets {clock_manager_inst|altpll_component|auto_generated|wire_pll1_clk[1]}] [get_ports {DRAM_CLK}]
-create_generated_clock -name vga_clk -source [get_nets {vga_pll_inst|altpll_component|auto_generated|wire_pll1_clk[0]}] [get_ports {VGA_CLK}]
+create_generated_clock -name vga_clk -invert -source [get_nets {vga_pll_inst|altpll_component|auto_generated|wire_pll1_clk[0]}] [get_ports {VGA_CLK}]
 
 #create_clock -name VGA_CLK_VIRT -period 9.259
 
@@ -147,6 +146,11 @@ set_false_path -to [get_ports LEDR*]
 set_false_path -to [get_ports LEDG*]
 set_false_path -to [get_ports HEX*]
 
+set_false_path -from [get_ports PS2_CLK] -to [all_clocks]
+set_false_path -from [get_ports PS2_DAT] -to [all_clocks]
+set_false_path -from [all_clocks] -to [get_ports PS2_CLK]
+set_false_path -from [all_clocks] -to [get_ports PS2_DAT]
+
 set_false_path -from [get_ports {SW[0]}] -to [get_registers {soc:soc_inst|soc_io_switches:soc_io_switches_0_inst|switches_ff_0[0]}]
 set_false_path -from [get_ports {SW[1]}] -to [get_registers {soc:soc_inst|soc_io_switches:soc_io_switches_0_inst|switches_ff_0[1]}]
 set_false_path -from [get_ports {SW[2]}] -to [get_registers {soc:soc_inst|soc_io_switches:soc_io_switches_0_inst|switches_ff_0[2]}]
@@ -166,9 +170,11 @@ set_false_path -from [get_ports {SW[15]}] -to [get_registers {soc:soc_inst|soc_i
 
 set_false_path -from [all_clocks] -to [get_ports {BT_UART_TX}]
 set_false_path -from [get_ports {BT_UART_RX}] -to [all_clocks]
+set_false_path -from [all_clocks] -to [get_ports {UART_TXD}]
+set_false_path -from [get_ports {UART_RXD}] -to [all_clocks]
 
-set_false_path -from [get_clocks {clock_manager_inst|altpll_component|auto_generated|pll1|clk[0]}] -to [get_clocks {vga_pll_inst|altpll_component|auto_generated|pll1|clk[0]}]
-set_false_path -from [get_clocks {vga_pll_inst|altpll_component|auto_generated|pll1|clk[0]}] -to [get_clocks {clock_manager_inst|altpll_component|auto_generated|pll1|clk[0]}]
+#set_false_path -from [get_clocks {clock_manager_inst|altpll_component|auto_generated|pll1|clk[0]}] -to [get_clocks {vga_pll_inst|altpll_component|auto_generated|pll1|clk[0]}]
+#set_false_path -from [get_clocks {vga_pll_inst|altpll_component|auto_generated|pll1|clk[0]}] -to [get_clocks {clock_manager_inst|altpll_component|auto_generated|pll1|clk[0]}]
 
 #**************************************************************
 # Set Multicycle Path
@@ -181,7 +187,8 @@ set_multicycle_path -setup -end -from sdram_clk -to [get_clocks {clock_manager_i
 # Set Maximum Delay
 #**************************************************************
 
-
+set_max_delay -from [get_clocks {clock_manager_inst|altpll_component|auto_generated|pll1|clk[0]}] -to [get_clocks {vga_pll_inst|altpll_component|auto_generated|pll1|clk[0]}] 4
+set_max_delay -from [get_clocks {vga_pll_inst|altpll_component|auto_generated|pll1|clk[0]}] -to [get_clocks {clock_manager_inst|altpll_component|auto_generated|pll1|clk[0]}] 4
 
 #**************************************************************
 # Set Minimum Delay
