@@ -59,6 +59,7 @@ architecture rtl of cpu86_bpu is
 
     constant BPU_ITEM_CNT           : natural := 8;
     constant BPU_ITEM_IDX_WIDTH     : integer := integer(ceil(log2(real(BPU_ITEM_CNT))));
+    constant RET_STACK_DW           : natural := 32;
 
     component axis_reg is
         generic (
@@ -73,6 +74,22 @@ architecture rtl of cpu86_bpu is
             out_m_tvalid            : out std_logic;
             out_m_tready            : in std_logic;
             out_m_tdata             : out std_logic_vector (DATA_WIDTH-1 downto 0)
+        );
+    end component;
+
+    component cpu86_bpu_lifo is
+        generic (
+            DEPTH                   : natural := 16;
+            DW                      : natural := 32
+        );
+        port (
+            clk                     : in std_logic;
+            resetn                  : in std_logic;
+            push_vld                : in std_logic;
+            push_data               : in std_logic_vector (DW-1 downto 0);
+            pop_vld                 : out std_logic;
+            pop_ack                 : in std_logic;
+            pop_data                : out std_logic_vector (DW-1 downto 0)
         );
     end component;
 
@@ -110,7 +127,6 @@ architecture rtl of cpu86_bpu is
     signal jump_m_tdata             : std_logic_vector(31 downto 0);
 
     signal bpu_items                : bpu_items_t;
-    signal bpu_wr_valid             : std_logic;
     signal bpu_wr_idx               : natural range 0 to BPU_ITEM_CNT-1;
     signal bpu_rd_idx               : natural range 0 to BPU_ITEM_CNT-1;
     signal bpu_item_wr_hit          : std_logic_vector(BPU_ITEM_CNT-1 downto 0);
@@ -139,6 +155,13 @@ architecture rtl of cpu86_bpu is
     signal next_free_bpu_item_idx   : natural range 0 to BPU_ITEM_CNT-1;
 
     signal jump_pass                : std_logic;
+
+    signal push_vld                 : std_logic;
+    signal push_data                : std_logic_vector (RET_STACK_DW-1 downto 0);
+    signal pop_vld                  : std_logic;
+    signal pop_ack                  : std_logic;
+    signal pop_data                 : std_logic_vector (RET_STACK_DW-1 downto 0);
+    signal flush_ret_stack_n        : std_logic;
 
 begin
     -- i/o assigns
@@ -189,6 +212,18 @@ begin
         out_m_tdata             => d_bpu_item_rd_tdata
     );
 
+    cpu86_bpu_lifo_inst : cpu86_bpu_lifo generic map (
+        DEPTH                   => 16,
+        DW                      => RET_STACK_DW
+    ) port map (
+        clk                     => clk,
+        resetn                  => flush_ret_stack_n,
+        push_vld                => push_vld,
+        push_data               => push_data,
+        pop_vld                 => pop_vld,
+        pop_ack                 => pop_ack,
+        pop_data                => pop_data
+    );
 
     -- assigns
     local_resetn            <= '0' when resetn = '0' or jump_m_tvalid = '1' else '1';
@@ -204,6 +239,13 @@ begin
     instr_s_tready          <= '1' when jump_s_tvalid = '0' and jump_m_tvalid = '0' and (instr_m_tvalid = '0' or (instr_m_tvalid = '1' and instr_m_tready = '1')) else '0';
 
     jump_pass               <= '1' when instr_s_tdata.op = BRANCH or instr_s_tdata.op = RET else '0';
+
+    push_vld  <= '1' when (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JCALL and instr_s_tdata.code(3) = '0') else '0';
+    push_data <= instr_s_tuser(USER_T_CS) & instr_s_tuser(USER_T_IP_NEXT);
+    pop_ack   <= '1' when instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = RET and
+        (instr_s_tdata.code = RET_NEAR or instr_s_tdata.code = RET_FAR or instr_s_tdata.code = RET_NEAR_IMM16 or instr_s_tdata.code = RET_FAR_IMM16) else '0';
+
+    flush_ret_stack_n <= '0' when (jump_s_tvalid = '1' and jump_s_tdata.mismatch = '1') or resetn ='0' else '1';
 
     -- forwarding instruction
     process (clk) begin
@@ -223,7 +265,9 @@ begin
 
             --without reset
             if (instr_s_tvalid = '1' and instr_s_tready = '1') then
-                if (d_bpu_item_rd_hit_any = '1' and
+                if (pop_vld = '1' and pop_ack = '1') then
+                    instr_m_tdata.bpu_taken <= '1';
+                elsif (d_bpu_item_rd_hit_any = '1' and
                     bpu_items(d_bpu_item_rd_hit_idx).saturated_cnt > 1 and
                     jump_pass = '1') then
                     instr_m_tdata.bpu_taken <= '1';
@@ -237,8 +281,13 @@ begin
                     instr_m_tdata.bpu_first <= '1';
                 end if;
 
-                instr_m_tdata.bpu_taken_cs  <= bpu_items(d_bpu_item_rd_hit_idx).jump_cs;
-                instr_m_tdata.bpu_taken_ip  <= bpu_items(d_bpu_item_rd_hit_idx).jump_ip;
+                if (pop_vld = '1' and pop_ack = '1') then
+                    instr_m_tdata.bpu_taken_cs  <= pop_data(USER_T_CS);
+                    instr_m_tdata.bpu_taken_ip  <= pop_data(USER_T_IP_NEXT);
+                else
+                    instr_m_tdata.bpu_taken_cs  <= bpu_items(d_bpu_item_rd_hit_idx).jump_cs;
+                    instr_m_tdata.bpu_taken_ip  <= bpu_items(d_bpu_item_rd_hit_idx).jump_ip;
+                end if;
 
                 instr_m_tdata.op            <= instr_s_tdata.op;
                 instr_m_tdata.code          <= instr_s_tdata.code;
@@ -288,7 +337,7 @@ begin
             if resetn = '0' then
                 jump_m_tvalid <= '0';
             else
-                if ((jump_s_tvalid = '1' and jump_s_tdata.mismatch = '1') or
+                if ((jump_s_tvalid = '1' and jump_s_tdata.mismatch = '1') or (pop_vld = '1' and pop_ack = '1') or
                     (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JMPU  and instr_s_tdata.code(3) = '0') or
                     (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JCALL and instr_s_tdata.code(3) = '0') or
                     (instr_s_tvalid = '1' and instr_s_tready = '1' and d_bpu_item_rd_hit_any = '1' and bpu_items(d_bpu_item_rd_hit_idx).saturated_cnt > 1 and jump_pass = '1'))
@@ -303,7 +352,13 @@ begin
             if (jump_s_tvalid = '1' and jump_s_tdata.mismatch = '1') then
                 jump_m_tdata(31 downto 16) <= jump_s_tdata.jump_cs;
                 jump_m_tdata(15 downto 0)  <= jump_s_tdata.jump_ip;
-            elsif (instr_s_tvalid = '1' and instr_s_tready = '1' and (instr_s_tdata.op = JMPU or instr_s_tdata.op = JCALL)) then
+            elsif (pop_vld = '1' and pop_ack = '1') then
+                jump_m_tdata(31 downto 16) <= pop_data(31 downto 16);
+                jump_m_tdata(15 downto 0)  <= pop_data(15 downto 0);
+            elsif (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JMPU) then
+                jump_m_tdata(31 downto 16) <= instr_s_tuser(31 downto 16);
+                jump_m_tdata(15 downto 0)  <= std_logic_vector(unsigned(instr_s_tuser(15 downto 0)) + unsigned(instr_s_tdata.disp));
+            elsif (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JCALL) then
                 if (instr_s_tdata.code = CALL_PTR16_16) then
                     jump_m_tdata(31 downto 16) <= instr_s_tdata.data;
                     jump_m_tdata(15 downto 0)  <= instr_s_tdata.disp;
