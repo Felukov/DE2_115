@@ -28,6 +28,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
+--use std.env.stop;
 
 use work.cpu86_types.all;
 
@@ -254,15 +255,15 @@ begin
                                     decode_chain(mod_seg_rm, disp_low, disp_high, first_byte);
                                     instr_tvalid <= '0';
 
-                                when x"06" | x"07" | x"0E" | x"0F" | x"16" | x"17" | x"1E" | x"1F" | x"26" | x"2E" | x"2F" | x"C3" |
+                                when x"06" | x"07" | x"0E" | x"16" | x"17" | x"1E" | x"1F" | x"26" | x"2E" | x"2F" | x"C3" |
                                      x"36" | x"37" | x"3E" | x"3F" | x"41" | x"42" | x"43" | x"44" | x"45" | x"46" | x"47" | x"48" |
                                      x"49" | x"4A" | x"4B" | x"4C" | x"4D" | x"4E" | x"4F" | x"50" | x"51" | x"52" | x"53" | x"54" |
                                      x"55" | x"56" | x"57" | x"58" | x"59" | x"5A" | x"5B" | x"5C" | x"5D" | x"5E" | x"5F" | x"60" |
-                                     x"61" | x"63" | x"64" | x"65" | x"66" | x"67" | x"6C" | x"6D" | x"6E" | x"6F" | x"90" | x"91" |
+                                     x"61" | x"6C" | x"6D" | x"6E" | x"6F" | x"90" | x"91" | x"F3" | x"F2" |
                                      x"92" | x"93" | x"94" | x"95" | x"96" | x"97" | x"98" | x"99" | x"9B" | x"9C" | x"9D" | x"9E" |
                                      x"9F" | x"A4" | x"A5" | x"A6" | x"A7" | x"AA" | x"AB" | x"AC" | x"AD" | x"AE" | x"AF" | x"CB" |
                                      x"C9" | x"CC" | x"CE" | x"CF" | x"F8" | x"F9" | x"FA" | x"FB" | x"FC" | x"FD" | x"F5" | x"F4" |
-                                     x"40" | x"27" | x"D7" | x"EC" | x"ED" | x"D6" | x"F1" | x"F0" | x"EF" | x"EE" =>
+                                     x"40" | x"27" | x"D7" | x"EC" | x"ED" | x"F0" | x"EF" | x"EE" =>
                                     byte_pos_chain(0) <= first_byte;
                                     instr_tvalid <= '1';
 
@@ -316,8 +317,15 @@ begin
                                     byte_pos_chain(1) <= first_byte;
                                     instr_tvalid <= '0';
 
+                                -- invalid opcodes
+                                when x"0F" | x"63" | x"64" | x"65" | x"66" | x"67" | x"82" | x"D6" | x"F1" =>
+                                    byte_pos_chain(0) <= first_byte;
+                                    instr_tvalid <= '1';
+
                                 when others =>
-                                    null;
+                                    instr_tvalid <= '0';
+                                    report "Cannot be here";
+                                    --stop;
                             end case;
 
                         when mod_aux_rm | mod_reg_rm | mod_seg_rm =>
@@ -435,7 +443,10 @@ begin
                         when disp_low   => shift_chain; next_is_new_instruction;
                         when disp_high  => shift_chain; next_is_new_instruction;
                         when data_ext   => shift_chain; next_is_new_instruction;
-                        when others     => null;
+                        when others     =>
+                            instr_tvalid <= '0';
+                            report "Cannot be here";
+                            --stop;
 
                     end case;
 
@@ -2322,7 +2333,7 @@ begin
                                 instr_tdata.data <= x"FFFF";
                             when x"D0" | x"D1" =>
                                 instr_tdata.data <= x"0001";
-                            when x"63" | x"64" | x"65" | x"66" | x"67" | x"D6" | x"F1" =>
+                            when x"0F" | x"63" | x"64" | x"65" | x"66" | x"67" | x"82" | x"D6" | x"F1" =>
                                 instr_tdata.data <= x"0006"; -- invalid opcodes. trap 6
                             when x"D8" | x"D9" | x"DA" | x"DB" | x"DC" | x"DD" | x"DE" | x"DF" =>
                                 instr_tdata.data <= x"0007"; -- esc instructions. trap 7
