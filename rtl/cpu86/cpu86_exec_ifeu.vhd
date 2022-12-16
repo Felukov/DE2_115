@@ -603,6 +603,7 @@ begin
             micro_tdata.jump_ip_mem     <= 'U';
             micro_tdata.jump_ip         <= (others => 'U');
             micro_tdata.jump_cx         <= (others => 'U');
+            micro_tdata.jump_is_ret     <= 'U';
             micro_tdata.mem_cmd         <= 'U';
             micro_tdata.mem_width       <= 'U';
             micro_tdata.mem_seg         <= (others => 'U');
@@ -1154,10 +1155,11 @@ begin
         procedure do_trap_0 is begin
             set_cmd_0(MICRO_NOP_OP);
 
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
+            micro_tdata.jump_cond   <= j_never;
+            micro_tdata.jump_imm    <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
+            micro_tdata.jump_is_ret <= '0';
         end;
 
         procedure do_trap_1 is begin
@@ -1882,21 +1884,22 @@ begin
             update_sp(rr_tdata.sp_val, rr_tdata.sp_offset);
 
             -- jump cmd
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '1';
+            micro_tdata.jump_cond   <= j_never;
+            micro_tdata.jump_imm    <= '1';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
-            micro_tdata.jump_cs <= rr_tuser(31 downto 16);
+            micro_tdata.jump_cs     <= rr_tuser(31 downto 16);
         end procedure;
 
         procedure do_ret_near_cmd_1 is begin
             set_cmd_1(MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP);
 
             -- update jump cmd
-            micro_tdata.jump_imm <= '0';
+            micro_tdata.jump_cond   <= j_always;
+            micro_tdata.jump_imm    <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '1';
-            micro_tdata.jump_cond <= j_always;
+            micro_tdata.jump_is_ret <= '1';
         end procedure;
 
         procedure do_ret_near_imm16_cmd_0 is begin
@@ -1904,11 +1907,11 @@ begin
             -- empty command to catch sp_val - 2
 
             -- jump cmd
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
+            micro_tdata.jump_cond   <= j_never;
+            micro_tdata.jump_imm    <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
-            micro_tdata.jump_cs <= rr_tuser(31 downto 16);
+            micro_tdata.jump_cs     <= rr_tuser(31 downto 16);
         end procedure;
 
         procedure do_ret_near_imm16_cmd_1 is begin
@@ -1926,9 +1929,10 @@ begin
                     set_cmd_1(MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP);
 
                     -- update jump cmd
+                    micro_tdata.jump_cond   <= j_always;
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '1';
-                    micro_tdata.jump_cond <= j_always;
+                    micro_tdata.jump_is_ret <= '1';
 
             end case;
         end procedure;
@@ -1940,8 +1944,8 @@ begin
             mem_read(seg => rr_tdata.seg_val, addr => rr_tdata.sp_val, w => rr_tdata.w);
 
             -- jump cmd
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
+            micro_tdata.jump_cond   <= j_never;
+            micro_tdata.jump_imm    <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
         end procedure;
@@ -1965,9 +1969,10 @@ begin
                     set_cmd_1(MICRO_JMP_OP or MICRO_MRD_OP or MICRO_UNLK_OP);
 
                     -- update jump cmd
+                    micro_tdata.jump_cond   <= j_always;
                     micro_tdata.jump_cs_mem <= '1';
                     micro_tdata.jump_ip_mem <= '0';
-                    micro_tdata.jump_cond <= j_always;
+                    micro_tdata.jump_is_ret <= '1';
 
             end case;
         end procedure;
@@ -1979,8 +1984,8 @@ begin
             mem_read(seg => rr_tdata.seg_val, addr => rr_tdata.sp_val, w => rr_tdata.w);
 
             -- jump cmd
-            micro_tdata.jump_cond <= j_never;
-            micro_tdata.jump_imm <= '0';
+            micro_tdata.jump_cond   <= j_never;
+            micro_tdata.jump_imm    <= '0';
             micro_tdata.jump_cs_mem <= '0';
             micro_tdata.jump_ip_mem <= '0';
         end procedure;
@@ -2009,9 +2014,10 @@ begin
 
                 when others =>
                     set_cmd_1(MICRO_UNLK_OP or MICRO_JMP_OP);
-                    micro_tdata.jump_cond <= j_always;
+                    micro_tdata.jump_cond   <= j_always;
                     micro_tdata.jump_cs_mem <= '0';
                     micro_tdata.jump_ip_mem <= '0';
+                    micro_tdata.jump_is_ret <= '1';
 
             end case;
         end procedure;
@@ -2035,6 +2041,13 @@ begin
             micro_tdata.alu_b_mem <= '0';
             micro_tdata.alu_w     <= rr_tdata.w;
             micro_tdata.mem_dreg  <= ZERO;
+
+            -- no jumps by default
+            micro_tdata.jump_cond   <= j_never;
+            micro_tdata.jump_imm    <= '0';
+            micro_tdata.jump_cs_mem <= '0';
+            micro_tdata.jump_ip_mem <= '0';
+            micro_tdata.jump_is_ret <= '0';
         end procedure;
 
     begin

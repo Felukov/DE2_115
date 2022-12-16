@@ -1740,8 +1740,8 @@ begin
             end if;
 
             if (micro_tvalid = '1' and micro_tready = '1') then
-                jmp_dout_tdata.bypass <= micro_tdata.bpu_bypass;
-
+                jmp_dout_tdata.bypass  <= micro_tdata.bpu_bypass;
+                jmp_dout_tdata.is_ret  <= micro_tdata.jump_is_ret;
                 jmp_dout_tdata.inst_cs <= micro_tdata.inst_cs;
                 jmp_dout_tdata.inst_ip <= micro_tdata.inst_ip;
             end if;

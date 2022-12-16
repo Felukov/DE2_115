@@ -457,6 +457,7 @@ package cpu86_types is
         jump_ip_mem     : std_logic;
         jump_ip         : std_logic_vector(15 downto 0);
         jump_cx         : std_logic_vector(15 downto 0);
+        jump_is_ret     : std_logic;
 
         mem_cmd         : std_logic;
         mem_width       : std_logic;
@@ -566,10 +567,6 @@ package cpu86_types is
         dreg            : reg_t;
         nval            : std_logic_vector(31 downto 0);
         dval            : std_logic_vector(15 downto 0);
-        -- ss_val          : std_logic_vector(15 downto 0);
-        -- cs_val          : std_logic_vector(15 downto 0);
-        -- ip_val          : std_logic_vector(15 downto 0);
-        -- ip_next_val     : std_logic_vector(15 downto 0);
     end record;
 
     type div_res_t is record
@@ -579,10 +576,6 @@ package cpu86_types is
         qval            : std_logic_vector(15 downto 0); --quotient
         rval            : std_logic_vector(15 downto 0); --remainder
         overflow        : std_logic;
-        -- ss_val          : std_logic_vector(15 downto 0);
-        -- cs_val          : std_logic_vector(15 downto 0);
-        -- ip_val          : std_logic_vector(15 downto 0);
-        -- ip_next_val     : std_logic_vector(15 downto 0);
     end record;
 
     type shf_req_t is record
@@ -626,6 +619,7 @@ package cpu86_types is
         inst_ip             : std_logic_vector(15 downto 0);
         jump_cs             : std_logic_vector(15 downto 0);
         jump_ip             : std_logic_vector(15 downto 0);
+        is_ret              : std_logic;
     end record;
 
     function decoded_instr_t_to_slv (d : decoded_instr_t) return std_logic_vector;
