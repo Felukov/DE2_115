@@ -212,6 +212,7 @@ begin
         out_m_tdata             => d_bpu_item_rd_tdata
     );
 
+    -- module cpu86_bpu_lifo instantiation
     cpu86_bpu_lifo_inst : cpu86_bpu_lifo generic map (
         DEPTH                   => 16,
         DW                      => RET_STACK_DW
@@ -240,12 +241,13 @@ begin
 
     jump_pass               <= '1' when instr_s_tdata.op = BRANCH or instr_s_tdata.op = RET else '0';
 
+    -- ret stack signals
     push_vld  <= '1' when (instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = JCALL and instr_s_tdata.code(3) = '0') else '0';
     push_data <= instr_s_tuser(USER_T_CS) & instr_s_tuser(USER_T_IP_NEXT);
     pop_ack   <= '1' when instr_s_tvalid = '1' and instr_s_tready = '1' and instr_s_tdata.op = RET and
         (instr_s_tdata.code = RET_NEAR or instr_s_tdata.code = RET_FAR or instr_s_tdata.code = RET_NEAR_IMM16 or instr_s_tdata.code = RET_FAR_IMM16) else '0';
 
-    flush_ret_stack_n <= '0' when (jump_s_tvalid = '1' and jump_s_tdata.mismatch = '1') or resetn ='0' else '1';
+    flush_ret_stack_n <= '0' when (jump_s_tvalid = '1' and jump_s_tdata.mismatch = '1' and jump_s_tdata.is_ret = '1') or resetn ='0' else '1';
 
     -- forwarding instruction
     process (clk) begin
