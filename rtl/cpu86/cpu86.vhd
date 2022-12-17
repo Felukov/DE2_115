@@ -246,6 +246,13 @@ architecture rtl of cpu86 is
     signal fetcher_mem_res_tvalid       : std_logic;
     signal fetcher_mem_res_tdata        : std_logic_vector(31 downto 0);
 
+    signal icache_mem_req_tvalid       : std_logic;
+    signal icache_mem_req_tready       : std_logic;
+    signal icache_mem_req_tdata        : std_logic_vector(19 downto 0);
+
+    signal icache_mem_res_tvalid       : std_logic;
+    signal icache_mem_res_tdata        : std_logic_vector(31 downto 0);
+
     signal exec_mem_req_tvalid          : std_logic;
     signal exec_mem_req_tready          : std_logic;
     signal exec_mem_req_tdata           : std_logic_vector(63 downto 0);
@@ -295,12 +302,12 @@ begin
         mem_rd_s_tvalid             => s_axis_mem_res_tvalid,
         mem_rd_s_tdata              => s_axis_mem_res_tdata,
 
-        fetcher_mem_req_tvalid      => fetcher_mem_req_tvalid,
-        fetcher_mem_req_tready      => fetcher_mem_req_tready,
-        fetcher_mem_req_tdata       => fetcher_mem_req_tdata,
+        fetcher_mem_req_tvalid      => icache_mem_req_tvalid,
+        fetcher_mem_req_tready      => icache_mem_req_tready,
+        fetcher_mem_req_tdata       => icache_mem_req_tdata,
 
-        fetcher_mem_res_tvalid      => fetcher_mem_res_tvalid,
-        fetcher_mem_res_tdata       => fetcher_mem_res_tdata,
+        fetcher_mem_res_tvalid      => icache_mem_res_tvalid,
+        fetcher_mem_res_tdata       => icache_mem_res_tdata,
 
         exec_mem_req_tvalid         => exec_mem_req_tvalid,
         exec_mem_req_tready         => exec_mem_req_tready,
@@ -308,6 +315,25 @@ begin
 
         exec_mem_res_tvalid         => exec_mem_res_tvalid,
         exec_mem_res_tdata          => exec_mem_res_tdata
+    );
+
+    cpu86_icache_inst : entity work.cpu86_icache port map (
+        clk                         => clk,
+        resetn                      => resetn,
+
+        s_axis_mem_req_tvalid       => fetcher_mem_req_tvalid,
+        s_axis_mem_req_tready       => fetcher_mem_req_tready,
+        s_axis_mem_req_tdata        => fetcher_mem_req_tdata,
+
+        m_axis_mem_data_tvalid      => fetcher_mem_res_tvalid,
+        m_axis_mem_data_tdata       => fetcher_mem_res_tdata,
+
+        m_axis_mem_req_tvalid       => icache_mem_req_tvalid,
+        m_axis_mem_req_tready       => icache_mem_req_tready,
+        m_axis_mem_req_tdata        => icache_mem_req_tdata,
+
+        s_axis_mem_data_tvalid      => icache_mem_res_tvalid,
+        s_axis_mem_data_tdata       => icache_mem_res_tdata
     );
 
     -- module cpu86_fetcher instantiation

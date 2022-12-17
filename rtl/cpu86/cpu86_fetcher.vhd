@@ -106,21 +106,25 @@ begin
     m_axis_data_tdata   <= fifo_1_m_tdata(31 downto 0);
     m_axis_data_tuser   <= fifo_1_m_tdata(63 downto 32);
 
-    -- module axis_reg instantiation
-    axis_reg_mem_req_inst : entity work.axis_reg generic map (
-        DATA_WIDTH      => 20
-    ) port map (
-        clk             => clk,
-        resetn          => resetn,
+    m_axis_mem_req_tvalid  <= cmd_tvalid;
+    cmd_tready <= m_axis_mem_req_tready;
+    m_axis_mem_req_tdata  <= "00" & cmd_tdata(19 downto 2);
 
-        in_s_tvalid     => cmd_tvalid,
-        in_s_tready     => cmd_tready,
-        in_s_tdata      => "00" & cmd_tdata(19 downto 2),
+    -- -- module axis_reg instantiation
+    -- axis_reg_mem_req_inst : entity work.axis_reg generic map (
+    --     DATA_WIDTH      => 20
+    -- ) port map (
+    --     clk             => clk,
+    --     resetn          => resetn,
 
-        out_m_tvalid    => m_axis_mem_req_tvalid,
-        out_m_tready    => m_axis_mem_req_tready,
-        out_m_tdata     => m_axis_mem_req_tdata
-    );
+    --     in_s_tvalid     => cmd_tvalid,
+    --     in_s_tready     => cmd_tready,
+    --     in_s_tdata      => "00" & cmd_tdata(19 downto 2),
+
+    --     out_m_tvalid    => m_axis_mem_req_tvalid,
+    --     out_m_tready    => m_axis_mem_req_tready,
+    --     out_m_tdata     => m_axis_mem_req_tdata
+    -- );
 
 
     -- module axis_fifo instantiation
@@ -185,7 +189,7 @@ begin
                 skip_hs_cnt <= 0;
             else
 
-                if (max_hs_cnt < 16) then
+                if (max_hs_cnt < 4) then
                     cmd_tvalid <= '1';
                 elsif cmd_tready = '1' then
                     cmd_tvalid <= '0';
