@@ -6,10 +6,11 @@ use ieee.std_logic_unsigned.all;
 library altera_mf;
 use altera_mf.altera_mf_components.all;
 
-entity axis_fifo_bram is
+entity axis_bram is
     generic (
         ADDR_WIDTH          : natural := 24;
         DATA_WIDTH          : natural := 32;
+        USER_WIDTH          : natural := 32;
         REGISTER_OUTPUT     : std_logic := '1'
     );
     port (
@@ -23,15 +24,16 @@ entity axis_fifo_bram is
         s_axis_rd_tvalid    : in std_logic;
         s_axis_rd_tready    : out std_logic;
         s_axis_rd_taddr     : in std_logic_vector(ADDR_WIDTH-1 downto 0);
-        s_axis_rd_tuser     : in std_logic_vector(DATA_WIDTH downto 0);
+        s_axis_rd_tuser     : in std_logic_vector(USER_WIDTH-1 downto 0);
 
         m_axis_res_tvalid   : out std_logic;
         m_axis_res_tready   : in std_logic;
-        m_axis_res_tdata    : out std_logic_vector(DATA_WIDTH-1 downto 0)
+        m_axis_res_tdata    : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        m_axis_res_tuser    : out std_logic_vector(USER_WIDTH-1 downto 0)
     );
-end entity axis_fifo_bram;
+end entity axis_bram;
 
-architecture rtl of axis_fifo_bram is
+architecture rtl of axis_bram is
     signal wr_tvalid        : std_logic;
     signal wr_taddr         : std_logic_vector(ADDR_WIDTH-1 downto 0);
     signal wr_tdata         : std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -39,16 +41,17 @@ architecture rtl of axis_fifo_bram is
     signal rd_tvalid        : std_logic;
     signal rd_tready        : std_logic;
     signal rd_taddr         : std_logic_vector(ADDR_WIDTH-1 downto 0);
-    signal rd_bypass_en     : std_logic;
-    signal rd_bypass_data   : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal rd_tuser         : std_logic_vector(USER_WIDTH-1 downto 0);
 
     signal res_tvalid       : std_logic;
     signal res_tready       : std_logic;
     signal res_tdata        : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal res_tuser        : std_logic_vector(USER_WIDTH-1 downto 0);
 
     signal bram_tvalid      : std_logic;
     signal bram_tready      : std_logic;
     signal bram_tdata       : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal bram_tuser       : std_logic_vector(USER_WIDTH-1 downto 0);
     signal bram_bypass_en   : std_logic;
     signal bram_bypass_data : std_logic_vector(DATA_WIDTH-1 downto 0);
 
@@ -62,12 +65,12 @@ begin
     rd_tvalid         <= s_axis_rd_tvalid;
     s_axis_rd_tready  <= rd_tready;
     rd_taddr          <= s_axis_rd_taddr;
-    rd_bypass_en      <= s_axis_rd_tuser(DATA_WIDTH);
-    rd_bypass_data    <= s_axis_rd_tuser(DATA_WIDTH-1 downto 0);
+    rd_tuser          <= s_axis_rd_tuser;
 
     m_axis_res_tvalid <= res_tvalid;
     res_tready        <= m_axis_res_tready;
     m_axis_res_tdata  <= res_tdata;
+    m_axis_res_tuser  <= res_tuser;
 
     addressstall_b <= '1' when bram_tvalid = '1' and bram_tready = '0' else '0';
 
@@ -150,12 +153,19 @@ begin
                 end if;
 
                 if (rd_tvalid = '1' and rd_tready = '1') then
-                    bram_bypass_en <= rd_bypass_en;
+                    if (wr_tvalid = '1' and wr_taddr = rd_taddr) then
+                        bram_bypass_en <= '1';
+                    else
+                        bram_bypass_en <= '0';
+                    end if;
                 end if;
             end if;
             -- datapath
             if (rd_tvalid = '1' and rd_tready = '1') then
-                bram_bypass_data <= rd_bypass_data;
+                bram_bypass_data <= wr_tdata;
+            end if;
+            if (rd_tvalid = '1' and rd_tready = '1') then
+                bram_tuser <= rd_tuser;
             end if;
         end if;
     end process;
@@ -181,6 +191,7 @@ begin
                     else
                         res_tdata <= bram_tdata;
                     end if;
+                    res_tuser <= bram_tuser;
                 end if;
             end if;
         end process;
@@ -192,6 +203,7 @@ begin
         res_tvalid <= bram_tvalid;
         bram_tready <= res_tready;
         res_tdata <= bram_bypass_data when bram_bypass_en = '1' else bram_tdata;
+        res_tuser <= bram_tuser;
 
     end generate;
 
