@@ -42,7 +42,7 @@ entity cpu86_fetcher is
 
         m_axis_mem_req_tvalid   : out std_logic;
         m_axis_mem_req_tready   : in std_logic;
-        m_axis_mem_req_tdata    : out std_logic_vector(19 downto 0);
+        m_axis_mem_req_tdata    : out std_logic_vector(17 downto 0);
 
         m_axis_data_tvalid      : out std_logic;
         m_axis_data_tready      : in std_logic;
@@ -108,7 +108,7 @@ begin
 
     m_axis_mem_req_tvalid  <= cmd_tvalid;
     cmd_tready <= m_axis_mem_req_tready;
-    m_axis_mem_req_tdata  <= "00" & cmd_tdata(19 downto 2);
+    m_axis_mem_req_tdata  <= cmd_tdata(19 downto 2);
 
     -- -- module axis_reg instantiation
     -- axis_reg_mem_req_inst : entity work.axis_reg generic map (

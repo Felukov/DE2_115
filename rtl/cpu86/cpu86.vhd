@@ -208,47 +208,19 @@ architecture rtl of cpu86 is
         );
     end component cpu86_exec;
 
-    component cpu86_mem_interconnect is
-        port (
-            clk                         : in std_logic;
-            resetn                      : in std_logic;
-
-            mem_req_m_tvalid            : out std_logic;
-            mem_req_m_tready            : in std_logic;
-            mem_req_m_tdata             : out std_logic_vector(63 downto 0);
-
-            mem_rd_s_tvalid             : in std_logic;
-            mem_rd_s_tdata              : in std_logic_vector(31 downto 0);
-
-            fetcher_mem_req_tvalid      : in std_logic;
-            fetcher_mem_req_tready      : out std_logic;
-            fetcher_mem_req_tdata       : in std_logic_vector(19 downto 0);
-
-            fetcher_mem_res_tvalid      : out std_logic;
-            fetcher_mem_res_tdata       : out std_logic_vector(31 downto 0);
-
-            exec_mem_req_tvalid         : in std_logic;
-            exec_mem_req_tready         : out std_logic;
-            exec_mem_req_tdata          : in std_logic_vector(63 downto 0);
-
-            exec_mem_res_tvalid         : out std_logic;
-            exec_mem_res_tdata          : out std_logic_vector(31 downto 0)
-        );
-    end component cpu86_mem_interconnect;
-
     signal exec_jump_req_tvalid         : std_logic;
     signal exce_jump_req_tdata          : cpu86_jump_t;
 
     signal fetcher_mem_req_tvalid       : std_logic;
     signal fetcher_mem_req_tready       : std_logic;
-    signal fetcher_mem_req_tdata        : std_logic_vector(19 downto 0);
+    signal fetcher_mem_req_tdata        : std_logic_vector(17 downto 0);
 
     signal fetcher_mem_res_tvalid       : std_logic;
     signal fetcher_mem_res_tdata        : std_logic_vector(31 downto 0);
 
     signal icache_mem_req_tvalid       : std_logic;
     signal icache_mem_req_tready       : std_logic;
-    signal icache_mem_req_tdata        : std_logic_vector(19 downto 0);
+    signal icache_mem_req_tdata        : std_logic_vector(17 downto 0);
 
     signal icache_mem_res_tvalid       : std_logic;
     signal icache_mem_res_tdata        : std_logic_vector(31 downto 0);
@@ -291,7 +263,7 @@ architecture rtl of cpu86 is
 begin
 
     -- module cpu86_mem_interconnect instantiation
-    cpu86_mem_interconnect_inst : cpu86_mem_interconnect port map(
+    cpu86_mem_interconnect_inst : entity work.cpu86_mem_interconnect port map(
         clk                         => clk,
         resetn                      => resetn,
 
@@ -317,6 +289,7 @@ begin
         exec_mem_res_tdata          => exec_mem_res_tdata
     );
 
+    -- module cpu86_icache_inst instantiation
     cpu86_icache_inst : entity work.cpu86_icache port map (
         clk                         => clk,
         resetn                      => resetn,
@@ -337,7 +310,7 @@ begin
     );
 
     -- module cpu86_fetcher instantiation
-    cpu86_fetcher_inst : cpu86_fetcher port map(
+    cpu86_fetcher_inst : entity work.cpu86_fetcher port map(
         clk                         => clk,
         resetn                      => resetn,
 

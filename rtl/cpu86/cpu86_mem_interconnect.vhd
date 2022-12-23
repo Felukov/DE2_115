@@ -45,7 +45,7 @@ entity cpu86_mem_interconnect is
 
         fetcher_mem_req_tvalid          : in std_logic;
         fetcher_mem_req_tready          : out std_logic;
-        fetcher_mem_req_tdata           : in std_logic_vector(19 downto 0);
+        fetcher_mem_req_tdata           : in std_logic_vector(17 downto 0);
 
         fetcher_mem_res_tvalid          : out std_logic;
         fetcher_mem_res_tdata           : out std_logic_vector(31 downto 0);
@@ -124,7 +124,7 @@ begin
                 mem_req_m_tdata(63 downto 62) <= (others => '0');
                 mem_req_m_tdata(61 downto 58) <= "0000";
                 mem_req_m_tdata(57)           <= '0';
-                mem_req_m_tdata(56 downto 32) <= "00000" & fetcher_mem_req_tdata;
+                mem_req_m_tdata(56 downto 32) <= "0000000" & fetcher_mem_req_tdata;
                 mem_req_m_tdata(31 downto 0)  <= (others => '0');
             end if;
         end if;

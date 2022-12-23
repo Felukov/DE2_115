@@ -37,14 +37,14 @@ entity cpu86_icache is
 
         s_axis_mem_req_tvalid     : in std_logic;
         s_axis_mem_req_tready     : out std_logic;
-        s_axis_mem_req_tdata      : in std_logic_vector(19 downto 0);
+        s_axis_mem_req_tdata      : in std_logic_vector(17 downto 0);
 
         m_axis_mem_data_tvalid    : out std_logic;
         m_axis_mem_data_tdata     : out std_logic_vector(31 downto 0);
 
         m_axis_mem_req_tvalid     : out std_logic;
         m_axis_mem_req_tready     : in std_logic;
-        m_axis_mem_req_tdata      : out std_logic_vector(19 downto 0);
+        m_axis_mem_req_tdata      : out std_logic_vector(17 downto 0);
 
         s_axis_mem_data_tvalid    : in std_logic;
         s_axis_mem_data_tdata     : in std_logic_vector(31 downto 0)
@@ -55,7 +55,7 @@ architecture rtl of cpu86_icache is
 
     constant ROB_IDX_W          : natural := 4;
     constant CACHE_DATA_AW      : natural := 8;
-    constant CACHE_TAG_AW       : natural := 12;
+    constant CACHE_TAG_AW       : natural := 10;
 
     subtype ROB_IDX_RANGE       is natural range ROB_IDX_W + CACHE_TAG_AW + CACHE_DATA_AW - 1 downto CACHE_TAG_AW + CACHE_DATA_AW;
     subtype CACHE_TAG_RANGE     is natural range CACHE_TAG_AW + CACHE_DATA_AW - 1 downto CACHE_DATA_AW;
@@ -65,7 +65,7 @@ architecture rtl of cpu86_icache is
         generic (
             S_QTY                   : natural := 2;
             TDATA_WIDTH             : natural := 32;
-            TUSER_WIDTH             : natural := 8
+            TUSER_WIDTH             : natural := 4
         );
         port (
             clk                     : in std_logic;
@@ -76,7 +76,7 @@ architecture rtl of cpu86_icache is
 
             s_axis_data_tvalid      : in std_logic_vector(S_QTY-1 downto 0);
             s_axis_data_tdata       : in std_logic_vector(S_QTY*TDATA_WIDTH-1 downto 0);
-            s_axis_data_tuser       : in std_logic_vector(S_QTY*TDATA_WIDTH-1 downto 0);
+            s_axis_data_tuser       : in std_logic_vector(S_QTY*TUSER_WIDTH-1 downto 0);
 
             m_axis_data_tvalid      : out std_logic;
             m_axis_data_tready      : in std_logic;
@@ -86,14 +86,14 @@ architecture rtl of cpu86_icache is
 
     signal cpu_req_tvalid       : std_logic;
     signal cpu_req_tready       : std_logic;
-    signal cpu_req_tdata        : std_logic_vector(19 downto 0);
+    signal cpu_req_tdata        : std_logic_vector(17 downto 0);
 
     signal cpu_res_tvalid       : std_logic;
     signal cpu_res_tdata        : std_logic_vector(31 downto 0);
 
     signal mem_req_tvalid       : std_logic;
     signal mem_req_tready       : std_logic;
-    signal mem_req_tdata        : std_logic_vector(19 downto 0);
+    signal mem_req_tdata        : std_logic_vector(17 downto 0);
     signal mem_req_rob_idx      : std_logic_vector(ROB_IDX_W-1 downto 0);
 
     signal mem_res_tvalid       : std_logic;
@@ -104,7 +104,7 @@ architecture rtl of cpu86_icache is
     signal cache_tag            : std_logic_vector(CACHE_TAG_AW-1 downto 0);
     signal cache_vld            : std_logic;
     signal cache_tdata          : std_logic_vector(31 downto 0);
-    signal cache_taddr          : std_logic_vector(19 downto 0);
+    signal cache_taddr          : std_logic_vector(17 downto 0);
     signal fifo_0_s_tvalid      : std_logic;
     signal fifo_0_s_tready      : std_logic;
     signal fifo_0_m_tvalid      : std_logic;
@@ -135,7 +135,7 @@ begin
 
     -- module axis_reg instantiation
     axis_reg_mem_req_inst : entity work.axis_reg generic map (
-        DATA_WIDTH      => 20
+        DATA_WIDTH      => 18
     ) port map (
         clk             => clk,
         resetn          => resetn,
@@ -153,7 +153,7 @@ begin
     axis_bram_inst : entity work.axis_bram generic map (
         ADDR_WIDTH                                    => 8,
         DATA_WIDTH                                    => CACHE_TAG_AW + 32,
-        USER_WIDTH                                    => ROB_IDX_W + 1 + 20,
+        USER_WIDTH                                    => ROB_IDX_W + 1 + 18,
         REGISTER_OUTPUT                               => '1'
     ) port map (
         clk                                           => clk,
@@ -167,21 +167,21 @@ begin
         s_axis_rd_tvalid                              => cpu_req_tvalid,
         s_axis_rd_tready                              => cpu_req_tready,
         s_axis_rd_taddr                               => cpu_req_tdata(7 downto 0),
-        s_axis_rd_tuser(24 downto 21)                 => rob_idx_tdata,
-        s_axis_rd_tuser(20)                           => cache_line_vld(to_integer(unsigned(cpu_req_tdata(7 downto 0)))),
-        s_axis_rd_tuser(19 downto 0)                  => cpu_req_tdata,
+        s_axis_rd_tuser(22 downto 19)                 => rob_idx_tdata,
+        s_axis_rd_tuser(18)                           => cache_line_vld(to_integer(unsigned(cpu_req_tdata(7 downto 0)))),
+        s_axis_rd_tuser(17 downto 0)                  => cpu_req_tdata,
 
         m_axis_res_tvalid                             => cache_tvalid,
         m_axis_res_tready                             => cache_tready,
         m_axis_res_tdata(32+CACHE_TAG_AW-1 downto 32) => cache_tag,
         m_axis_res_tdata(31 downto 0)                 => cache_tdata,
-        m_axis_res_tuser(24 downto 21)                => cache_rob_idx,
-        m_axis_res_tuser(20)                          => cache_vld,
-        m_axis_res_tuser(19 downto 0)                 => cache_taddr
+        m_axis_res_tuser(22 downto 19)                => cache_rob_idx,
+        m_axis_res_tuser(18)                          => cache_vld,
+        m_axis_res_tuser(17 downto 0)                 => cache_taddr
     );
 
     rob_idx_tready <= '1' when cpu_req_tvalid = '1' and cpu_req_tready = '1' else '0';
-    cache_hit <= '1' when cache_tvalid = '1' and cache_tready = '1' and cache_vld = '1' and cache_tag = cache_taddr(19 downto 8) else '0';
+    cache_hit <= '1' when cache_tvalid = '1' and cache_tready = '1' and cache_vld = '1' and cache_tag = cache_taddr(17 downto 8) else '0';
 
     cpu86_icache_rob_inst : cpu86_icache_rob generic map(
         S_QTY                           => 2,
@@ -223,7 +223,7 @@ begin
         s_axis_fifo_tvalid                  => fifo_0_s_tvalid,
         s_axis_fifo_tready                  => fifo_0_s_tready,
         s_axis_fifo_tdata(ROB_IDX_RANGE)    => mem_req_rob_idx,
-        s_axis_fifo_tdata(CACHE_TAG_RANGE)  => mem_req_tdata(19 downto 8),
+        s_axis_fifo_tdata(CACHE_TAG_RANGE)  => mem_req_tdata(17 downto 8),
         s_axis_fifo_tdata(CACHE_DATA_RANGE) => mem_req_tdata( 7 downto 0),
 
         m_axis_fifo_tvalid                  => fifo_0_m_tvalid,
@@ -254,7 +254,7 @@ begin
                 mem_req_tvalid <= '0';
             else
                 if (cache_tvalid = '1' and cache_tready = '1') then
-                    if (cache_vld = '0' or cache_tag /= cache_taddr(19 downto 8)) then
+                    if (cache_vld = '0' or cache_tag /= cache_taddr(17 downto 8)) then
                         mem_req_tvalid <= '1';
                     else
                         mem_req_tvalid <= '0';
