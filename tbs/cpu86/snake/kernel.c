@@ -5,9 +5,6 @@
 void int8_handler();
 void int9_handler();
 
-uint16_t t1 = 0;
-uint16_t t2 = 0;
-
 void __cdecl interrupt_handler(
     uint16_t int_no,
     uint16_t r_ds,
@@ -31,8 +28,6 @@ void __cdecl interrupt_handler(
         break;
 
     case 0x09:
-        _inline_outpw(0x305, t1);
-        t1++;
         int9_handler();
         break;
     default:
@@ -53,8 +48,6 @@ void int9_handler(){
     // uint8_t b = _inline_inp(KBD_DATA);
     // _inline_outpw(0x306, b);
     kbd_isr();
-    _inline_outpw(0x306, t2);
-    t2++;
 }
 
 int init_timer(){
@@ -155,4 +148,3 @@ void uart_log(const char* s){
         s++;
     }
 }
-

@@ -16,6 +16,7 @@ void kbd_isr(){
     if (kbd_buf_wr_ptr == 16) {
         kbd_buf_wr_ptr = 0;
     }
+    _inline_outpw(0x306, 0x2222);
 }
 
 uint8_t kbd_has_data(){
