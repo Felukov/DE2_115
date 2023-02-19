@@ -1400,7 +1400,8 @@ begin
                         when "101" => set_op(JMPU, JMP_M16_16, '1');
                         when others => null;
                     end case;
-
+                when x"C4" => null; -- everything already done
+                when x"C5" => null; -- everything already done
                 when others =>
                     instr_tdata.code <= "0000";
             end case;

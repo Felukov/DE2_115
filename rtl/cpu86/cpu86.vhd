@@ -32,6 +32,9 @@ use work.cpu86_types.all;
 use ieee.math_real.all;
 
 entity cpu86 is
+    generic (
+        ENABLE_ICACHE                   : std_logic := '1'
+    );
     port (
         clk                             : in std_logic;
         resetn                          : in std_logic;
@@ -289,25 +292,38 @@ begin
         exec_mem_res_tdata          => exec_mem_res_tdata
     );
 
-    -- module cpu86_icache_inst instantiation
-    cpu86_icache_inst : entity work.cpu86_icache port map (
-        clk                         => clk,
-        resetn                      => resetn,
+    gen_icache : if ENABLE_ICACHE = '1' generate
 
-        s_axis_mem_req_tvalid       => fetcher_mem_req_tvalid,
-        s_axis_mem_req_tready       => fetcher_mem_req_tready,
-        s_axis_mem_req_tdata        => fetcher_mem_req_tdata,
+            -- module cpu86_icache_inst instantiation
+            cpu86_icache_inst : entity work.cpu86_icache port map (
+                clk                         => clk,
+                resetn                      => resetn,
 
-        m_axis_mem_data_tvalid      => fetcher_mem_res_tvalid,
-        m_axis_mem_data_tdata       => fetcher_mem_res_tdata,
+                s_axis_mem_req_tvalid       => fetcher_mem_req_tvalid,
+                s_axis_mem_req_tready       => fetcher_mem_req_tready,
+                s_axis_mem_req_tdata        => fetcher_mem_req_tdata,
 
-        m_axis_mem_req_tvalid       => icache_mem_req_tvalid,
-        m_axis_mem_req_tready       => icache_mem_req_tready,
-        m_axis_mem_req_tdata        => icache_mem_req_tdata,
+                m_axis_mem_data_tvalid      => fetcher_mem_res_tvalid,
+                m_axis_mem_data_tdata       => fetcher_mem_res_tdata,
 
-        s_axis_mem_data_tvalid      => icache_mem_res_tvalid,
-        s_axis_mem_data_tdata       => icache_mem_res_tdata
-    );
+                m_axis_mem_req_tvalid       => icache_mem_req_tvalid,
+                m_axis_mem_req_tready       => icache_mem_req_tready,
+                m_axis_mem_req_tdata        => icache_mem_req_tdata,
+
+                s_axis_mem_data_tvalid      => icache_mem_res_tvalid,
+                s_axis_mem_data_tdata       => icache_mem_res_tdata
+            );
+
+    end generate;
+
+    gen_no_icache : if ENABLE_ICACHE = '0' generate
+        icache_mem_req_tvalid <= fetcher_mem_req_tvalid;
+        fetcher_mem_req_tready <= icache_mem_req_tready;
+        icache_mem_req_tdata <= fetcher_mem_req_tdata;
+
+        fetcher_mem_res_tvalid <= icache_mem_res_tvalid;
+        fetcher_mem_res_tdata <= icache_mem_res_tdata;
+    end generate;
 
     -- module cpu86_fetcher instantiation
     cpu86_fetcher_inst : entity work.cpu86_fetcher port map(

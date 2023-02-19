@@ -1323,150 +1323,148 @@ begin
             micro_tdata.mem_dmask <= rr_tdata_buf.dmask;
         end procedure;
 
-        procedure do_stack_cmd_0 is begin
-            case rr_tdata.code is
-                when STACKU_POPM =>
-                    set_cmd_0(MICRO_MEM_OP or MICRO_ALU_OP);
+        procedure do_stack_popm_0 is begin
+            set_cmd_0(MICRO_MEM_OP or MICRO_ALU_OP);
 
-                    -- memory cmd
-                    mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val);
+            -- memory cmd
+            mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val);
 
-                    -- alu cmd
-                    update_sp(upd_when => rr_tdata.dreg /= SP,
-                        sp_val => rr_tdata.sp_val,
-                        offset => rr_tdata.sp_offset
-                    );
-
-                when STACKU_POPA =>
-                    set_cmd_0(MICRO_MEM_OP);
-
-                    -- memory cmd
-                    mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val);
-
-                when STACKU_PUSHR =>
-                    set_cmd_0(MICRO_MEM_OP or MICRO_ALU_OP);
-
-                    -- memory cmd
-                    mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.sreg_val, w => rr_tdata.w);
-
-                    -- alu cmd
-                    update_sp(sp_val => rr_tdata.sp_val);
-
-                when STACKU_PUSHM =>
-                    set_cmd_0(MICRO_MEM_OP);
-
-                    -- memory cmd
-                    mem_read_word(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next);
-
-                when STACKU_PUSHI =>
-                    set_cmd_0(MICRO_MEM_OP or MICRO_ALU_OP);
-
-                    -- memory cmd
-                    mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.data, w => rr_tdata.w);
-
-                    -- alu cmd
-                    update_sp(sp_val => rr_tdata.sp_val);
-
-                when STACKU_PUSHA =>
-                    set_cmd_0(MICRO_MEM_OP);
-
-                    -- memory cmd
-                    micro_tdata.mem_cmd      <= '1';
-                    micro_tdata.mem_width    <= rr_tdata.w;
-                    micro_tdata.mem_seg      <= rr_tdata.ss_seg_val;
-                    micro_tdata.mem_addr     <= rr_tdata.sp_val;
-                    micro_tdata.mem_data_src <= MEM_DATA_SRC_IMM;
-                    micro_tdata.mem_data     <= rr_tdata.ax_tdata;
-
-                when others => null;
-            end case;
-
+            -- alu cmd
+            update_sp(upd_when => rr_tdata.dreg /= SP,
+                sp_val => rr_tdata.sp_val,
+                offset => rr_tdata.sp_offset
+            );
         end procedure;
 
-        procedure do_stack_cmd_1 is begin
-            case rr_tdata_buf.code is
-                when STACKU_PUSHM =>
-                    set_cmd_1(MICRO_MEM_OP or MICRO_MRD_OP or MICRO_ALU_OP);
+        procedure do_stack_popm_1 is begin
+            set_cmd_1(MICRO_MRD_OP or MICRO_MEM_OP);
 
-                    -- mem cmd
-                    micro_tdata.mem_cmd <= '1';
+            micro_tdata.mem_cmd      <= '1';
+            micro_tdata.mem_width    <= rr_tdata_buf.w;
+            micro_tdata.mem_seg      <= rr_tdata_buf.seg_val;
+            micro_tdata.mem_addr     <= ea_val_plus_disp;
+            micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
+        end procedure;
+
+        procedure do_stack_popa_0 is begin
+            set_cmd_0(MICRO_MEM_OP);
+
+            -- memory cmd
+            mem_read_word(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val);
+        end procedure;
+
+        procedure do_stack_popa_1 is begin
+            micro_tdata.mem_addr <= sp_val;
+
+            case micro_cnt is
+                when 15 =>
+                    set_cmd_1(MICRO_MEM_OP);
+                    -- READ MEM FROM SP
+                    micro_tdata.mem_cmd <= '0';
+                    micro_tdata.mem_width <= '1';
                     micro_tdata.mem_seg <= rr_tdata_buf.ss_seg_val;
-                    micro_tdata.mem_addr <= rr_tdata_buf.sp_val;
-                    micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
-
+                when 9 =>
+                    set_cmd_1(MICRO_ALU_OP or MICRO_MEM_OP);
                     -- alu cmd
-                    update_sp(sp_val => rr_tdata_buf.sp_val);
+                    update_sp(sp_val => sp_val, sp_offset => sp_offset);
 
-                when STACKU_PUSHA =>
-                    if (micro_cnt = 1) then
-                        set_cmd_1(MICRO_MEM_OP or MICRO_UNLK_OP or MICRO_ALU_OP);
-                    end if;
-
-                    -- alu cmd
-                    update_sp(sp_val => sp_val);
-
-                    -- mem cmd
-                    micro_tdata.mem_addr <= sp_val;
-
-                    case micro_cnt is
-                        when 7 => micro_tdata.mem_data <= rr_tdata_buf.cx_tdata;
-                        when 6 => micro_tdata.mem_data <= rr_tdata_buf.dx_tdata;
-                        when 5 => micro_tdata.mem_data <= rr_tdata_buf.bx_tdata;
-                        when 4 => micro_tdata.mem_data <= rr_tdata_buf.dreg_val;
-                        when 3 => micro_tdata.mem_data <= rr_tdata_buf.bp_tdata;
-                        when 2 => micro_tdata.mem_data <= rr_tdata_buf.si_tdata;
-                        when 1 => micro_tdata.mem_data <= rr_tdata_buf.di_tdata;
-                        when others => null;
-                    end case;
-
-                when STACKU_POPM =>
-                    set_cmd_1(MICRO_MRD_OP or MICRO_MEM_OP);
-
-                    micro_tdata.mem_cmd <= '1';
-                    micro_tdata.mem_width <= rr_tdata_buf.w;
-                    micro_tdata.mem_seg <= rr_tdata_buf.seg_val;
-                    micro_tdata.mem_addr <= ea_val_plus_disp;
-                    micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
-
-                when STACKU_POPA =>
-                    micro_tdata.mem_addr <= sp_val;
-
-                    case micro_cnt is
-                        when 15 =>
-                            set_cmd_1(MICRO_MEM_OP);
-                            -- READ MEM FROM SP
-                            micro_tdata.mem_cmd <= '0';
-                            micro_tdata.mem_width <= '1';
-                            micro_tdata.mem_seg <= rr_tdata_buf.ss_seg_val;
-                        when 9 =>
-                            set_cmd_1(MICRO_ALU_OP or MICRO_MEM_OP);
-                            -- alu cmd
-                            update_sp(sp_val => sp_val, sp_offset => sp_offset);
-
-                        when 8 =>
-                            set_cmd_1(MICRO_MRD_OP);
-                            micro_tdata.mem_dreg  <= DI;
-                            micro_tdata.mem_dmask <= rr_tdata_buf.dmask;
-                        when 7 =>
-                            micro_tdata.mem_dreg  <= SI;
-                        when 6 =>
-                            micro_tdata.mem_dreg  <= BP;
-                        when 5 =>
-                            --skip SP;
-                            micro_tdata.mem_dreg  <= ZERO;
-                        when 4 =>
-                            micro_tdata.mem_dreg  <= BX;
-                        when 3 =>
-                            micro_tdata.mem_dreg  <= DX;
-                        when 2 =>
-                            micro_tdata.mem_dreg  <= CX;
-                        when 1 =>
-                            micro_tdata.mem_dreg  <= AX;
-                        when others => null;
-                    end case;
-
+                when 8 =>
+                    set_cmd_1(MICRO_MRD_OP);
+                    micro_tdata.mem_dreg  <= DI;
+                    micro_tdata.mem_dmask <= rr_tdata_buf.dmask;
+                when 7 =>
+                    micro_tdata.mem_dreg  <= SI;
+                when 6 =>
+                    micro_tdata.mem_dreg  <= BP;
+                when 5 =>
+                    --skip SP;
+                    micro_tdata.mem_dreg  <= ZERO;
+                when 4 =>
+                    micro_tdata.mem_dreg  <= BX;
+                when 3 =>
+                    micro_tdata.mem_dreg  <= DX;
+                when 2 =>
+                    micro_tdata.mem_dreg  <= CX;
+                when 1 =>
+                    micro_tdata.mem_dreg  <= AX;
                 when others => null;
             end case;
+        end procedure;
+
+        procedure do_stack_pushm_0 is begin
+            set_cmd_0(MICRO_MEM_OP);
+
+            -- memory cmd
+            mem_read_word(seg => rr_tdata.seg_val, addr => ea_val_plus_disp_next);
+        end procedure;
+
+        procedure do_stack_pushm_1 is begin
+            set_cmd_1(MICRO_MEM_OP or MICRO_MRD_OP or MICRO_ALU_OP);
+
+            -- mem cmd
+            micro_tdata.mem_cmd <= '1';
+            micro_tdata.mem_seg <= rr_tdata_buf.ss_seg_val;
+            micro_tdata.mem_addr <= rr_tdata_buf.sp_val;
+            micro_tdata.mem_data_src <= MEM_DATA_SRC_FIFO;
+
+            -- alu cmd
+            update_sp(sp_val => rr_tdata_buf.sp_val);
+        end procedure;
+
+        procedure do_stack_pushr_0 is begin
+            set_cmd_0(MICRO_MEM_OP or MICRO_ALU_OP);
+
+            -- memory cmd
+            mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.sreg_val, w => rr_tdata.w);
+
+            -- alu cmd
+            update_sp(sp_val => rr_tdata.sp_val);
+        end procedure;
+
+        procedure do_stack_pushi_0 is begin
+            set_cmd_0(MICRO_MEM_OP or MICRO_ALU_OP);
+
+            -- memory cmd
+            mem_write_imm(seg => rr_tdata.ss_seg_val, addr => rr_tdata.sp_val, val => rr_tdata.data, w => rr_tdata.w);
+
+            -- alu cmd
+            update_sp(sp_val => rr_tdata.sp_val);
+        end procedure;
+
+        procedure do_stack_pusha_0 is begin
+            set_cmd_0(MICRO_MEM_OP);
+
+            -- memory cmd
+            micro_tdata.mem_cmd      <= '1';
+            micro_tdata.mem_width    <= rr_tdata.w;
+            micro_tdata.mem_seg      <= rr_tdata.ss_seg_val;
+            micro_tdata.mem_addr     <= rr_tdata.sp_val;
+            micro_tdata.mem_data_src <= MEM_DATA_SRC_IMM;
+            micro_tdata.mem_data     <= rr_tdata.ax_tdata;
+        end procedure;
+
+        procedure do_stack_pusha_1 is begin
+            if (micro_cnt = 1) then
+                set_cmd_1(MICRO_MEM_OP or MICRO_UNLK_OP or MICRO_ALU_OP);
+            end if;
+
+            -- alu cmd
+            update_sp(sp_val => sp_val);
+
+            -- mem cmd
+            micro_tdata.mem_addr <= sp_val;
+
+            case micro_cnt is
+                when 7 => micro_tdata.mem_data <= rr_tdata_buf.cx_tdata;
+                when 6 => micro_tdata.mem_data <= rr_tdata_buf.dx_tdata;
+                when 5 => micro_tdata.mem_data <= rr_tdata_buf.bx_tdata;
+                when 4 => micro_tdata.mem_data <= rr_tdata_buf.dreg_val;
+                when 3 => micro_tdata.mem_data <= rr_tdata_buf.bp_tdata;
+                when 2 => micro_tdata.mem_data <= rr_tdata_buf.si_tdata;
+                when 1 => micro_tdata.mem_data <= rr_tdata_buf.di_tdata;
+                when others => null;
+            end case;
+
         end procedure;
 
         procedure do_stack_enter_0 is begin
@@ -2183,9 +2181,14 @@ begin
                     when STACKU =>
                         case rr_tdata.code is
                             when STACKU_POPR    => do_stack_popr_0;
+                            when STACKU_POPM    => do_stack_popm_0;
+                            when STACKU_POPA    => do_stack_popa_0;
+                            when STACKU_PUSHM   => do_stack_pushm_0;
+                            when STACKU_PUSHA   => do_stack_pusha_0;
                             when STACKU_ENTER   => do_stack_enter_0;
                             when STACKU_LEAVE   => do_stack_leave_0;
-                            when others         => do_stack_cmd_0;
+                            when STACKU_PUSHR   => do_stack_pushr_0;
+                            when others         => do_stack_pushi_0;
                         end case;
                     when JCALL =>
                         case rr_tdata.code is
@@ -2230,9 +2233,12 @@ begin
                     when STACKU =>
                         case micro_code is
                             when STACKU_POPR    => do_stack_popr_1;
+                            when STACKU_POPM    => do_stack_popm_1;
+                            when STACKU_POPA    => do_stack_popa_1;
+                            when STACKU_PUSHM   => do_stack_pushm_1;
                             when STACKU_ENTER   => do_stack_enter_1;
                             when STACKU_LEAVE   => do_stack_leave_1;
-                            when others         => do_stack_cmd_1;
+                            when others         => do_stack_pusha_1;
                         end case;
                     when JCALL =>
                         case micro_code is
